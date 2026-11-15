@@ -15,3 +15,14 @@ complete-history reconciliation; durable receipt candidates with read-back;
 no synthesized successful sends; local permissions, automatic mode and revocation;
 secret-free errors and dashboard connection controls. This is unofficial access,
 not a Tinder partnership or a claim of written platform permission.
+
+# Fonts
+
+The landing and account pages serve their typefaces from this server (`control/static/fonts/`), so visitors'
+browsers do not contact a third party. Both are licensed under the SIL Open Font License 1.1; the full notices
+are in `licenses/`.
+
+- Onest, Copyright 2021 The Onest Project Authors (https://github.com/googlefonts/onest): `licenses/Onest-OFL.txt`
+- Unbounded, Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded): `licenses/Unbounded-OFL.txt`
+
+The files are subsets (basic Latin and Polish letters) of the upstream variable fonts.

@@ -6,6 +6,7 @@ Runs as its own small service, separate from customer instances. Stores only wha
 from __future__ import annotations
 
 import base64
+import html as html_lib
 import hashlib
 import hmac
 import json
@@ -18,7 +19,7 @@ from contextlib import closing
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
 from control import mailer, provision
 
@@ -26,8 +27,8 @@ BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
 BRAND = os.getenv('BRAND_NAME', 'Iskra')
 EMAIL = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$')
-CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-       "font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+       "font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
        "base-uri 'none'; form-action 'self'; object-src 'none'")
 _HITS: dict[str, list[float]] = {}
 
@@ -178,7 +179,7 @@ async def security_headers(request: Request, call_next):
 SHARE = ('<meta property="og:type" content="website"><meta property="og:site_name" content="{{BRAND}}">'
          '<meta property="og:title" content="{{BRAND}}: zamień dopasowania w spotkania">'
          '<meta property="og:description" content="Asystent randkowy AI, który pisze Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła.">'
-         '<meta property="og:url" content="{{ORIGIN}}/"><meta property="og:image" content="{{ORIGIN}}/assets/og.png">'
+         '<meta property="og:url" content="{{ORIGIN}}{{PATH}}"><meta property="og:image" content="{{ORIGIN}}/assets/og.png">'
          '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
          '<meta property="og:image:alt" content="Iskra: wiadomość, sygnały, szkic odpowiedzi i umówiona kawa">'
          '<meta property="og:locale" content="pl_PL"><meta name="twitter:card" content="summary_large_image">'
@@ -199,13 +200,63 @@ def versioned_assets(html: str) -> str:
     return re.sub(r'/assets/([A-Za-z0-9_.-]+)', stamp, html)
 
 
+PATHS = {'index.html': '/', 'privacy.html': '/prywatnosc', 'terms.html': '/regulamin', 'login.html': '/zaloguj',
+         'register.html': '/rejestracja', 'forgot.html': '/nie-pamietam-hasla', 'reset.html': '/nowe-haslo',
+         'account.html': '/konto'}
+# Account pages are not worth indexing. They stay crawlable (not in robots.txt) so the noindex is seen.
+NOINDEX = {'login.html', 'register.html', 'forgot.html', 'reset.html', 'account.html'}
+FAQ = re.compile(r'<details><summary>(.*?)</summary><p>(.*?)</p></details>', re.S)
+
+
+def _text(fragment: str) -> str:
+    return re.sub(r'\s+', ' ', html_lib.unescape(re.sub(r'<[^>]+>', '', fragment))).strip()
+
+
+def structured_data(html: str, origin: str, price: str) -> str:
+    """Organization, WebSite, WebApplication (with the real price) and the FAQ exactly as shown on the page.
+    No ratings or reviews: there are none yet, and inventing them is against Google's rules."""
+    org = {'@type': 'Organization', '@id': origin + '/#org', 'name': BRAND, 'url': origin + '/',
+           'logo': origin + '/apple-touch-icon.png'}
+    email = os.getenv('LEGAL_EMAIL', '').strip()
+    if email:
+        org['email'] = email
+    graph = [org,
+             {'@type': 'WebSite', '@id': origin + '/#website', 'url': origin + '/', 'name': BRAND, 'inLanguage': 'pl-PL',
+              'publisher': {'@id': origin + '/#org'}},
+             {'@type': 'WebApplication', '@id': origin + '/#app', 'name': BRAND, 'url': origin + '/', 'inLanguage': 'pl-PL',
+              'description': 'Asystent randkowy AI: pisze odpowiedzi w Twoim stylu i podpowiada moment na zaproszenie na randkę. Ty zatwierdzasz każdą wiadomość.',
+              'applicationCategory': 'LifestyleApplication', 'operatingSystem': 'Web', 'publisher': {'@id': origin + '/#org'}}]
+    cost = re.search(r'(\d+(?:[.,]\d+)?)\s*zł', price)
+    if cost:
+        amount = '%.2f' % float(cost.group(1).replace(',', '.'))
+        graph[2]['offers'] = {'@type': 'Offer', 'price': amount, 'priceCurrency': 'PLN', 'url': origin + '/rejestracja',
+                              'availability': 'https://schema.org/InStock',
+                              'priceSpecification': {'@type': 'UnitPriceSpecification', 'price': amount, 'priceCurrency': 'PLN',
+                                                     'billingDuration': 1, 'unitCode': 'MON'}}
+    faq = [{'@type': 'Question', 'name': _text(q), 'acceptedAnswer': {'@type': 'Answer', 'text': _text(ans)}}
+           for q, ans in FAQ.findall(html)]
+    if faq:
+        graph.append({'@type': 'FAQPage', 'mainEntity': faq})
+    body = json.dumps({'@context': 'https://schema.org', '@graph': graph}, ensure_ascii=False).replace('</', '<\\/')
+    return '<script type="application/ld+json">' + body + '</script>'
+
+
 def page(name: str) -> HTMLResponse:
     origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
-    html = (STATIC / name).read_text(encoding='utf-8').replace('</head>', SHARE + '</head>', 1)
+    path = PATHS.get(name, '/')
+    html = (STATIC / name).read_text(encoding='utf-8')
     price = os.getenv('PLAN_PRICE', '').strip() or 'cena widoczna przy płatności'
+    extra = SHARE
+    if name in NOINDEX:
+        extra = '<meta name="robots" content="noindex,follow">' + extra
+    if origin:
+        extra = f'<link rel="canonical" href="{origin}{path}">' + extra
+    html = html.replace('</head>', extra + '</head>', 1)
     for key, fallback in LEGAL_FIELDS.items():
         html = html.replace('{{' + key + '}}', os.getenv(key, '').strip() or fallback)
-    html = html.replace('{{ORIGIN}}', origin).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND)
+    html = html.replace('{{ORIGIN}}', origin).replace('{{PATH}}', path).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND)
+    if name == 'index.html' and origin:
+        html = html.replace('</head>', structured_data(html, origin, price) + '</head>', 1)
     return HTMLResponse(versioned_assets(html), headers={'Cache-Control': 'no-cache'})
 
 
@@ -236,6 +287,44 @@ def asset(name: str):
     if name not in types:
         raise HTTPException(404)
     return FileResponse(STATIC / name, media_type=types[name], headers={'Cache-Control': 'public, max-age=86400'})
+
+
+@app.get('/assets/fonts/{name}')
+def font(name: str):
+    if not re.fullmatch(r'(onest|unbounded)-latin(-ext)?-v1\.woff2', name):
+        raise HTTPException(404)
+    return FileResponse(STATIC / 'fonts' / name, media_type='font/woff2',
+                        headers={'Cache-Control': 'public, max-age=31536000, immutable'})
+
+
+@app.get('/robots.txt')
+def robots(request: Request):
+    lines = ['User-agent: *', 'Allow: /', 'Disallow: /api/', 'Disallow: /admin/', 'Disallow: /stripe/', 'Disallow: /konto', '']
+    lines.append('Sitemap: ' + _origin(request) + '/sitemap.xml')
+    return PlainTextResponse('\n'.join(lines) + '\n', headers={'Cache-Control': 'public, max-age=3600'})
+
+
+@app.get('/sitemap.xml')
+def sitemap(request: Request):
+    origin = _origin(request)
+    urls = ''.join(f'<url><loc>{origin}{path}</loc></url>' for path in ('/', '/regulamin', '/prywatnosc'))
+    return Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                    + urls + '</urlset>', media_type='application/xml', headers={'Cache-Control': 'public, max-age=3600'})
+
+
+@app.get('/llms.txt')
+def llms(request: Request):
+    origin = _origin(request)
+    price = os.getenv('PLAN_PRICE', '').strip() or 'cena widoczna przy płatności'
+    text = (f'# {BRAND}\n\n'
+            f'> {BRAND} to płatny asystent randkowy AI dla dorosłych (18+). Pisze szkice odpowiedzi na Tinderze w stylu użytkownika '
+            f'i podpowiada, kiedy zaprosić na randkę. Użytkownik zatwierdza każdą wiadomość. Cena: {price}, anulowanie w każdej chwili. '
+            f'{BRAND} nie jest powiązana z Tinder ani Match Group.\n\n'
+            f'## Strony\n\n'
+            f'- [Strona główna]({origin}/): co robi {BRAND}, jak działa, cennik i najczęstsze pytania\n'
+            f'- [Regulamin]({origin}/regulamin): zasady korzystania z usługi\n'
+            f'- [Polityka prywatności]({origin}/prywatnosc): jak przetwarzamy dane\n')
+    return PlainTextResponse(text, headers={'Cache-Control': 'public, max-age=3600'})
 
 
 @app.get('/apple-touch-icon.png')
