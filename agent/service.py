@@ -77,6 +77,9 @@ async def process_job(job):
              {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
              {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},
              examples,style.style_stats(),style.canon_text(lang),plan)
+        # Asked about AI: only an honest admission may go out; anything else waits for the owner.
+        if decision.action=='reply' and rt.ai_question(incoming[0] if incoming else '') and not rt.AI_MENTION.search(decision.reply or ''):
+            decision.action='requires_user';decision.note='Zapytała o AI. Odpowiedź musi to przyznać: '+(decision.reply or '')
         if t['platform']!='simulator' and generator=='demo_rule (not AI)':
             decision.action='requires_user';decision.reply='';decision.note='Configure a model for live replies';generator='demo_placeholder'
         if existing:

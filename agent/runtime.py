@@ -127,13 +127,24 @@ def eligible(thread):
         except TinderError: return False
     return not cfg['paused'] and not thread['user_paused'] and not thread['user_archived'] and thread['source_visibility']=='available'
 
-AI_MENTION=re.compile(r"(?<![\w])(ai|a\.i\.|bot\w*|chat\s?gpt|sztuczn\w*|automat\w*)(?![\w])",re.I)
+AI_MENTION=re.compile(r"(?<![\w])(ai|a\.i\.|bot\w*|chat\s?gpt|sztuczn\w*)(?![\w])",re.I)
+AI_OBJECTION=re.compile(r"(nie\s+(chc\w*|lubi\w*|pisz\w*|b[eę]d\w*\s+pisa\w*)|s[łl]abe|dziwn\w*|creepy|weird|cringe|[żz]enad\w*|"
+                        r"wol[eę]\s+(cz[łl]owiek|normaln)|serio\s+bot|kurwa|stop|not\s+ok|don'?t\s+like|no\s+thanks)",re.I)
+
+
+def ai_objection(text):
+    """She objects to talking with AI (not just asking about it)."""
+    return bool(text) and bool(AI_MENTION.search(text)) and bool(AI_OBJECTION.search(text))
+
+
+def ai_question(text):
+    return bool(text) and bool(AI_MENTION.search(text))
 
 
 def auto_consent(thread):
-    """Has the other person been told that AI writes here? Either an explicit per-conversation grant from the owner,
-    or the owner's Tinder bio says so (checked on every sync). A conversation where she mentions AI or bots goes back
-    to the owner for good, and the owner can switch any single conversation off."""
+    """Has the other person been told that AI is used here? Either an explicit per-conversation grant from the owner,
+    or the owner's Tinder bio says so (checked on every sync). If she asks, the reply admits it honestly (see
+    service.process_job); if she objects, the conversation goes back to the owner. The owner can switch any off."""
     grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
     if grants and all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return True
     if grants:return False  # owner set this conversation explicitly (e.g. switched autopilot off)
@@ -141,9 +152,9 @@ def auto_consent(thread):
     con=s.rows('SELECT value FROM connections WHERE id=?',(thread['connection_id'],))
     value=json.loads(con[0]['value']) if con else {}
     if not (value.get('bio_mode') and value.get('bio_disclosure')):return False
-    if any(m['sender']=='them' and AI_MENTION.search(m['body'] or '') for m in s.messages(thread['id'])):
+    if any(m['sender']=='them' and ai_objection(m['body'] or '') for m in s.messages(thread['id'])):
         with s.connect() as db:db.execute('INSERT OR IGNORE INTO grants VALUES(?,?,?,?)',(thread['id'],0,0,0))
-        audit(thread['id'],'autopilot_handed_to_owner','She mentioned AI or bots; this conversation now needs the owner')
+        audit(thread['id'],'autopilot_handed_to_owner','She objected to AI; this conversation now needs the owner')
         return False
     return True
 

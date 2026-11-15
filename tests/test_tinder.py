@@ -409,10 +409,30 @@ async def test_bio_disclosure_enables_autopilot_everywhere_and_stops_when_remove
     assert not rt.auto_allowed(service.thread_by_id(TID))
 
 
-async def test_mentioning_ai_hands_conversation_back_to_owner(source):
-    source.owner_bio='Odpowiada za mnie czasem AI'
+async def test_question_about_ai_gets_honest_auto_reply_and_dodge_waits_for_owner(source,monkeypatch):
+    source.owner_bio='Używam AI czasami'
     source.messages[0]['message']='czy to pisze bot?'
-    t=await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
+    await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
+    assert rt.auto_consent(service.thread_by_id(TID))  # a question alone does not stop the autopilot
+    monkeypatch.setattr(service,'generate',lambda *a:(Decision(action='reply',reply='haha a co, wyglądam na robota?',note='',claims=[]),'LLM-reviewed:x'))
+    while (job:=rt.claim()):await service.process_job(job)
+    assert not source.posts  # a dodge is never sent automatically
+    d=[r for r in s.all_drafts() if r['thread_id']==TID][-1];assert d['status']=='needs_user'
+
+
+async def test_honest_answer_about_ai_is_sent_automatically(source,monkeypatch):
+    source.owner_bio='Używam AI czasami'
+    source.messages[0]['message']='czy to pisze bot?'
+    await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
+    monkeypatch.setattr(service,'generate',lambda *a:(Decision(action='reply',reply='haha trochę tak, czasem pomaga mi AI, ale na kawę przyjdę sam',note='',claims=[]),'LLM-reviewed:x'))
+    while (job:=rt.claim()):await service.process_job(job)
+    assert source.posts and 'AI' in source.posts[-1]['message']
+
+
+async def test_objection_to_ai_hands_conversation_back_to_owner(source):
+    source.owner_bio='Używam AI czasami'
+    source.messages[0]['message']='serio piszesz z AI? to słabe, nie chcę tak'
+    await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
     assert not rt.auto_consent(service.thread_by_id(TID))
     g=s.rows('SELECT * FROM grants WHERE thread_id=?',(TID,))[0]
     assert (g['enabled'],g['participant_consent'],g['disclosed'])==(0,0,0)
