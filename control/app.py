@@ -53,7 +53,7 @@ MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status
               ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0'), ('accounts', 'render_service_id', 'TEXT'),
               ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
               ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
-              ('accounts', 'withdrawn_at', 'DOUBLE PRECISION')]
+              ('accounts', 'withdrawn_at', 'DOUBLE PRECISION'), ('accounts', 'provision_started', 'DOUBLE PRECISION')]
 WITHDRAWAL_DAYS = 14
 
 
@@ -388,7 +388,55 @@ def me(request: Request):
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
             'provision_state': acc.get('provision_state') or '', 'can_withdraw': can_withdraw(acc),
             'withdrawn': bool(acc.get('withdrawn_at')),
-            'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc)}
+            'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
+            'setup': setup_progress(acc)}
+
+
+SETUP_SECONDS = {'create': 240, 'link': 120}  # typical time from start to a live server
+_DEPLOY_CACHE: dict[str, tuple[float, str]] = {}
+BUILDING = {'created', 'queued', 'build_in_progress'}
+STARTING = {'update_in_progress', 'pre_deploy_in_progress'}
+BROKEN = {'build_failed', 'update_failed', 'pre_deploy_failed', 'canceled'}
+
+
+def _deploy_status(service_id: str) -> str:
+    """Newest deploy status of the instance, cached for a few seconds so polling pages don't hammer Render."""
+    now = time.time()
+    cached = _DEPLOY_CACHE.get(service_id)
+    if cached and now - cached[0] < 6:
+        return cached[1]
+    try:
+        status = provision.deploy_status(service_id) if provision.api_ready() else 'unknown'
+    except Exception:
+        status = 'unknown'
+    _DEPLOY_CACHE[service_id] = (now, status)
+    return status
+
+
+def setup_progress(acc: dict) -> dict:
+    """Where the customer's server is: queued, creating, building, starting, ready (or slow/manual)."""
+    owner = is_owner(acc.get('email', ''))
+    kind = 'link' if owner else 'create'
+    started = acc.get('provision_started')
+    state = acc.get('provision_state') or ''
+    out = {'kind': kind, 'expected': SETUP_SECONDS[kind], 'elapsed': int(time.time() - started) if started else 0}
+    if state == 'failed':
+        return {**out, 'stage': 'slow'}
+    if state == 'manual':
+        return {**out, 'stage': 'manual'}
+    if state == 'running':
+        return {**out, 'stage': 'creating'}
+    if not acc.get('instance_url'):
+        return {**out, 'stage': 'queued'}
+    service_id = acc.get('render_service_id') or (os.getenv('OWNER_SERVICE_ID', '').strip() if owner else '')
+    status = _deploy_status(service_id) if service_id and started and time.time() - started < 3600 else 'live'
+    if status in BUILDING:
+        return {**out, 'stage': 'building'}
+    if status in STARTING:
+        return {**out, 'stage': 'starting'}
+    if status in BROKEN:
+        return {**out, 'stage': 'slow'}
+    return {**out, 'stage': 'ready'}
 
 
 @app.post('/api/account/delete')
@@ -558,7 +606,7 @@ def run_provision(account_id: int, origin: str = '') -> str:
         return 'manual'
     if acc.get('provision_state') == 'running':
         return 'running'
-    q("UPDATE accounts SET provision_state='running', provision_error=NULL WHERE id=?", (account_id,))
+    q("UPDATE accounts SET provision_state='running', provision_error=NULL, provision_started=? WHERE id=?", (time.time(), account_id))
     try:
         inst = provision.create_instance(account_id)
     except Exception as exc:
@@ -580,6 +628,7 @@ def link_owner(acc: dict) -> str:
     if not sid or not provision.api_ready():
         q("UPDATE accounts SET comped=1, provision_state='manual' WHERE id=?", (acc['id'],))
         return 'manual'
+    q('UPDATE accounts SET provision_started=? WHERE id=?', (time.time(), acc['id']))
     try:
         inst = provision.link_existing(sid)
     except Exception as exc:

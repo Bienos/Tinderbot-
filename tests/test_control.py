@@ -357,3 +357,32 @@ def test_owner_registered_before_render_key_is_linked_on_next_login(client,monke
     _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock(calls))
     client.post('/api/logout');client.post('/api/login',json={'email':'owner@example.com','password':REG['password']})
     assert client.get('/api/me').json()['panel_ready']
+
+
+def test_setup_progress_follows_the_real_render_deploy(client,monkeypatch):
+    import httpx,json
+    from control import provision
+    import control.app as capp
+    _provision_env(monkeypatch);monkeypatch.setenv('OWNER_EMAIL','owner@example.com');monkeypatch.setenv('OWNER_SERVICE_ID','srv-owner')
+    status={'now':'build_in_progress'};capp._DEPLOY_CACHE.clear()
+    def handler(req):
+        if req.method=='GET' and req.url.path=='/v1/services/srv-owner/deploys':
+            return httpx.Response(200,json=[{'deploy':{'id':'dep-1','status':status['now']},'cursor':'c'}])
+        if req.method=='GET' and req.url.path=='/v1/services/srv-owner':
+            return httpx.Response(200,json={'id':'srv-owner','serviceDetails':{'url':'https://owner-bot.onrender.com'}})
+        return httpx.Response(200,json={})
+    monkeypatch.setattr(provision,'TRANSPORT',httpx.MockTransport(handler))
+    client.post('/api/register',json={**REG,'email':'owner@example.com'})
+    setup=client.get('/api/me').json()['setup']
+    assert setup['stage']=='building' and setup['kind']=='link' and setup['expected']==120 and 0<=setup['elapsed']<5
+    for render,stage in (('update_in_progress','starting'),('live','ready'),('update_failed','slow')):
+        status['now']=render;capp._DEPLOY_CACHE.clear()
+        assert client.get('/api/me').json()['setup']['stage']==stage
+
+
+def test_setup_progress_without_render_access_never_pretends_to_build(client,monkeypatch):
+    client.post('/api/register',json={**REG,'email':'plain@example.com'})
+    assert client.get('/api/me').json()['setup']['stage']=='queued'
+    monkeypatch.setenv('OWNER_EMAIL','owner@example.com');monkeypatch.setenv('OWNER_SERVICE_ID','srv-owner')
+    client.post('/api/logout');client.post('/api/register',json={**REG,'email':'owner@example.com'})
+    assert client.get('/api/me').json()['setup']['stage']=='manual'

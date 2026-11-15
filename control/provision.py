@@ -116,3 +116,15 @@ def link_existing(service_id: str) -> dict:
 def set_suspended(service_id: str, suspended: bool) -> None:
     with _client() as c:
         c.post(f"/services/{service_id}/{'suspend' if suspended else 'resume'}").raise_for_status()
+
+
+def deploy_status(service_id: str) -> str:
+    """Status of the service's newest deploy on Render (e.g. build_in_progress, update_in_progress, live)."""
+    with _client() as c:
+        r = c.get(f'/services/{service_id}/deploys', params={'limit': 1})
+        r.raise_for_status()
+        items = r.json()
+    if not items:
+        return 'created'
+    item = items[0]
+    return str((item.get('deploy') or item).get('status') or 'unknown')

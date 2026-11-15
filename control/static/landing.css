@@ -183,3 +183,17 @@ body.split{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);m
 .table-wrap{overflow-x:auto;margin:12px 0}.legal table{border-collapse:collapse;width:100%;min-width:620px;background:#fff;border-radius:14px;overflow:hidden;font-size:14px}.legal th,.legal td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}.legal th{color:var(--ink);background:var(--bg-2)}
 .check.consent{display:flex;gap:10px;align-items:flex-start;font-size:14px;text-align:left;margin:4px 0 14px;line-height:1.45}.check.consent.need{color:#c0263f}.check.consent.need input{outline:2px solid #fd267a;outline-offset:2px}
 .withdraw{margin-top:18px;font-size:14px;text-align:left}.withdraw summary{cursor:pointer;color:var(--muted)}.withdraw p{margin:8px 0}
+.status-card .setup{margin:8px 0 4px;align-self:stretch}.setup-bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}
+.setup-bar span{display:block;height:100%;width:3%;border-radius:inherit;background:var(--fire);transition:width .9s ease;position:relative;overflow:hidden}
+.setup-bar span::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:sheen 1.8s ease-in-out infinite}
+@keyframes sheen{to{transform:translateX(100%)}}
+.status-card .setup-meta{margin:10px 0 20px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:1.4em}
+.setup-steps{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.setup-steps li{position:relative;padding-left:34px;color:var(--muted);font-weight:500;line-height:22px}
+.setup-steps li::before{content:"";position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}
+.setup-steps li.done{color:var(--ink)}.setup-steps li.done::before{border:0;background:var(--fire)}
+.setup-steps li.done::after{content:"";position:absolute;left:8px;top:4px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.setup-steps li.now{color:var(--ink);font-weight:600}.setup-steps li.now::before{border-color:var(--ember);border-right-color:transparent;animation:spin .9s linear infinite}
+.setup-steps li.slow::before{animation-duration:2.4s}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.setup-bar span::after,.setup-steps li.now::before{animation:none}}
