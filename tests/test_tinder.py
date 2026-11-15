@@ -385,10 +385,10 @@ async def test_owner_sends_edited_draft_without_autopilot_consent(source,monkeyp
     assert source.posts and source.posts[-1]['message']=='poprawione przeze mnie', out
 
 
-def test_bio_disclosure_needs_ai_and_messaging_words():
+def test_bio_disclosure_needs_an_explicit_ai_mention():
     assert tinder.bio_discloses_ai('Czasem odpisuje za mnie asystent AI 🤖')
-    assert tinder.bio_discloses_ai('Heads up: an AI helps me reply to messages')
-    assert not tinder.bio_discloses_ai('używam AI jak coś') and not tinder.bio_discloses_ai('Lubię góry i kawę')
+    assert tinder.bio_discloses_ai('używam AI czasami, a ty?') and tinder.bio_discloses_ai('Heads up: I use AI sometimes')
+    assert not tinder.bio_discloses_ai('Lubię góry i kawę') and not tinder.bio_discloses_ai('')
     assert not tinder.bio_discloses_ai('Mieszkam w Kaiserslautern, piszę wiersze')  # "ai" inside a word does not count
 
 

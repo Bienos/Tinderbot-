@@ -408,14 +408,12 @@ async def _history(api: TinderClient, thread: dict, owner: str) -> list[dict]:
 
 MISSES_BEFORE_HIDDEN = 3
 
-# The owner's bio tells every match, before the first message, that an AI assistant writes. Both an AI word and a
-# messaging word are required: "używam AI" alone does not say that replies come from AI.
-_AI_WORD = re.compile(r'(?<![\w])(ai|a\.i\.|sztuczn\w*\s+inteligencj\w*|chat\s?gpt|bot\w*|asystent\w*\s+ai)(?![\w])', re.I)
-_MSG_WORD = re.compile(r'(pisz|pisa|odpis|odpowiad|wiadomo|czat|chat|rozmow|messag|repl|text|writ)', re.I)
+# The owner's bio tells every match, before the first message, that he uses AI. Any explicit mention counts.
+_AI_WORD = re.compile(r'(?<![\w])(ai|a\.i\.|sztuczn\w*\s+inteligencj\w*|chat\s?gpt|bot\w*)(?![\w])', re.I)
 
 
 def bio_discloses_ai(bio: str) -> bool:
-    return bool(bio) and bool(_AI_WORD.search(bio)) and bool(_MSG_WORD.search(bio))
+    return bool(bio) and bool(_AI_WORD.search(bio))
 
 
 def _tinder_value(tid: str) -> dict:
