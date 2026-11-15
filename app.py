@@ -16,7 +16,7 @@ from agent.diagnostics import report_failure,tinder_startup_check
 from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
-LOGIN='''<!doctype html><title>Conversation Agent · Sign in</title><style>body{font:17px system-ui;background:#f8f4eb;max-width:420px;margin:15vh auto}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}small{color:#666}</style><h1>Conversation Agent</h1><p>Sign in with your dashboard access token.</p><form><input type=password autocomplete=current-password required aria-label="Access token"><button>Sign in</button></form><small>The local token is stored in runtime/dashboard-token. Set DASHBOARD_TOKEN for deployment.</small><p id=error></p><script src="/static/login.js" defer></script>'''
+LOGIN='''<!doctype html><title>Conversation Agent · Sign in</title><style>body{font:17px system-ui;background:#f4f5f7;max-width:420px;margin:15vh auto}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}small{color:#666}</style><h1>Conversation Agent</h1><p>Sign in with your dashboard access token.</p><form><input type=password autocomplete=current-password required aria-label="Access token"><button>Sign in</button></form><small>The local token is stored in runtime/dashboard-token. Set DASHBOARD_TOKEN for deployment.</small><p id=error></p><script src="/static/login.js" defer></script>'''
 @asynccontextmanager
 async def lifespan(app):
     public_origin();rt.init();token()
