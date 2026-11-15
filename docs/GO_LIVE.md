@@ -12,12 +12,14 @@ Sign in/create your Render account. Authorize the repository connection if promp
 
 ## 2. Add the two requested secrets in Render
 
-- `OPENAI_API_KEY`: your model-provider API key, needed for natural replies.
+- `ANTHROPIC_API_KEY`: your Anthropic API key, needed for natural replies. The Blueprint sets `LLM_PROVIDER=anthropic` and `ANTHROPIC_MODEL=claude-sonnet-5-5`. Do not put an Anthropic key in `OPENAI_API_KEY`.
 - `TINDER_AUTH_TOKEN`: your own Tinder account's session credential. This is not your Tinder password. Follow the own-account workflow in docs/TINDER.md/upstream OpenDate documentation; session expiry requires a replacement/reconnect.
 
 **Enter these only in Render's secret/environment UI. Do not paste them into chat, GitHub files, issue comments or screenshots.** The Blueprint contains placeholders, never real credentials.
 
 Render also generates a strong `DASHBOARD_TOKEN`. You will use it to sign into your app after deployment; retrieve it from the service's Environment page. Keep it private like a password.
+
+If the service already exists, add `ANTHROPIC_API_KEY` in its **Environment** page and select **Save, rebuild, and deploy** after the source/provider configuration is updated. Blueprint `sync: false` placeholders do not prompt for newly added secrets on an existing service. No secret is copied from another provider. See [provider setup](LLM_PROVIDERS.md).
 
 Do not copy your entire local `.env` into Render. In particular, leave `PUBLIC_ORIGIN` unset to use Render's automatically supplied HTTPS address. If you use a custom domain later, explicitly set `PUBLIC_ORIGIN=https://your-exact-domain` and redeploy.
 
@@ -64,6 +66,6 @@ The worker continues after you close the dashboard. Pause/revoke controls remain
 
 ## What has and has not been checked
 
-The Blueprint has been checked against Render's retrieved public JSON Schema. The Render CLI is installed, but its account-aware validation could not proceed because no CLI workspace is selected/authenticated. Render's dashboard must perform its normal validation when you apply the Blueprint. The local regression suite tests the Render HTTPS-origin configuration, secure login, clean worker startup and settings surviving a restart on persistent local storage.
+The Blueprint has been checked against Render's retrieved public JSON Schema. The Render CLI is installed, but its account-aware validation requires separate CLI authentication; plugin OAuth access does not authenticate it. Render performs its normal validation when you apply the Blueprint. The local regression suite tests the Render HTTPS-origin configuration, secure login, clean worker startup and settings surviving a restart on persistent local storage. Its fixture setup also isolates synthetic test data and local cookie policy from production deployment settings.
 
-No paid service was created and no Render deploy was run here. A successful local/schema check is not evidence of a Live deployment. The unofficial Tinder integration remains subject to upstream restrictions, account/session availability and real-world testing; the traffic controls do not guarantee acceptance or prevent blocking.
+Check the actual service's current deploy state; this guide and a successful local/schema check are not evidence of a Live deployment. The unofficial Tinder integration remains subject to upstream restrictions, account/session availability and real-world testing; the traffic controls do not guarantee acceptance or prevent blocking.

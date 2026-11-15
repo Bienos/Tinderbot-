@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-15",
+  "provider": "anthropic",
+  "default_model": "claude-sonnet-5-5",
+  "api_version": "2026-10-21",
+  "unit_integration_browser": {
+    "tests": 135,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 21.805,
+    "provider_contract_cases": 19
+  },
+  "production_environment_reproduction": {
+    "SEED_SIMULATOR": "false",
+    "COOKIE_SECURE": "true",
+    "DATING_AGENT_SOURCE": "fixture",
+    "LLM_PROVIDER": "anthropic"
+  },
+  "first_hosted_build_failure": "15 tests inherited production seed/cookie settings; corrected in fixtures without weakening runtime settings",
+  "live_anthropic_calls": false,
+  "provider_responses": "httpx.MockTransport, synthetic credentials only",
+  "live_tinder_calls": false,
+  "new_dependencies": [],
+  "documentation": [
+    {
+      "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+      "retrieval": "HTML read through web tool; direct Markdown 403"
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/models/overview",
+      "retrieval": "HTML read through web tool; direct Markdown 403"
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/versioning",
+      "retrieval": "HTML read through web tool; direct Markdown 403"
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/api/migration-2026-10-21",
+      "retrieval": "HTML read through web tool; direct Markdown 403"
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide",
+      "retrieval": "HTML read through web tool; direct Markdown 403"
+    }
+  ]
+}

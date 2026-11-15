@@ -4,7 +4,7 @@ A working single-owner FastAPI application for independent conversations, permis
 
 ## Go live online
 
-[Open the Render deployment setup](https://dashboard.render.com/blueprint/new?repo=https://github.com/Bienos/Tinderbot-) using the committed render.yaml. It proposes one small paid Python service plus a persistent disk. Enter secrets only in Render, review charges and apply; then follow the [go-live walkthrough](docs/GO_LIVE.md). No hosted service has been created yet.
+[Open the Render deployment setup](https://dashboard.render.com/blueprint/new?repo=https://github.com/Bienos/Tinderbot-) using the committed render.yaml. It proposes one small paid Python service plus a persistent disk, configured for Anthropic Claude. Enter secrets only in Render, review charges and apply; then follow the [go-live walkthrough](docs/GO_LIVE.md). Creating a service does not verify live messaging; check its deploy status and account configuration separately.
 
 ## Start
 
@@ -14,13 +14,13 @@ A working single-owner FastAPI application for independent conversations, permis
 
 Open **http://127.0.0.1:8765**. Sign in with `runtime/dashboard-token`, or configure a strong `DASHBOARD_TOKEN` in `.env`. The background worker initially starts in **supervised** mode. Connecting Tinder enables **automatic sending** for eligible Tinder conversations, as requested, without changing Telegram’s mode. In Settings, select **simulation** to let it automatically reply on the fictional platform. Without a model key, one labeled demonstration rule can reply to the seeded weekend conversation; other messages request owner knowledge. This is deliberately not presented as a full offline conversational model.
 
-For arbitrary natural-language replies, set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` using [.env.example](.env.example). Generation includes recent thread history, verified personal facts, preferences, feedback and source-linked observations, followed by independent factual/boundary review. Live model quality was not evaluated without credentials.
+For natural-language replies, set `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` and optionally `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`). OpenAI remains supported with `LLM_PROVIDER=openai`, `OPENAI_API_KEY` and optionally `OPENAI_MODEL`. See [provider setup](docs/LLM_PROVIDERS.md) and [.env.example](.env.example). Generation includes recent thread history, verified personal facts, preferences, feedback and source-linked observations, followed by independent factual/boundary review. Live model quality was not evaluated without credentials.
 
 Alternatively, `docker compose up --build -d` provides the deployment recipe. The native Python/Chromium flow was executed; Docker daemon access was unavailable, so the container build is unverified.
 
 ## Connect Tinder with automatic sending
 
-Configure `TINDER_ENABLED=true`, your own `TINDER_AUTH_TOKEN` and `OPENAI_API_KEY` locally, then restart. In **Settings → Tinder**, choose **Connect Tinder · automatic replies**. The worker discovers matches and messages. Set each intended thread's consent/disclosure grant once; replies then send without per-message approval. Pause/revoke controls remain available.
+Configure `TINDER_ENABLED=true`, your own `TINDER_AUTH_TOKEN` and the selected model provider's API key, then restart. In **Settings → Tinder**, choose **Connect Tinder · automatic replies**. The worker discovers matches and messages. Set each intended thread's consent/disclosure grant once; replies then send without per-message approval. Pause/revoke controls remain available.
 
 The connector is unofficial, adapted from OpenDate with MIT attribution. Live Tinder compatibility is **not yet verified** because no credential was supplied. It never retries a message POST and requires a provider message ID verified in thread history. See [Tinder setup and behavior](docs/TINDER.md).
 
@@ -72,6 +72,7 @@ agent/service.py           background orchestration and durable execution
 agent/runtime.py           jobs/actions/settings/memory/outcomes/outbox/metrics
 agent/storage.py           preserved SQLite message/draft/fixture foundation
 agent/engine.py            structured generation and independent review
+agent/llm.py               native Anthropic/OpenAI structured-output transports
 agent/outcomes.py          temporal local and optional semantic outcome extraction
 agent/notify.py            minimal SMTP delivery and retries
 static/                    dashboard and fictional chat platform

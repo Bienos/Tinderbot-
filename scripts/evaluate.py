@@ -7,6 +7,7 @@ from collections import Counter,defaultdict
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from agent import storage as s,runtime as rt
 from agent.engine import generate,prepare_context
+from agent.llm import configured as model_configured
 from agent.outcomes import detect
 BASE=Path(__file__).resolve().parents[1]
 def read(name):return [json.loads(l) for l in (BASE/'data'/name).read_text().splitlines() if l.strip()]
@@ -26,8 +27,8 @@ def evaluate(live=False,limit=20):
         # This is a distribution, not an accuracy claim: corpus labels are coarse, not human gold evidence.
         confusion[(r['expected_outcome'],','.join(kinds) or 'open')]+=1
     import os
-    if live and not os.getenv('OPENAI_API_KEY'):raise SystemExit('--live requires OPENAI_API_KEY')
-    saved=os.environ.pop('OPENAI_API_KEY',None) if not live else None
+    if live and not model_configured():raise SystemExit('--live requires an API key for the selected LLM_PROVIDER')
+    saved={key:os.environ.pop(key) for key in ('OPENAI_API_KEY','ANTHROPIC_API_KEY') if not live and key in os.environ}
     generated=[]
     try:
         for r in [r for r in full if r['variant']=='independently_authored'][:limit]:
@@ -41,7 +42,7 @@ def evaluate(live=False,limit=20):
                 if d.action=='reply':h.append(dict(id=f'{r["id"]}-out-{i}',sender='you',body=d.reply))
             generated.append({'id':r['id'],'family_id':r['family_id'],'steps':steps})
     finally:
-        if saved:os.environ['OPENAI_API_KEY']=saved
+        os.environ.update(saved)
     # A controlled context-availability ablation; does not measure linguistic performance.
     trials=[]
     for n in (6,14,20,30):

@@ -4,6 +4,7 @@ from uuid import uuid4
 from agent import storage as s,runtime as rt
 from agent.adapters import adapter,StaleAction
 from agent.engine import generate,should_draft
+from agent.llm import configured as model_configured
 from agent.outcomes import detect,semantic
 from agent.tinder import TinderRejected
 from agent.dispatch import DispatchDenied
@@ -77,7 +78,7 @@ async def process_job(job):
         if decision.action!='reply':s.set_draft_status(d['id'],'no_reply' if decision.action=='no_reply' else 'needs_user')
         rt.audit(t['id'],'draft_'+decision.action,'Response policy evaluated; details remain in the draft')
         significant={'date_confirmed','date_rescheduled','date_cancelled','instagram_shared','phone_shared'}
-        if os.getenv('SEMANTIC_OUTCOMES','false')=='true' and os.getenv('OPENAI_API_KEY') and not any(o.kind in significant for o in detect(hist)):
+        if os.getenv('SEMANTIC_OUTCOMES','false')=='true' and model_configured() and not any(o.kind in significant for o in detect(hist)):
             try:
                 extracted=await asyncio.to_thread(semantic,hist)
                 if extracted:rt.record_outcomes(t['id'],job['anchor'],extracted)

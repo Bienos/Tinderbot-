@@ -8,8 +8,10 @@ BASE='http://127.0.0.1:8765'
 @pytest.fixture
 def server(tmp_path,monkeypatch):
     env={**os.environ,'AGENT_DB_PATH':str(tmp_path/'browser.db'),'WORKER_ENABLED':'true','WORKER_INTERVAL':'1',
-         'PUBLIC_ORIGIN':'http://127.0.0.1:8765','DASHBOARD_TOKEN':TOKEN,'DATING_AGENT_SOURCE':'browser'}
+         'PUBLIC_ORIGIN':'http://127.0.0.1:8765','DASHBOARD_TOKEN':TOKEN,'DATING_AGENT_SOURCE':'browser',
+         'SEED_SIMULATOR':'true','COOKIE_SECURE':'false'}
     env.pop('OPENAI_API_KEY',None)
+    env.pop('ANTHROPIC_API_KEY',None)
     env['TINDER_ENABLED']='false';env.pop('TINDER_AUTH_TOKEN',None)
     log=(tmp_path/'server.log').open('w')
     proc=subprocess.Popen([str(Path('.venv/bin/python').absolute()),'-m','uvicorn','app:app','--host','127.0.0.1','--port','8765','--no-access-log'],env=env,stdout=log,stderr=log)

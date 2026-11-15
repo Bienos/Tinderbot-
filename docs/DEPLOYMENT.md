@@ -29,7 +29,7 @@ Follow [TINDER.md](TINDER.md). Configure TINDER_ENABLED and TINDER_AUTH_TOKEN lo
 
 ## Model, email and operational checks
 
-Set OPENAI_API_KEY/OPENAI_MODEL for structured generation and independent review. `SEMANTIC_OUTCOMES=true` opts into additional model-based outcome extraction; validate its quality before relying on it. Set actual per-million pricing to make cost metrics meaningful; zero means unpriced, not free. A live smoke call and human review of both Polish and English remain necessary.
+Set `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` and optionally `ANTHROPIC_MODEL` for Claude structured generation and independent review. The Render Blueprint defaults to `claude-sonnet-5-5`. OpenAI remains supported through `LLM_PROVIDER=openai` and `OPENAI_API_KEY`/`OPENAI_MODEL`. See [LLM_PROVIDERS.md](LLM_PROVIDERS.md). `SEMANTIC_OUTCOMES=true` opts into additional model-based outcome extraction with the selected provider; validate its quality before relying on it. Set actual per-million pricing to make cost metrics meaningful; zero means unpriced, not free. A live smoke call and human review of both Polish and English remain necessary.
 
 Enable email in Settings and configure SMTP_HOST/PORT, sender, recipient and optional authentication. STARTTLS is required. Notifications contain no names/contact/time/place/chat text. Dashboard delivery works without SMTP. SMTP setup failures retry; ambiguous sends are quarantined. No live SMTP receipt was obtained during development.
 

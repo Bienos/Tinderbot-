@@ -11,6 +11,7 @@ from agent import storage as s,runtime as rt,service,tinder as tinder_integratio
 from agent.auth import token,same_secret,create_session,session_valid,revoke_session
 from agent.http_security import SecurityBoundary,internal_request,public_origin
 from agent.dispatch import DispatchDenied
+from agent.llm import configured as model_configured
 from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
@@ -119,7 +120,7 @@ def state():
     for t in s.threads():
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
         p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);threads.append(p)
-    return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':bool(os.getenv('OPENAI_API_KEY')),
+    return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:rt.memory(t['id']) for t in s.threads()},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),

@@ -42,8 +42,9 @@ with TestClient(app, headers={'Authorization':'Bearer '+os.environ['DASHBOARD_TO
   assert c.post('/api/mock/threads/t5/simulate-visibility?visible=true').status_code==200
   assert next(t for t in c.get('/api/state').json()['threads'] if t['id']=='t5')['state']=='waiting'
 '''
-        env={**os.environ,'AGENT_DB_PATH':str(Path(temp)/'test.db'),'DATING_AGENT_SOURCE':'fixture','WORKER_ENABLED':'false','PUBLIC_ORIGIN':'http://testserver','DASHBOARD_TOKEN':'test-dashboard-token-at-least-32-chars'}
+        env={**os.environ,'AGENT_DB_PATH':str(Path(temp)/'test.db'),'DATING_AGENT_SOURCE':'fixture','WORKER_ENABLED':'false','PUBLIC_ORIGIN':'http://testserver','DASHBOARD_TOKEN':'test-dashboard-token-at-least-32-chars','SEED_SIMULATOR':'true','COOKIE_SECURE':'false'}
         env.pop('OPENAI_API_KEY',None)
+        env.pop('ANTHROPIC_API_KEY',None)
         env['TINDER_ENABLED']='false';env.pop('TINDER_AUTH_TOKEN',None)
         result=subprocess.run([sys.executable,'-c',script],capture_output=True,text=True,env=env,timeout=30)
         assert result.returncode==0, result.stdout+'\n'+result.stderr

@@ -15,6 +15,7 @@ def test_render_https_origin_clean_worker_and_persistent_settings(tmp_path,monke
     monkeypatch.setenv('SEED_SIMULATOR','false');monkeypatch.setenv('DATING_AGENT_SOURCE','fixture')
     monkeypatch.setenv('TINDER_ENABLED','false');monkeypatch.delenv('TINDER_AUTH_TOKEN',raising=False)
     monkeypatch.delenv('OPENAI_API_KEY',raising=False)
+    monkeypatch.delenv('ANTHROPIC_API_KEY',raising=False)
     url='https://tinderbot-example.onrender.com'
     assert public_origin()==url
     with TestClient(app,base_url=url) as c:

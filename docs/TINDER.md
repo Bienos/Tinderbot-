@@ -14,10 +14,15 @@ This is a working implemented connector with offline contract/integration tests.
    # Optional expected account ID; otherwise the connection binds to /profile's verified ID.
    TINDER_OWNER_ID=
    TINDER_POLL_INTERVAL=180
-   OPENAI_API_KEY=your_model_key
+   LLM_PROVIDER=anthropic
+   ANTHROPIC_API_KEY=your_anthropic_key
    ```
 
-   Keep real values local. A Tinder session credential grants account access; never paste it into chat, a ticket or a repository. OpenDate documents its own-account session credential workflow. This application does not collect login passwords, extract tokens from browsers or implement session renewal.
+   Keep real values local or in Render's secret environment settings. A Tinder session credential grants account access; never paste it into chat, a ticket or a repository. This application does not collect login passwords, extract tokens from browsers or implement session renewal.
+
+   OpenDate documents obtaining the credential from **your own** authenticated Tinder web session: sign in at `https://tinder.com` on a computer, open browser developer tools → **Network**, refresh/open your inbox, inspect a request to the exact host `api.gotinder.com`, and find **Headers → Request Headers → X-Auth-Token** (header names may be lowercase). Copy only its value into `TINDER_AUTH_TOKEN` in your private environment settings. Do not export/share a HAR, copy a whole request containing cookies, install token-finder extensions or paste scripts into the browser console. If the header is absent or access is blocked, stop rather than bypass login or account controls.
+
+   Source: [OpenDate connector documentation](https://github.com/sumitaich1998/OpenDate/blob/ba179f23b14a416ef9514e579cab6f7431e3ec1c/docs/connectors.md#getting-an-x-auth-token). This is an unofficial session credential, not an official developer API key. [Tinder's terms](https://policies.tinder.com/terms/intl/en/) restrict unapproved API/AI access. Possession of your session token does not establish platform authorization. No credential is obtained or tested by providing these instructions.
 
 2. Restart the application (`./run.sh`, or recreate the Compose service after editing its environment). Sign into the dashboard and open **Settings → Tinder · OpenDate connection**.
 3. Confirm account ownership and acknowledge the unofficial connection, then choose **Connect Tinder · automatic replies**. The backend verifies `/profile`, binds the connection to that account and enables automatic sending for this Tinder account while leaving Telegram’s mode unchanged. There is **no per-message approval** while this account’s automatic replies are enabled. Global pause and simulation mode still block live sends.

@@ -1,12 +1,14 @@
-# Current validation — account traffic controls, 2026-11-15
+# Current validation — Anthropic support and Render build isolation, 2026-11-15
 
 ## Executed suite
 
-`PLAYWRIGHT_BROWSERS_PATH=/workspace/pw-browsers RUN_BROWSER_E2E=1 .venv/bin/python -m pytest -q --junitxml=reports/tests.xml`
+`SEED_SIMULATOR=false COOKIE_SECURE=true DATING_AGENT_SOURCE=fixture LLM_PROVIDER=anthropic ANTHROPIC_MODEL=claude-sonnet-5-5 PLAYWRIGHT_BROWSERS_PATH=/workspace/pw-browsers RUN_BROWSER_E2E=1 .venv/bin/python -m pytest -q --junitxml=reports/tests.xml`
 
-**116 passed, 0 failed, 0 errors, 0 skipped**, 22.26 seconds in the earlier account-traffic JUnit run. The current complete run took 21.744 seconds.
+**135 passed, 0 failed, 0 errors, 0 skipped**, 21.805 seconds. Provider calls are mocked. This run deliberately inherits Render's production simulator-disabled and secure-cookie settings to validate test isolation.
 
-Three additional cloud-deployment cases validate Render HTTPS-origin derivation, secure session/login behavior, a fresh simulator-free background worker and settings persisting across restart; an explicit custom origin overrides the generated platform URL and malformed origins fail closed. This includes **19 new account-traffic cases**, **23 security cases**, **25 existing mocked Tinder cases**, **3 real Chromium simulator tests**, and **43 other existing cases**. The single pinned Starlette/httpx test-client deprecation warning remains visible.
+The **19 provider cases** validate Anthropic headers and structured schema, independent review, explicit provider selection, dashboard recognition, refusal/truncation/HTTP errors, original length validation, unsafe content blocks, usage, semantic extraction, offline evaluation key isolation and OpenAI compatibility. Three cloud-deployment cases validate Render HTTPS-origin derivation, secure session/login behavior, a fresh simulator-free background worker and settings persisting across restart; an explicit custom origin overrides the generated platform URL and malformed origins fail closed. This also includes **19 account-traffic cases**, **23 security cases**, **25 existing mocked Tinder cases**, **3 real Chromium simulator tests**, and **43 other existing cases**. The single pinned Starlette/httpx test-client deprecation warning remains visible.
+
+The first owner-applied Render build failed with 15 fixture-dependent tests because production `SEED_SIMULATOR=false` removed synthetic test threads and `COOKIE_SECURE=true` affected HTTP test sessions. Shared and subprocess fixtures now explicitly select test seeding and cookie policy, while cloud tests continue exercising production behavior. No failing tests or production protections were removed. A restricted-network local TestClient run stalled; it was stopped and rerun with permitted loopback networking. All final test counts above come from the completed run.
 
 The previous 94-test security-hardened validation and XML are preserved in VALIDATION_PRE_TRAFFIC.md and tests_pre_traffic.xml. The historical source archive used for the request-count comparison is dating-agent-security-hardened.zip (SHA-256 d45a73cbf5cc6ec03755d3fc5f2c11cddc3924b33462d8addea13e5f6814b096). Historical artifacts describe earlier code, not current controls.
 
@@ -38,4 +40,4 @@ Automatic sending remains on by default for an explicitly connected, consented/d
 
 ## Prepared Render hosting path
 
-The native-Python render.yaml uses the documented smallest paid web compute plan (0.5c-512mb), one instance, a 1 GB /var/data disk, generated dashboard credentials and two owner-supplied secret placeholders. No fictional simulator or Chromium runs in this hosted configuration. It passed Render’s fetched public JSON Schema. Render CLI 2.36.0 was downloaded from the official release and SHA-256 verified; account-aware CLI validation was blocked by no selected/authenticated CLI workspace. The dashboard must perform normal account validation when the owner applies it. No Render resource or deployment was created. See docs/GO_LIVE.md and reports/render_deployment_sources.json.
+The native-Python render.yaml uses the documented smallest paid web compute plan (0.5c-512mb), one instance, a 1 GB /var/data disk, generated dashboard credentials and two owner-supplied secret placeholders (now ANTHROPIC_API_KEY and TINDER_AUTH_TOKEN). No fictional simulator or Chromium runs in this hosted configuration. The updated Blueprint passed Render's fetched public JSON Schema. Render CLI 2.36.0 is installed, but separate CLI authentication remains unavailable; plugin OAuth access does not authenticate the CLI. The Render plugin successfully planned the original Blueprint, and the owner applied it; the first hosted build failure is described above. This artifact records local checks before deploying the corrected revision, not a successful cloud or messaging test. See docs/GO_LIVE.md and reports/anthropic_provider_validation.json.

@@ -29,7 +29,7 @@ def measure(path):
     env={**os.environ,'TINDER_ENABLED':'true','TINDER_AUTH_TOKEN':'fake-private-token-for-offline-tests',
          'SEED_SIMULATOR':'false','WORKER_ENABLED':'false','DATING_AGENT_SOURCE':'fixture',
          'TINDER_REQUESTS_PER_MINUTE':'1000','TINDER_REQUESTS_PER_HOUR':'10000'}
-    env.pop('OPENAI_API_KEY',None);env.pop('TINDER_OWNER_ID',None)
+    env.pop('OPENAI_API_KEY',None);env.pop('ANTHROPIC_API_KEY',None);env.pop('TINDER_OWNER_ID',None)
     result=subprocess.run([sys.executable,'-c',RUNNER],cwd=path,env=env,capture_output=True,text=True,timeout=60)
     if result.returncode:raise RuntimeError(result.stderr)
     return json.loads(next(l[len('BENCHMARK:'):] for l in result.stdout.splitlines() if l.startswith('BENCHMARK:')))
