@@ -809,12 +809,16 @@ async def password_forgot(request: Request, tasks: BackgroundTasks):
     if _limited('forgot:' + _client_ip(request), 5) or _limited('forgot:' + email, 3):
         raise HTTPException(429, 'Za dużo prób. Spróbuj za godzinę.')
     rows = q('SELECT id FROM accounts WHERE email=?', (email,), fetch=True)
+    if not rows:
+        # Registration already tells whether an address is taken, so hiding it here protected nothing and only
+        # left people waiting for an e-mail that never comes. Rate limits above still apply.
+        raise HTTPException(404, 'Nie ma konta z tym adresem e-mail. Sprawdź, czy nie ma literówki, albo załóż konto.')
     if rows:
         raw = secrets.token_urlsafe(32)
         q('DELETE FROM password_resets WHERE account_id=? OR expires<?', (rows[0]['id'], time.time()))
         q('INSERT INTO password_resets VALUES(?,?,?)', (_sid(raw), rows[0]['id'], time.time() + 3600))
         tasks.add_task(mailer.password_reset, email, _origin(request) + '/nowe-haslo?t=' + raw)
-    return {'ok': True}  # same answer either way, so the form does not reveal who has an account
+    return {'ok': True}
 
 
 @app.post('/api/password/reset')
