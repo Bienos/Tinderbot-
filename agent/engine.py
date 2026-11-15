@@ -14,6 +14,10 @@ Only claim personal facts from the verified profile. Historical outgoing message
 Never invent experiences, availability, preferences, relationship intentions, emotions or promises.
 Missing personal knowledge => requires_user. Respect disinterest; no response is valid.
 Do not claim to be human. Do not disclose other conversations. Do not invent contact data.
+Voice: write like the "you" side of style_examples and the STYLE CANON, matching style_stats (length, casing,
+punctuation, laughter, emoji). React to the specific thing she said. One message, usually one or two short sentences.
+style_examples come from other, often fictional, chats: they are style references only. Never take facts, places,
+plans, names or experiences from them, and never copy a line verbatim.
 Return structured JSON matching the schema. claims lists every factual/commitment claim with a profile key.
 The reply alone will be delivered, never notes or JSON. If no reply is appropriate use action=no_reply.'''
 
@@ -34,19 +38,25 @@ class Review(BaseModel):
     respects_boundaries:bool
     reason:str
 
-def prepare_context(history:Sequence[dict],user_facts='',*,memory=None,preferences=None,permissions=None):
-    return {'known_user_facts':user_facts,'recent_messages':[
-        {'id':m.get('id',str(i)),'sender':m['sender'],'text':m['body']} for i,m in enumerate(list(history)[-14:])],
-        'conversation_observations':memory or [],'preferences':preferences or {},'permissions':permissions or {}}
+def context_window():
+    try:return max(6,min(80,int(os.getenv('CONTEXT_MESSAGES','40'))))
+    except ValueError:return 40
 
-def structured(prompt,context,schema):
+def prepare_context(history:Sequence[dict],user_facts='',*,memory=None,preferences=None,permissions=None,
+                    style_examples=None,style_stats=None):
+    return {'known_user_facts':user_facts,'recent_messages':[
+        {'id':m.get('id',str(i)),'sender':m['sender'],'text':m['body']} for i,m in enumerate(list(history)[-context_window():])],
+        'conversation_observations':memory or [],'preferences':preferences or {},'permissions':permissions or {},
+        'style_examples':style_examples or [],'style_stats':style_stats or {}}
+
+def structured(prompt,context,schema,cached_system=None):
     from agent.runtime import metric
     from agent.limits import claim_model_call,BudgetExceeded
     encoded=json.dumps(context,ensure_ascii=False)
     if len(encoded.encode('utf-8'))>65536:raise BudgetExceeded('Model input exceeds configured context bound')
     claim_model_call()
     t=time.monotonic()
-    content,input_tokens,output_tokens=complete(prompt,encoded,schema.model_json_schema())
+    content,input_tokens,output_tokens=complete(prompt,encoded,schema.model_json_schema(),cached_system=cached_system)
     metric('llm_latency_seconds',time.monotonic()-t)
     metric('llm_tokens',input_tokens+output_tokens)
     metric('llm_estimated_cost_usd',input_tokens*float(os.getenv('LLM_INPUT_USD_PER_MILLION','0'))/1e6+
@@ -55,7 +65,7 @@ def structured(prompt,context,schema):
 
 def should_draft(history):return bool(history) and history[-1]['sender']=='them'
 
-def generate(history,profile=None,memory=None,preferences=None,permissions=None):
+def generate(history,profile=None,memory=None,preferences=None,permissions=None,style_examples=None,style_stats=None,canon=None):
     profile=profile or {};last=history[-1]['body'].lower() if history else ''
     if not should_draft(history):return Decision(action='no_reply',reply='',note='Waiting for incoming message',claims=[]),'policy'
     if any(x in last for x in ('nie pisz','not interested',"don't contact",'nie jestem zainteres','stop messaging')):
@@ -65,9 +75,10 @@ def generate(history,profile=None,memory=None,preferences=None,permissions=None)
         if 'do siebie' in last:
             return Decision(action='reply',reply='hahaha, aż tak ciężki weekend?',note='Bounded synthetic demo response',claims=[]),'demo_rule (not AI)'
         return Decision(action='requires_user',reply='',note='LLM not configured; personal judgement needed',claims=[]),'demo_placeholder'
-    context=prepare_context(history,profile,memory=memory,preferences=preferences,permissions=permissions)
+    context=prepare_context(history,profile,memory=memory,preferences=preferences,permissions=permissions,
+                            style_examples=style_examples,style_stats=style_stats)
     try:
-        d=structured(SYSTEM_PROMPT,context,Decision)
+        d=structured(SYSTEM_PROMPT,context,Decision,cached_system=canon)
         if d.action!='reply':return d,'LLM:'+model_label()
         if not d.reply.strip() or any(c.profile_key not in profile or c.text not in str(profile[c.profile_key]) for c in d.claims):
             raise ValueError('Ungrounded claim')

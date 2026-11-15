@@ -73,7 +73,7 @@ def anthropic_schema(schema):
     return result
 
 
-def complete(prompt, encoded_context, schema):
+def complete(prompt, encoded_context, schema, cached_system=None):
     """One provider request. Never retry or fall back to another provider implicitly."""
     selected = provider()
     if not configured():
@@ -82,7 +82,10 @@ def complete(prompt, encoded_context, schema):
     with httpx.Client(timeout=40, trust_env=False, follow_redirects=False) as client:
         if selected == 'anthropic':
             payload = {
-                'model': model, 'max_tokens': 1024, 'system': prompt,
+                'model': model, 'max_tokens': 1024,
+                # Stable blocks first; the style canon is large and identical across drafts, so it is cached.
+                'system': [{'type': 'text', 'text': prompt}] + ([{'type': 'text', 'text': cached_system,
+                           'cache_control': {'type': 'ephemeral'}}] if cached_system else []),
                 'messages': [{'role': 'user', 'content': encoded_context}],
                 'output_config': {'format': {'type': 'json_schema', 'schema': anthropic_schema(schema)}},
             }
@@ -96,7 +99,7 @@ def complete(prompt, encoded_context, schema):
         else:
             response = client.post('https://api.openai.com/v1/chat/completions',
                 headers={'Authorization': 'Bearer ' + os.environ['OPENAI_API_KEY']},
-                json={'model': model, 'messages': [{'role': 'system', 'content': prompt},
+                json={'model': model, 'messages': [{'role': 'system', 'content': prompt + ('\n\n' + cached_system if cached_system else '')},
                                                  {'role': 'user', 'content': encoded_context}],
                       'max_completion_tokens': 768,
                       'response_format': {'type': 'json_schema', 'json_schema': {

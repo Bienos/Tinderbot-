@@ -304,6 +304,11 @@ async def tinder_restore_deleted():
     task=asyncio.create_task(run());_BG.add(task);task.add_done_callback(_BG.discard)
     return {'restored':n,'retention_days':365,'sync':'started'}
 
+@app.get('/api/style')
+def style_library():
+    from agent import style
+    return {**style.library_summary(),'suggested_style':style.suggested_style()}
+
 @app.post('/api/tinder/sync')
 async def tinder_sync():
     from agent.tinder import poll

@@ -62,11 +62,17 @@ async def process_job(job):
     if not existing or existing[0]['status']=='regenerate':
         cfg=rt.settings();context_hash=rt.settings_hash(cfg);history_hash=rt.history_hash(hist)
         # Raw observations repeat recent history only when older than the model window.
-        recent={m['id'] for m in hist[-14:]}
+        from agent.engine import context_window
+        from agent import style
+        recent={m['id'] for m in hist[-context_window():]}
         memory=[m for m in rt.memory(t['id']) if m['source_id'] not in recent]
+        examples=style.select_examples(hist,language=cfg['language'],exclude_thread=t['id'])
+        incoming=[m['body'] for m in hist if m['sender']=='them'][-1:]
+        lang=cfg['language'] if cfg['language'] in ('pl','en') else style.language_of(incoming[0] if incoming else '')
         decision,generator=await asyncio.to_thread(generate,hist,cfg['profile'],memory,
              {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
-             {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True})
+             {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},
+             examples,style.style_stats(),style.canon_text(lang))
         if t['platform']!='simulator' and generator=='demo_rule (not AI)':
             decision.action='requires_user';decision.reply='';decision.note='Configure a model for live replies';generator='demo_placeholder'
         if existing:

@@ -7,12 +7,14 @@ import pytest
 
 def m(sender, text): return {'sender':sender,'body':text}
 
-def test_short_memory_keeps_last_14():
-    hist=[m('them',f'message{i}') for i in range(40)]
+def test_context_window_defaults_to_40_and_is_configurable(monkeypatch):
+    hist=[m('them',f'message{i}') for i in range(60)]
     context=prepare_context(hist)
-    assert len(context['recent_messages'])==14
-    assert context['recent_messages'][0]['text']=='message26'
-    assert context['recent_messages'][-1]['text']=='message39'
+    assert len(context['recent_messages'])==40
+    assert context['recent_messages'][0]['text']=='message20'
+    assert context['recent_messages'][-1]['text']=='message59'
+    monkeypatch.setenv('CONTEXT_MESSAGES','14')
+    assert prepare_context(hist)['recent_messages'][0]['text']=='message46'
 
 def test_draft_only_when_their_message_is_latest():
     assert should_draft([m('them','hello')])
