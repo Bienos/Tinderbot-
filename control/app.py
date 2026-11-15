@@ -404,7 +404,7 @@ DEMO_FILES = {'dashboard.js': (BOT_STATIC, 'text/javascript'), 'icon.svg': (BOT_
               'fonts/fonts.css': (BOT_STATIC, 'text/css'), 'demo.js': (STATIC, 'text/javascript')}
 DEMO_BAR = ('<div role="note" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 14px;'
             'padding:8px 16px;background:#2a0f1f;color:#fff;font:600 13px/1.3 Onest,system-ui,sans-serif;text-align:center">'
-            '<span>Demo na fikcyjnych danych. Klikaj śmiało, nic nie jest wysyłane.</span>'
+            '<span>Demo na fikcyjnych danych</span>'
             '<a href="/rejestracja" style="padding:5px 12px;border-radius:999px;color:#fff;text-decoration:none;'
             'background:linear-gradient(135deg,#fd267a,#ff6036)">Załóż konto</a></div>')
 

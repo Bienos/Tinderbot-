@@ -111,6 +111,10 @@
     availability: 'zwykle wieczory w tygodniu, w weekend elastycznie',
     date_ideas: ['kawa albo matcha na mieście', 'spacer z kawą na wynos', 'planszówki w barze', 'wystawa albo targi']};
 
+  const conn = {id: 'tinder:demo', enabled: true, unofficial: true, auto_send: true, bio_mode: true, bio_disclosure: true,
+    error: null, last_sync: null, next_poll: 0, blocked_until: 0, failures: 0};
+  const autopilot = () => conn.auto_send && conn.bio_mode && conn.bio_disclosure;
+
   function project(t) {
     const h = messages[t.id], last = h[h.length - 1];
     const own = drafts.filter(d => d.thread_id === t.id && (d.status === 'pending' || d.status === 'needs_user'));
@@ -122,7 +126,7 @@
     return {...t, plan, state, state_reason: STATE_REASON[state], next_action: next, message_count: h.length,
       latest_message: last ? last.body : null, latest_sender: last ? last.sender : null, latest_message_id: last ? last.id : null,
       pending_draft_count: own.filter(d => d.status === 'pending').length, has_current_draft: current,
-      sort_at: last ? last.created_at : t.profile.matched_at, automatic_sending: t.automatic_sending && settings.mode === 'autopilot' || t.id === 'd8'};
+      sort_at: last ? last.created_at : t.profile.matched_at, automatic_sending: autopilot() && !t.user_paused};
   }
 
   function stats(rows) {
@@ -154,8 +158,7 @@
       worker: {running: true, last_tick: iso(Date.now() - 20e3), error: null}, settings, grants: [], memory, outcome_details: outcomeDetails,
       activity: activity.slice().reverse(), actions: [], connections: [{id: 'tinder:demo', enabled: 1, can_reply: 1}],
       tinder: {configured: true, enabled: true, unofficial: true, token_source: 'vault', token_fingerprint: 'a41f9c', vault_ready: true,
-        connections: [{id: 'tinder:demo', enabled: true, unofficial: true, auto_send: settings.mode === 'autopilot', bio_mode: true, bio_disclosure: true,
-          error: null, last_sync: iso(Date.now() - 2 * MIN), next_poll: 0, blocked_until: 0, failures: 0}]},
+        connections: [{...conn, last_sync: iso(Date.now() - 2 * MIN)}]},
       account_url: '', stats: stats(rows), outbox: [], metrics: []};
   }
 
@@ -207,6 +210,11 @@
       if (t && 'paused' in payload) t.user_paused = payload.paused ? 1 : 0;
       if (t && 'archived' in payload) t.user_archived = payload.archived ? 1 : 0;
       return reply({ok: true});
+    }
+    if (/^\/api\/tinder\/connections\/[^/]+\/automation$/.test(path)) {
+      if ('enabled' in payload) conn.auto_send = !!payload.enabled;
+      if ('bio_mode' in payload) conn.bio_mode = !!payload.bio_mode;
+      return reply({ok: true, automatic_sending: conn.auto_send, bio_mode: conn.bio_mode});
     }
     if (path === '/api/settings' && method === 'PUT') { Object.assign(settings, payload); return reply(settings); }
     return reply({ok: true, demo: true});
