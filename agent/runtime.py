@@ -232,5 +232,22 @@ def settings_hash(cfg=None):
     return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 
+def regenerate_pending():
+    """After the owner changes style, facts or goals, drafts waiting for an answer are written again with the new
+    settings (otherwise they would just turn out of date). Only drafts for the latest incoming message that were
+    never attempted to be sent. Returns how many were queued."""
+    n=0
+    for d in s.all_drafts():
+        if d['status'] not in ('pending','stale'):continue
+        hist=s.messages(d['thread_id'])
+        if not hist or hist[-1]['id']!=d['anchor_message_id'] or hist[-1]['sender']!='them':continue
+        with s.connect() as db:
+            if db.execute('SELECT 1 FROM actions WHERE draft_id=?',(d['id'],)).fetchone():continue
+            db.execute("UPDATE drafts SET status='regenerate' WHERE id=?",(d['id'],))
+            db.execute("UPDATE jobs SET status='queued',available=0,updated=1 WHERE thread_id=? AND anchor=?",(d['thread_id'],d['anchor_message_id']))
+        enqueue(d['thread_id'],d['anchor_message_id']);n+=1
+    return n
+
+
 def history_hash(history):
     return hashlib.sha256(json.dumps([{k:m[k] for k in ('id','sender','body','created_at')} for m in history],sort_keys=True,ensure_ascii=False).encode()).hexdigest()

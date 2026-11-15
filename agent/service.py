@@ -1,5 +1,5 @@
 """Event ingestion, isolated generation, guarded execution and background orchestration."""
-import asyncio,json,os,time
+import asyncio,contextlib,json,os,time
 from uuid import uuid4
 from agent import storage as s,runtime as rt
 from agent.adapters import adapter,StaleAction
@@ -10,8 +10,25 @@ from agent.tinder import TinderRejected
 from agent.dispatch import DispatchDenied
 from agent.limits import check_send_budget,BudgetExceeded
 
-LOCK=asyncio.Lock()
+LOCK=asyncio.Lock()   # drafts, consent and sending. Held per job or per owner click, never across a long network sync.
+SYNC=asyncio.Lock()   # one Tinder/Telegram synchronization at a time; its network waits happen here, not under LOCK
+TICK=asyncio.Lock()   # one full tick() at a time
+WAKE=asyncio.Event()  # set to start the next background cycle at once (e.g. the owner asked for a new draft)
+
+
+class Busy(Exception):
+    pass
+
+
+@contextlib.asynccontextmanager
+async def owner_lock(wait=25):
+    """An owner click waits briefly for the job in progress (seconds) instead of failing or hanging."""
+    try:await asyncio.wait_for(LOCK.acquire(),wait)
+    except asyncio.TimeoutError:raise Busy('Coordinator busy')
+    try:yield
+    finally:LOCK.release()
 WORKER={'running':False,'last_tick':None,'error':None}
+SHUTTING_DOWN=False  # set on SIGTERM: no new background work while the process drains
 
 def thread_by_id(tid):return next((t for t in s.threads() if t['id']==tid),None)
 
@@ -165,32 +182,67 @@ async def reconcile():
             except Exception:receipt=None
             if receipt:complete(action['id'],action['draft_id'],receipt);rt.metric('worker_recoveries')
 
-async def tick():
-    if LOCK.locked():return
-    async with LOCK:
-        await reconcile()
-        await sync_all()
-        for _ in range(50):
+async def run_jobs():
+    """Draft generation, one job at a time. The lock is released between jobs, so the owner's clicks (send,
+    new version) get in after at most one job instead of waiting for the whole queue."""
+    for _ in range(50):
+        if SHUTTING_DOWN:return
+        async with LOCK:
             job=rt.claim()
-            if not job:break
+            if not job:return
             try:await process_job(job)
             except (DispatchDenied,PermissionError,BudgetExceeded):rt.job_end(job,'blocked','Stale context or permission denied')
             except Exception:rt.job_end(job,'queued' if job['attempts']<4 else 'failed','Processing failed; inspect configuration');rt.metric('job_failures')
-        from agent.notify import deliver_outbox
-        await asyncio.to_thread(deliver_outbox)
-        rt.expire();WORKER['last_tick']=s.utcnow();WORKER['error']=None
+        await asyncio.sleep(0)
+
+async def sync_once():
+    async with SYNC:await sync_all()
+
+async def housekeeping():
+    from agent.notify import deliver_outbox
+    await asyncio.to_thread(deliver_outbox)
+    rt.expire();WORKER['last_tick']=s.utcnow();WORKER['error']=None
+
+async def tick():
+    """Everything once, in order: reconcile, synchronize, drafts. (The background worker runs these pieces apart.)"""
+    if SHUTTING_DOWN or TICK.locked():return
+    async with TICK:
+        async with LOCK:await reconcile()
+        await sync_once()
+        await run_jobs()
+        await housekeeping()
+
+def _worker_failed(exc):
+    import traceback
+    frames=traceback.extract_tb(exc.__traceback__)
+    rt.audit(None,'worker_error',type(exc).__name__+' at '+' > '.join(f.name+':'+str(f.lineno) for f in frames[-4:]))
+    WORKER['error']='Synchronization failed ('+type(exc).__name__+'); check browser, credentials or source availability'
+    rt.metric('sync_failures')
+
+async def background_sync():
+    try:await sync_once()
+    except asyncio.CancelledError:raise
+    except Exception as exc:_worker_failed(exc)
+    finally:WAKE.set()  # new messages found: write their drafts now, not at the next interval
 
 async def worker():
+    """Drafts every few seconds; synchronization (which can take minutes during the first import) runs beside it,
+    so a long import never stops drafts, sending or the owner's buttons."""
     WORKER['running']=True
+    sync_task=None
     try:
         while True:
-            try:await tick()
+            try:
+                if not SHUTTING_DOWN:
+                    async with LOCK:await reconcile()
+                    await run_jobs()
+                    if sync_task is None or sync_task.done():sync_task=asyncio.create_task(background_sync())
+                    await housekeeping()
             except asyncio.CancelledError:raise
-            except Exception as exc:
-                import traceback
-                frames=traceback.extract_tb(exc.__traceback__)
-                rt.audit(None,'worker_error',type(exc).__name__+' at '+' > '.join(f.name+':'+str(f.lineno) for f in frames[-4:]))
-                WORKER['error']='Synchronization failed ('+type(exc).__name__+'); check browser, credentials or source availability'
-                rt.metric('sync_failures')
-            await asyncio.sleep(float(os.getenv('WORKER_INTERVAL','5')))
-    finally:WORKER['running']=False
+            except Exception as exc:_worker_failed(exc)
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(WAKE.wait(),float(os.getenv('WORKER_INTERVAL','5')))
+            WAKE.clear()
+    finally:
+        if sync_task and not sync_task.done():sync_task.cancel()
+        WORKER['running']=False
