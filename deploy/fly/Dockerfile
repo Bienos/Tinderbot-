@@ -15,6 +15,7 @@ COPY agent ./agent
 COPY static ./static
 COPY data ./data
 COPY deploy/fly/entrypoint.sh /usr/local/bin/entrypoint
+COPY deploy/fly/serve.py /app/serve.py
 RUN chmod 0755 /usr/local/bin/entrypoint
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
