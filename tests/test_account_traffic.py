@@ -70,7 +70,7 @@ async def test_repeated_protocol_failure_opens_circuit(source,monkeypatch):
 async def test_unchanged_ungranted_threads_use_cache_and_backoff(source):
     await setup_thread(source,grant=False)
     before=len(source.requests);await tinder.sync_connection(CID)
-    assert len(source.requests)-before==2 # profile + list, no repeated histories
+    assert len(source.requests)-before==3 # profile + new-matches list + conversations list, no repeated histories
     state=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
     assert state['idle_rounds']==1 and state['next_poll']>time.time()+tinder.poll_interval()
 
@@ -96,7 +96,7 @@ async def test_global_pause_stops_background_network(source):
 async def test_paused_thread_history_not_polled(source):
     await setup_thread(source);s.set_thread_flags(TID,paused=True)
     before=len(source.requests);await tinder.sync_connection(CID)
-    assert len(source.requests)-before==2
+    assert len(source.requests)-before==3
 
 async def test_uncertain_receipt_reconciliation_is_throttled(source,monkeypatch):
     source.hide_sent=True;await ready(source,monkeypatch)

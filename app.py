@@ -157,7 +157,7 @@ def state():
     threads=[]
     for t in s.threads():
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
-        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);threads.append(p)
+        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');threads.append(p)
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:rt.memory(t['id']) for t in s.threads()},'outcome_details':outcomes,

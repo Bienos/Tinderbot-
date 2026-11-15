@@ -64,26 +64,42 @@ def timestamp(value: Any) -> str:
 
 
 
-def profile_summary(person: dict) -> dict:
-    """Display-only profile data for the owner's dashboard: image links (Tinder hosts only), bio and age."""
+def _iso(value):
+    try:
+        dt = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat()
+    except (ValueError, TypeError):
+        return None
+
+
+def _tinder_https(url):
+    if not isinstance(url, str) or len(url) > 500: return False
+    parts = urlsplit(url); host = (parts.hostname or '').lower()
+    return parts.scheme == 'https' and (host == 'gotinder.com' or host.endswith('.gotinder.com'))
+
+
+def profile_summary(person: dict, match: dict | None = None) -> dict:
+    """Display-only profile data for the owner's dashboard: image links (Tinder hosts only), bio, age, timestamps."""
     photos = []
     for ph in (person.get('photos') or [])[:9]:
         if not isinstance(ph, dict): continue
-        url = ph.get('url')
-        if not url:
-            files = ph.get('processedFiles')
-            url = files[0].get('url') if isinstance(files, list) and files and isinstance(files[0], dict) else None
-        if isinstance(url, str) and len(url) <= 500:
-            parts = urlsplit(url)
-            host = (parts.hostname or '').lower()
-            if parts.scheme == 'https' and (host == 'gotinder.com' or host.endswith('.gotinder.com')): photos.append(url)
+        files = [f for f in (ph.get('processedFiles') or []) if isinstance(f, dict) and _tinder_https(f.get('url'))]
+        # Prefer the smallest rendition that is still sharp enough for a card (>=320px wide); else the largest.
+        big = sorted((f for f in files if isinstance(f.get('width'), int) and f['width'] >= 320), key=lambda f: f['width'])
+        url = big[0]['url'] if big else (max(files, key=lambda f: f.get('width') or 0)['url'] if files else None)
+        if not url and _tinder_https(ph.get('url')): url = ph['url']
+        if url: photos.append(url)
     bio = person.get('bio'); age = None
     try:
         born = datetime.fromisoformat(str(person.get('birth_date')).replace('Z', '+00:00'))
         today = datetime.now(timezone.utc); age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
         if not 18 <= age <= 120: age = None
     except ValueError: age = None
-    return {'photos': photos, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age}
+    match = match or {}
+    return {'photos': photos, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age,
+            'matched_at': _iso(match.get('created_date')), 'last_activity': _iso(match.get('last_activity_date'))}
+
 
 def token() -> str:
     value = os.getenv('TINDER_AUTH_TOKEN', '').strip()
@@ -216,10 +232,10 @@ class TinderClient:
         if not isinstance(user, dict): raise TinderProtocolError('invalid_profile')
         return ident(user.get('_id') or user.get('id'))
 
-    async def pages(self, path: str, key: str, count: int) -> Page:
+    async def pages(self, path: str, key: str, count: int, extra: dict | None = None) -> Page:
         collected = {}; cursor = None; seen = set()
         for _ in range(self.max_pages):
-            params = {'count': count}
+            params = {'count': count, **(extra or {})}
             if cursor: params['page_token'] = cursor
             data = await self.request('GET', path, params=params)
             block = data.get('data')
@@ -237,7 +253,17 @@ class TinderClient:
             seen.add(cursor)
         return Page(list(collected.values()), False)
 
-    async def matches(self) -> Page: return await self.pages('/v2/matches', 'matches', 60)
+    async def matches(self) -> Page:
+        # Tinder's web app lists new matches (message=0) and conversations (message=1) separately.
+        merged = {}; complete = True
+        for flag in (0, 1):
+            try: page = await self.pages('/v2/matches', 'matches', 60, extra={'message': flag, 'is_tinder_u': 'false', 'locale': 'en-GB'})
+            except TinderRejected:
+                if flag == 0: raise
+                continue
+            complete = complete and page.complete
+            for m in page.items: merged.setdefault(ident(m.get('_id') or m.get('id')), m)
+        return Page(list(merged.values()), complete)
 
     async def check_inbox_access(self):
         # Verify one page without importing chats or enabling any operation.
@@ -381,7 +407,7 @@ async def sync_connection(connection_id: str):
             if s.rows('SELECT 1 FROM tombstones WHERE thread_id=?', (tid,)): continue
             saved=s.rows('SELECT value FROM tinder_threads WHERE thread_id=?',(tid,))
             cached=json.loads(saved[0]['value']) if saved else {}
-            cached={**cached,'profile':profile_summary(person)}
+            cached={**cached,'profile':profile_summary(person,match)}
             activity_key=traffic.metadata_key(match)
             with s.connect() as db:
                 db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1) '
