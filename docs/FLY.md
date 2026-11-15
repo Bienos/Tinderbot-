@@ -5,7 +5,7 @@ własną aplikację, maszynę, bazę na własnym dysku i własne klucze. Zmienia
 (256 MB, zawsze włączona) plus dysk 1 GB to ok. 2,3–2,6 USD miesięcznie zamiast ok. 7,25 USD na Renderze.
 
 ## Jak to działa
-- Aplikacja `iskra-u<numer>-<losowe>` z adresem `https://<nazwa>.fly.dev` (HTTPS daje Fly).
+- Aplikacja `winq-u<numer>-<losowe>` (przedrostek z nazwy marki) z adresem `https://<nazwa>.fly.dev` (HTTPS daje Fly).
 - Dysk 1 GB w regionie `fra` (Frankfurt), szyfrowany, z codzienną kopią trzymaną 7 dni.
 - Maszyna 256 MB, zawsze włączona (bot pracuje także wtedy, gdy panel jest zamknięty).
 - Hasła i klucze (token panelu, klucz szyfrowania, klucz SSO, klucz modelu) trafiają do sekretów aplikacji Fly,

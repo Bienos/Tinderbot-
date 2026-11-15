@@ -481,7 +481,7 @@ def test_fly_provisioning_builds_an_isolated_always_on_bot_with_secrets_outside_
     assert capp.run_provision(acc['id'])=='done'
     row=capp.q('SELECT * FROM accounts WHERE id=?',(acc['id'],),fetch=True)[0]
     app=row['render_service_id'][4:]
-    assert row['render_service_id'].startswith('fly:iskra-u') and row['instance_url']==f'https://{app}.fly.dev'
+    assert row['render_service_id'].startswith('fly:winq-u') and row['instance_url']==f'https://{app}.fly.dev'
     steps=[(m,p.replace(app,'APP')) for m,p,_,_ in fcalls]
     assert steps[:7]==[('POST','/v1/apps'),('POST','/v1/apps/APP/ip_assignments'),('POST','/v1/apps/APP/ip_assignments'),
                        ('POST','/v1/apps/APP/secrets'),('POST','/v1/apps/APP/volumes'),('POST','/v1/apps/APP/machines'),
@@ -510,7 +510,7 @@ def test_fly_failure_cleans_up_and_is_retryable(client,monkeypatch):
     fcalls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock([]));monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(fcalls,fail_machine=True))
     client.post('/api/register',json=REG,headers={'Origin':'http://testserver'});acc=capp.q('SELECT id FROM accounts',fetch=True)[0]
     assert capp.run_provision(acc['id'])=='failed'
-    assert any(m=='DELETE' and p.startswith('/v1/apps/iskra-u') for m,p,_,_ in fcalls)    # no half-made app left behind
+    assert any(m=='DELETE' and p.startswith('/v1/apps/winq-u') for m,p,_,_ in fcalls)    # no half-made app left behind
     row=capp.q('SELECT provision_state,provision_error,render_service_id FROM accounts',fetch=True)[0]
     assert row['provision_state']=='failed' and 'create machine' in row['provision_error'] and not row['render_service_id']
 

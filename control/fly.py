@@ -16,6 +16,7 @@ key never sits in this service's own settings.
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import time
 
@@ -86,7 +87,8 @@ def machine_config(image: str, env: dict, volume_id: str, account_id: int, host:
 def create_instance(account_id: int) -> dict:
     """App, public address, secrets, volume, Machine. On any failure the half-made app is removed again."""
     from control import provision
-    name = f'iskra-u{account_id}-{secrets.token_hex(3)}'
+    brand = re.sub(r'[^a-z0-9]', '', os.getenv('BRAND_NAME', 'winq').lower()) or 'bot'
+    name = f'{brand}-u{account_id}-{secrets.token_hex(3)}'  # customers see this in their panel's address
     region = os.getenv('FLY_REGION', 'fra').strip() or 'fra'
     origin = f'https://{name}.fly.dev'
     sso_secret = secrets.token_urlsafe(32)
