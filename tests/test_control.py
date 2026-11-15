@@ -623,3 +623,15 @@ def test_fly_bot_is_live_only_when_its_certificate_is_ready(monkeypatch):
     monkeypatch.setattr(fly,'TRANSPORT',_fly_mock([],cert_status='Awaiting certificates'))
     assert fly.deploy_status('winq-u7-abc123')=='live'          # a bot with its own fly.dev address needs no certificate
     assert fly.bot_host('winq-b-c611469f')=='c611469f.app.winq.site' and fly.bot_host('winq-u7-abc123') is None
+
+
+def test_demo_serves_real_panel_on_fake_data(client):
+    page = client.get('/demo')
+    assert page.status_code == 200 and 'noindex' in page.text and 'Demo na fikcyjnych danych' in page.text
+    # demo.js must run before dashboard.js so the panel's API calls are answered in the browser
+    assert page.text.index('/demo/static/demo.js') < page.text.index('/demo/static/dashboard.js')
+    assert '"/static/' not in page.text
+    for name in ('demo.js', 'dashboard.js', 'icon.svg', 'fonts/fonts.css', 'fonts/onest-latin-wght-normal.woff2'):
+        assert client.get('/demo/static/' + name).status_code == 200
+    for name in ('../app.py', 'fonts/../../app.py', 'dashboard.html', 'login.js'):
+        assert client.get('/demo/static/' + name).status_code == 404

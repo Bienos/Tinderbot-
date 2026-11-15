@@ -397,6 +397,39 @@ def open_panel(request: Request):
     return RedirectResponse(acc['instance_url'].rstrip('/') + '/auth/sso?t=' + sso_token(acc), 303)
 
 
+# Public demo: the bot's real panel (static/dashboard.html at the repo root) on invented data.
+# control/static/demo.js answers the panel's API calls inside the browser, so no bot and no account are involved.
+BOT_STATIC = BASE.parent / 'static'
+DEMO_FILES = {'dashboard.js': (BOT_STATIC, 'text/javascript'), 'icon.svg': (BOT_STATIC, 'image/svg+xml'),
+              'fonts/fonts.css': (BOT_STATIC, 'text/css'), 'demo.js': (STATIC, 'text/javascript')}
+DEMO_BAR = ('<div role="note" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 14px;'
+            'padding:8px 16px;background:#2a0f1f;color:#fff;font:600 13px/1.3 Onest,system-ui,sans-serif;text-align:center">'
+            '<span>Demo na fikcyjnych danych</span>'
+            '<a href="/rejestracja" style="padding:5px 12px;border-radius:999px;color:#fff;text-decoration:none;'
+            'background:linear-gradient(135deg,#fd267a,#ff6036)">Załóż konto</a></div>')
+
+
+@app.get('/demo')
+def demo():
+    html = (BOT_STATIC / 'dashboard.html').read_text(encoding='utf-8').replace('/static/', '/demo/static/')
+    html = html.replace('<title>Winq · panel</title>', f'<title>{BRAND} · demo panelu</title><meta name="robots" content="noindex">', 1)
+    html = html.replace('<script src="/demo/static/dashboard.js"', '<script src="/demo/static/demo.js" defer></script>'
+                        '<script src="/demo/static/dashboard.js"', 1)
+    html = re.sub(r'<body([^>]*)>', lambda m: m.group(0) + DEMO_BAR, html, count=1)
+    return HTMLResponse(html, headers={'Cache-Control': 'no-cache'})
+
+
+@app.get('/demo/static/{name:path}')
+def demo_static(name: str):
+    if re.fullmatch(r'fonts/[a-z-]+\.woff2', name) and (BOT_STATIC / name).is_file():
+        return FileResponse(BOT_STATIC / name, media_type='font/woff2', headers={'Cache-Control': 'public, max-age=604800'})
+    if name not in DEMO_FILES:
+        raise HTTPException(404)
+    folder, kind = DEMO_FILES[name]
+    return FileResponse(folder / name, media_type=kind,
+                        headers={'Cache-Control': 'no-cache'})
+
+
 @app.get('/health')
 def health():
     return {'status': 'ok'}
