@@ -271,6 +271,14 @@ def account_page(request: Request):
     return page('account.html')
 
 
+@app.get('/konto/zaawansowane')
+def account_advanced_page(request: Request):
+    """Account deletion lives here, linked only from the panel's Settings → Account tab, not from the main account page."""
+    if not current_account(request):
+        return RedirectResponse('/zaloguj', 303)
+    return page('account_advanced.html')
+
+
 @app.get('/konto/panel')
 def open_panel(request: Request):
     acc = current_account(request)

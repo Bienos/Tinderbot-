@@ -115,6 +115,13 @@ def test_delete_account_requires_password(client):
     assert client.post('/api/login',json={'email':'ola@example.com','password':REG['password']}).status_code==401
 
 
+def test_delete_option_is_not_on_main_account_page(client):
+    assert client.get('/konto/zaawansowane',follow_redirects=False).status_code==303
+    client.post('/api/register',json=REG)
+    assert 'delete-form' not in client.get('/konto').text
+    assert 'delete-form' in client.get('/konto/zaawansowane').text
+
+
 def test_cross_origin_posts_blocked_when_origin_configured(client,monkeypatch):
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
     assert client.post('/api/register',json=REG,headers={'Origin':'https://evil.example'}).status_code==403
