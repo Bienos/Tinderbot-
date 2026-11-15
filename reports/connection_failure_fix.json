@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-15",
+  "reported_action": "Connect Tinder",
+  "regression_before_fix": {
+    "failed_cases": 2,
+    "encodings": [
+      "gzip",
+      "deflate"
+    ],
+    "exception": "httpx.DecodingError",
+    "cause": "Decoded response bytes were reconstructed with original Content-Encoding and decoded twice"
+  },
+  "fix": "Remove wire encoding/length/transfer headers from already-decoded response; classify corrupted encodings without replaying sends",
+  "tests": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "151",
+    "time": "22.590",
+    "timestamp": "2026-11-15T09:35:54.118968+00:00",
+    "hostname": "5c23637562a0"
+  },
+  "compression_regressions": 10,
+  "safe_diagnostic_regressions": 6,
+  "live_message_sends": false,
+  "startup_profile_probe": "Optional, disabled by default; deployment outcome tracked separately",
+  "secret_handling": "No credential reads by the assistant; no response bodies, exception text or frame locals in diagnostic logs"
+}

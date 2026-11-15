@@ -1,5 +1,6 @@
 """OpenDate-derived connector contracts and application orchestration. All HTTP is mocked."""
 import json
+import gzip,zlib
 from datetime import datetime,timezone,timedelta
 import httpx
 import pytest
@@ -8,6 +9,59 @@ from agent.adapters import adapter,StaleAction
 from agent.engine import Decision
 OWNER='owner-a';PERSON='person-a';CID='tinder:owner-a';TID='tinder:owner-a:match-a'
 TOKEN='fake-private-token-for-offline-tests'
+
+@pytest.mark.parametrize('encoding,compress',[('gzip',gzip.compress),('deflate',zlib.compress)])
+async def test_compressed_profile_response_is_decoded_once(store,encoding,compress):
+    body=compress(json.dumps({'data':{'_id':OWNER}}).encode())
+    def handle(req):
+        return httpx.Response(200,headers={'Content-Type':'application/json','Content-Encoding':encoding},content=body)
+    async with tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)) as api:
+        assert await api.profile()==OWNER
+
+@pytest.mark.parametrize('status,expected',[(401,tinder.TinderAuthError),(403,tinder.TinderRestriction),
+    (429,tinder.TinderRateLimited),(503,tinder.TinderRateLimited)])
+async def test_compressed_error_response_preserves_status_and_retry_after(store,status,expected):
+    body=gzip.compress(json.dumps({'error':'synthetic-upstream-error'}).encode())
+    calls=[]
+    def handle(req):
+        calls.append(req)
+        return httpx.Response(status,headers={'Content-Type':'application/json','Content-Encoding':'gzip',
+            'Retry-After':'180'},content=body)
+    async with tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)) as api:
+        with pytest.raises(expected) as error:await api.profile()
+    assert len(calls)==1
+    if status in (429,503):assert error.value.delay==180
+
+@pytest.mark.parametrize('method,expected',[('GET',tinder.TinderProtocolError),('POST',tinder.TinderUncertain)])
+async def test_corrupt_compression_is_controlled_and_never_retries_a_send(store,method,expected):
+    calls=[]
+    class Corrupt(httpx.AsyncByteStream):
+        async def __aiter__(self):yield b'invalid-gzip-data'
+    def handle(req):
+        calls.append(req)
+        return httpx.Response(200,headers={'Content-Encoding':'gzip'},stream=Corrupt())
+    async with tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)) as api:
+        with pytest.raises(expected):await api.request(method,'/profile' if method=='GET' else '/user/matches/match-a')
+    assert len(calls)==1
+
+async def test_compressed_response_limit_applies_to_decoded_size(store):
+    body=gzip.compress(b'x'*(4*1024*1024+1))
+    async with tinder.TinderClient(TOKEN,transport=httpx.MockTransport(lambda req:httpx.Response(
+        200,headers={'Content-Encoding':'gzip'},content=body))) as api:
+        with pytest.raises(tinder.TinderProtocolError,match='source_response_too_large'):await api.profile()
+
+def test_api_connect_accepts_compressed_profile_without_internal_failure(store,monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import app
+    monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN',TOKEN)
+    body=gzip.compress(json.dumps({'data':{'_id':OWNER}}).encode())
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(
+        lambda req:httpx.Response(200,headers={'Content-Type':'application/json','Content-Encoding':'gzip'},content=body))))
+    with TestClient(app,headers={'Authorization':'Bearer test-dashboard-token-at-least-32-chars'}) as client:
+        result=client.post('/api/tinder/connect',json={'account_owned':True,'acknowledge_unofficial':True})
+        assert result.status_code==200 and result.json()['connection_id']==CID
+        assert not s.rows('SELECT * FROM actions') and not s.rows('SELECT * FROM grants')
+
 def raw_message(mid='in-1',text='hey',sender=PERSON):
     return {'_id':mid,'message':text,'from':sender,'to':PERSON if sender==OWNER else OWNER,
             'match_id':'match-a','sent_date':datetime.now(timezone.utc).isoformat()}

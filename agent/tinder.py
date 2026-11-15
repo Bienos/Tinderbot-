@@ -126,7 +126,15 @@ class TinderClient:
                     async for chunk in stream.aiter_bytes():
                         chunks.extend(chunk)
                         if len(chunks)>4*1024*1024:raise TinderProtocolError('source_response_too_large')
-                    response=httpx.Response(stream.status_code,headers=stream.headers,content=bytes(chunks),request=stream.request)
+                    # aiter_bytes already decodes Content-Encoding. Reusing those
+                    # headers would make Response decode the plaintext a second time.
+                    decoded_headers=stream.headers.copy()
+                    for header in ('Content-Encoding','Content-Length','Transfer-Encoding'):
+                        decoded_headers.pop(header,None)
+                    response=httpx.Response(stream.status_code,headers=decoded_headers,content=bytes(chunks),request=stream.request)
+            except httpx.DecodingError:
+                if method!='GET':raise TinderUncertain('send_receipt_invalid') from None
+                raise TinderProtocolError('invalid_source_encoding') from None
             except httpx.TransportError:
                 if method != 'GET': raise TinderUncertain('send_delivery_unknown') from None
                 if attempt + 1 == attempts: raise TinderUnavailable('read_transport_failed') from None

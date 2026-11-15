@@ -1,12 +1,12 @@
-# Current validation — Anthropic support and Render build isolation, 2026-11-15
+# Current validation — compressed Tinder responses and safe diagnostics, 2026-11-15
 
 ## Executed suite
 
-`SEED_SIMULATOR=false COOKIE_SECURE=true DATING_AGENT_SOURCE=fixture LLM_PROVIDER=anthropic ANTHROPIC_MODEL=claude-sonnet-5-5 PLAYWRIGHT_BROWSERS_PATH=/workspace/pw-browsers RUN_BROWSER_E2E=1 .venv/bin/python -m pytest -q --junitxml=reports/tests.xml`
+`PLAYWRIGHT_BROWSERS_PATH=/workspace/pw-browsers RUN_BROWSER_E2E=1 .venv/bin/python -m pytest -q --junitxml=reports/tests.xml`
 
-**135 passed, 0 failed, 0 errors, 0 skipped**, 21.805 seconds. Provider calls are mocked. This run deliberately inherits Render's production simulator-disabled and secure-cookie settings to validate test isolation.
+**151 passed, 0 failed, 0 errors, 0 skipped**, 22.590 seconds. Provider responses are mocked; three simulator tests use real Chromium. The preceding 135-test run also validated Render production environment isolation.
 
-The **19 provider cases** validate Anthropic headers and structured schema, independent review, explicit provider selection, dashboard recognition, refusal/truncation/HTTP errors, original length validation, unsafe content blocks, usage, semantic extraction, offline evaluation key isolation and OpenAI compatibility. Three cloud-deployment cases validate Render HTTPS-origin derivation, secure session/login behavior, a fresh simulator-free background worker and settings persisting across restart; an explicit custom origin overrides the generated platform URL and malformed origins fail closed. This also includes **19 account-traffic cases**, **23 security cases**, **25 existing mocked Tinder cases**, **3 real Chromium simulator tests**, and **43 other existing cases**. The single pinned Starlette/httpx test-client deprecation warning remains visible.
+The **19 provider cases** validate Anthropic headers and structured schema, independent review, explicit provider selection, dashboard recognition, refusal/truncation/HTTP errors, original length validation, unsafe content blocks, usage, semantic extraction, offline evaluation key isolation and OpenAI compatibility. Three cloud-deployment cases validate Render HTTPS-origin derivation, secure session/login behavior, a fresh simulator-free background worker and settings persisting across restart; an explicit custom origin overrides the generated platform URL and malformed origins fail closed. This also includes **19 account-traffic cases**, **23 security cases**, **35 mocked Tinder cases**, **6 safe-diagnostic cases**, **3 real Chromium simulator tests**, and **43 other existing cases**. The single pinned Starlette/httpx test-client deprecation warning remains visible.
 
 The first owner-applied Render build failed with 15 fixture-dependent tests because production `SEED_SIMULATOR=false` removed synthetic test threads and `COOKIE_SECURE=true` affected HTTP test sessions. Shared and subprocess fixtures now explicitly select test seeding and cookie policy, while cloud tests continue exercising production behavior. No failing tests or production protections were removed. A restricted-network local TestClient run stalled; it was stopped and rerun with permitted loopback networking. All final test counts above come from the completed run.
 
@@ -34,10 +34,16 @@ Official Tinder terms and banned-account guidance plus RFC 6585/9110 were inspec
 
 Python syntax compilation and `docker compose config --quiet` passed. Runtime dependencies are unchanged; the preceding advisory check of 29 pinned Python packages found zero known advisories and zero skipped packages. No Docker build/runtime or image scan was possible because daemon access is unavailable.
 
-No real Tinder account, live model, live Telegram account or SMTP server was accessed. All Tinder request/send tests use mocked HTTP, and browser tests use only our local fictional site. The implementation does not demonstrate invisibility or a measured reduction in account-ban probability. Platform restrictions and live endpoint compatibility remain unresolved external risks.
+No real Tinder account, live model, live Telegram account or SMTP server was accessed during these local automated tests. All Tinder request/send tests use mocked HTTP, and browser tests use only our local fictional site. Hosted read-only troubleshooting probes, if enabled by the operator, are separate from these test results. The implementation does not demonstrate invisibility or a measured reduction in account-ban probability. Platform restrictions and live endpoint compatibility remain unresolved external risks.
 
 Automatic sending remains on by default for an explicitly connected, consented/disclosed Tinder account. Budgets, pause/revoke and restriction stops can defer/block dispatch without requiring approval for every ordinary message. Tinder's account-specific setting does not change Telegram's execution mode.
 
 ## Prepared Render hosting path
 
 The native-Python render.yaml uses the documented smallest paid web compute plan (0.5c-512mb), one instance, a 1 GB /var/data disk, generated dashboard credentials and two owner-supplied secret placeholders (now ANTHROPIC_API_KEY and TINDER_AUTH_TOKEN). No fictional simulator or Chromium runs in this hosted configuration. The updated Blueprint passed Render's fetched public JSON Schema. Render CLI 2.36.0 is installed, but separate CLI authentication remains unavailable; plugin OAuth access does not authenticate the CLI. The Render plugin successfully planned the original Blueprint, and the owner applied it; the first hosted build failure is described above. This artifact records local checks before deploying the corrected revision, not a successful cloud or messaging test. See docs/GO_LIVE.md and reports/anthropic_provider_validation.json.
+
+## Reported Connect Tinder failure
+
+Reproduced two failing gzip/deflate profile regressions before fixing the transport: `aiter_bytes()` already decoded the payload, then rebuilding a response with the original Content-Encoding caused a second decode and unhandled httpx.DecodingError. Decoded-response reconstruction now removes wire encoding/length/transfer headers while preserving status, content type and Retry-After. Malformed encoded reads return a controlled protocol error; malformed send receipts remain uncertain and are never retried. Ten compression cases cover profile success, 401/403/429/503 responses, corrupt GET/POST payloads, the decompressed size bound and the exact dashboard connect route.
+
+Six diagnostic tests validate opaque error references, metadata-only logging, database-failure tolerance, read-only profile checks without enabling/sending, redaction and pause behavior. The optional startup check defaults off; its outcome does not prove chat discovery or sending. Deployment and any live profile probe remain separate operational checks.

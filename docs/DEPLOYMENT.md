@@ -1,5 +1,9 @@
 # Setup and deployment
 
+## Diagnosing connection failures
+
+Unexpected request errors return a reference that also appears in Activity and server logs. Logs contain only exception class and code locations, never exception text, request bodies, frame locals or credentials. For an owner-requested Tinder connection failure, temporarily set `TINDER_STARTUP_CHECK=true` and redeploy for a read-only profile check. This does not enable a connection, import chats or send messages. Existing request budgets/cooldowns and global pause still apply. Disable the flag after troubleshooting. A successful profile check does not establish messaging permission or verify discovery/sending.
+
 For the prepared hosted path, use [GO_LIVE.md](GO_LIVE.md) and the repository’s render.yaml. It runs natively on Render with one persistent disk, simulator disabled, and credentials entered through the provider UI. Review paid resources before applying.
 
 ## One-command local startup

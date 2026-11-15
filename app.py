@@ -12,6 +12,7 @@ from agent.auth import token,same_secret,create_session,session_valid,revoke_ses
 from agent.http_security import SecurityBoundary,internal_request,public_origin
 from agent.dispatch import DispatchDenied
 from agent.llm import configured as model_configured
+from agent.diagnostics import report_failure,tinder_startup_check
 from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
@@ -33,9 +34,10 @@ async def lifespan(app):
             await asyncio.sleep(20)
     hb=asyncio.create_task(heartbeat())
     task=asyncio.create_task(service.worker()) if os.getenv('WORKER_ENABLED','true')=='true' else None
+    preflight=asyncio.create_task(tinder_startup_check()) if os.getenv('TINDER_STARTUP_CHECK','false')=='true' else None
     try:yield
     finally:
-        for t in (task,hb):
+        for t in (task,hb,preflight):
             if t:
                 t.cancel()
                 with contextlib.suppress(asyncio.CancelledError):await t
@@ -59,7 +61,10 @@ async def auth(request,call_next):
         if request.method not in ('GET','HEAD') and not auth and not origin and request.headers.get('x-agent-request')!='dashboard':
             return JSONResponse({'detail':'CSRF protection'},403)
     try:response=await call_next(request)
-    except Exception:return JSONResponse({'detail':'Internal failure; inspect activity and configuration'},500)
+    except Exception as exc:
+        route=request.scope.get('route')
+        reference=report_failure(exc,getattr(route,'path','http_request'))
+        return JSONResponse({'detail':'Unexpected application error. Reference: '+reference,'error_id':reference},500)
     return response
 
 class Login(BaseModel):token:str=Field(max_length=256)

@@ -1,5 +1,10 @@
 import pytest
 from agent import storage as s,runtime as rt
+@pytest.fixture(autouse=True)
+def disable_operator_startup_check(monkeypatch):
+    # A production troubleshooting flag must not add real network calls to tests.
+    monkeypatch.setenv('TINDER_STARTUP_CHECK','false')
+
 @pytest.fixture
 def store(tmp_path,monkeypatch):
     monkeypatch.setattr(s,'DB_PATH',tmp_path/'test.db')
