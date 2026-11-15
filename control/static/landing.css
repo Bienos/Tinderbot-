@@ -343,23 +343,27 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .split-art{min-height:0;height:100vh;justify-content:space-between;gap:24px;padding:36px clamp(28px,4vw,56px)}
 .split-main{height:100vh;overflow-y:auto;padding:24px clamp(18px,4vw,56px)}
 .art-copy .art-h{margin:0;max-width:16ch}
-.art-kick{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
-.trip{width:min(100%,430px);background:#fff;color:var(--ink);border-radius:24px;transform:rotate(-1.5deg);box-shadow:0 40px 80px -30px rgba(90,0,40,.6);position:relative;overflow:hidden}
-.trip-head{display:flex;align-items:baseline;gap:10px;padding:16px 20px 12px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.trip-head b{font-family:"Unbounded",sans-serif;font-size:18px;letter-spacing:-.02em;text-transform:none;color:var(--ink)}.trip-head i{font-style:normal;color:var(--ember)}
-.trip-kind{margin-left:auto;padding:3px 8px;border-radius:999px;background:var(--bg)}
-.trip-stops{list-style:none;margin:0;padding:4px 20px 14px 20px;position:relative;display:grid;gap:12px}
-.trip-stops::before{content:"";position:absolute;left:28px;top:16px;bottom:44px;border-left:2px dashed #ffc2d6}
-.trip-stops li{position:relative;display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding-left:22px;animation:tripin .5s ease-out both}
-.trip-stops li::before{content:"";position:absolute;left:1px;top:4px;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid var(--ember)}
-.trip-stops li:nth-child(2){animation-delay:.35s}.trip-stops li:nth-child(3){animation-delay:.7s}.trip-stops li:nth-child(4){animation-delay:1.05s}
-.trip-stops time{grid-row:span 2;font-size:12px;font-weight:700;color:var(--muted);min-width:64px;padding-top:2px}
-.trip-stops b{font-size:15px}.trip-stops small{font-size:13px;color:var(--muted);line-height:1.35}
-.trip-stops .goal::before{background:linear-gradient(135deg,#fd267a,#ff6036);border-color:#fff;box-shadow:0 0 0 3px rgba(253,38,122,.25);width:14px;height:14px;left:0;top:3px}
-.trip-stops .goal b{color:var(--ember)}
-.trip-stub{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-top:2px dashed var(--line);background:linear-gradient(135deg,#fd267a,#ff6036);color:#fff}
-.trip-stub small{display:block;font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.06em;font-weight:700}.trip-stub b{font-size:15px}
-.trip-price{text-align:right}.trip-price b{font-family:"Unbounded",sans-serif;font-size:17px}.trip-price small{text-transform:none;letter-spacing:0;font-weight:500}
+.swk{margin:auto 0;display:grid;gap:clamp(14px,2.6vh,26px)}
+.swk-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,250px);align-items:center;gap:20px;animation:tripin .6s ease-out both}
+.swk-row:nth-child(2){animation-delay:.35s}.swk-row:nth-child(3){animation-delay:.7s}
+.swk-w{margin:0;font-family:"Unbounded",sans-serif;font-weight:800;font-size:clamp(44px,5.2vw,82px);line-height:1;letter-spacing:-.05em;white-space:nowrap}
+.swk-row:nth-child(2) .swk-w{color:rgba(255,255,255,.72)}.swk-w.hl{color:#2a0f22}
+.swk-card{background:#fff;color:var(--ink);border-radius:20px;padding:12px 14px;box-shadow:0 24px 50px -22px rgba(80,0,35,.6);display:grid;gap:8px}
+.swk-row:nth-child(1) .swk-card{transform:rotate(-2deg)}.swk-row:nth-child(2) .swk-card{transform:rotate(1.5deg)}.swk-row:nth-child(3) .swk-card{transform:rotate(-1deg)}
+.swk-card small{font-size:12px;color:var(--muted);line-height:1.35}
+.swk-k{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ember)}
+.swk-match{display:flex;align-items:center}
+.swk-av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;border:3px solid #fff;background:#2a0f22}
+.swk-av.b{background:linear-gradient(135deg,#fd267a,#ff6036);margin-left:-8px}
+.swk-heart{order:1;margin-left:10px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#ffe3ec;color:var(--ember);font-size:14px;animation:beat 1.6s ease-in-out infinite}
+.swk-av.b{order:0}
+@keyframes beat{50%{transform:scale(1.18)}}
+.swk-bubble{background:linear-gradient(135deg,#fd267a,#ff6036);color:#fff;font-size:13px;line-height:1.35;padding:9px 12px;border-radius:14px 14px 4px 14px}
+.swk-card.dark{background:#2a0f22;color:#fff}.swk-card.dark .swk-k{color:#ff9cbc}.swk-card.dark small{color:rgba(255,255,255,.7)}
+.swk-date{display:flex;align-items:center;gap:12px}.swk-date b{display:block;font-size:14px}
+.swk-cal{flex:none;width:52px;border-radius:12px;overflow:hidden;background:#fff;color:var(--ink);text-align:center;font-family:"Unbounded",sans-serif;font-weight:700;font-size:14px;padding-bottom:5px}
+.swk-cal b{background:linear-gradient(135deg,#fd267a,#ff6036);color:#fff;font-size:10px;letter-spacing:.08em;padding:3px 0;margin-bottom:4px}
+@media(max-width:1180px) and (min-width:901px){.swk-row{grid-template-columns:auto minmax(0,200px);gap:14px}.swk-w{font-size:clamp(34px,3.9vw,46px)}.swk-card small{display:none}}
 @keyframes tripin{from{opacity:0;transform:translateY(8px)}}
 .split-art .art-list{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;font-weight:600;max-width:560px}
 .split-art .art-list li{display:flex;align-items:center;white-space:nowrap;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.18)}
@@ -370,5 +374,5 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .row2f{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px}
 .mode span{padding:9px 12px}.mode small{font-size:12px}
 .card-wrap .check{font-size:14px;line-height:1.4}.card-wrap .check input{margin-top:1px}
-@media(max-height:820px) and (min-width:901px){.trip-stops{gap:8px}.trip-stops small{font-size:12px}.split-art .art-list{display:none}.card-wrap{padding:22px 28px}.card-wrap .sub{display:none}.steps-mini{margin-bottom:12px}}
-@media(max-width:900px){body.split{height:auto;overflow:visible}.split-art{height:auto}.split-main{height:auto;overflow:visible}.trip,.split-art .art-list,.art-kick{display:none}.row2f{grid-template-columns:1fr}}
+@media(max-height:820px) and (min-width:901px){.swk-w{font-size:clamp(40px,4.4vw,64px)}.swk-card small{display:none}.card-wrap{padding:22px 28px}.card-wrap .sub{display:none}.steps-mini{margin-bottom:12px}}
+@media(max-width:900px){body.split{height:auto;overflow:visible}.split-art{height:auto}.split-main{height:auto;overflow:visible}.swk{display:none}.row2f{grid-template-columns:1fr}}
