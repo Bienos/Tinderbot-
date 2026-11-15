@@ -65,7 +65,6 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  else if(me.has_access||paidNow){mark(2);progress(me,paidNow)}
  else if(me.provision_state==='failed'){mark(2);h.textContent='Stawianie serwera się przedłuża';p.textContent='Coś poszło nie tak przy przygotowaniu Twojego serwera. Już nad tym pracujemy i napiszemy, gdy będzie gotowy.'}
  else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut, a ta strona odświeży się sama.':'Stawiamy Twój osobny serwer. Ta strona odświeży się sama, a gdy panel będzie gotowy, napiszemy też mailem.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s);watch(me)}
- const dz=document.getElementById('danger-zone');if(dz)dz.hidden=!!card.querySelector('.setup');
  if(me.withdrawn){const w=document.createElement('p');w.className='muted';w.textContent='Odstąpiłeś od umowy. Zwrot jest w drodze.';card.append(w)}
  if(me.can_withdraw)withdrawBox();
  if(me.can_manage_billing)card.append(btn('Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));

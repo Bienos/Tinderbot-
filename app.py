@@ -16,14 +16,14 @@ from agent.diagnostics import report_failure,tinder_startup_check
 from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
-# Public, pre-login pages share the landing page's look (control/static/landing.css): palette, type and flame mark.
-FLAME='<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient></defs><path fill="url(#fg)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg>'
+# Public, pre-login pages share the landing page's look (control/static/landing.css): palette, type and the iskra wordmark.
+WORDMARK=(BASE/'static/wordmark.svg').read_text(encoding='utf-8').strip().replace('<svg ','<svg class="wordmark" aria-hidden="true" focusable="false" ',1)
 PAGE_CSS=(':root{--pink:#fd267a;--ink:#2a0f22;--text:#57404f;--muted:#8a7482;--line:#f0e3e9;--grad:linear-gradient(120deg,#fd267a 0%,#ff6036 100%);'
  'font-family:"Onest",ui-sans-serif,system-ui,sans-serif;color-scheme:light}*{box-sizing:border-box}'
  'body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;color:var(--text);font-size:16px;line-height:1.55;'
  'background:radial-gradient(1200px 700px at 85% -10%,#ffe1ea 0%,transparent 60%),radial-gradient(900px 600px at -10% 30%,#fff0e6 0%,transparent 55%),#fff6f8}'
  'main{width:min(440px,100%);background:#fff;border-radius:28px;padding:36px 32px;box-shadow:0 24px 60px -28px rgba(42,15,34,.35)}'
- '.brand{display:flex;align-items:center;gap:8px;font-family:"Unbounded","Onest",sans-serif;font-weight:700;font-size:21px;letter-spacing:-.02em;color:var(--ink);margin-bottom:28px}.brand svg{width:26px;height:26px}'
+ '.brand{line-height:0;margin-bottom:28px}.brand .wordmark{height:28px;width:auto;display:block}'
  'h1{font-family:"Unbounded","Onest",sans-serif;font-weight:650;font-size:24px;line-height:1.15;letter-spacing:-.03em;color:var(--ink);margin:0 0 10px}p{margin:0 0 22px}'
  '.btn{display:block;width:100%;text-align:center;border:0;cursor:pointer;background:var(--grad);color:#fff;text-decoration:none;font:inherit;font-weight:700;padding:14px 22px;border-radius:999px;box-shadow:0 10px 30px -10px rgba(253,38,122,.65)}'
  'input{display:block;width:100%;font:inherit;padding:12px 16px;border:2px solid var(--line);border-radius:14px;background:#fff6f8;color:var(--ink);margin:0 0 12px}input:focus{outline:0;border-color:var(--pink)}'
@@ -40,7 +40,7 @@ def control_origin():
 def brand_page(title,body,status=200,head=''):
     return HTMLResponse('<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         f'<meta name="theme-color" content="#fff6f8"><link rel="icon" type="image/svg+xml" href="/static/icon.svg"><link rel="stylesheet" href="/static/fonts/fonts.css">{head}'
-        f'<title>{html.escape(title)} · Iskra</title><style>{PAGE_CSS}</style></head><body><main><div class="brand">{FLAME}Iskra</div>{body}</main></body></html>',status)
+        f'<title>{html.escape(title)} · Iskra</title><style>{PAGE_CSS}</style></head><body><main><div class="brand" role="img" aria-label="Iskra">{WORDMARK}</div>{body}</main></body></html>',status)
 
 def login_page():
     form=('<form><input type="password" autocomplete="current-password" required aria-label="Token dostępu" placeholder="Token dostępu">'
@@ -58,7 +58,9 @@ def login_page():
 STATIC_FILES={'dashboard.js':'text/javascript','mock.js':'text/javascript','login.js':'text/javascript','icon.svg':'image/svg+xml','fonts/fonts.css':'text/css',
     **{f'fonts/{face}-{subset}-wght-normal.woff2':'font/woff2' for face in ('onest','unbounded') for subset in ('latin','latin-ext')}}
 PUBLIC_STATIC=frozenset('/static/'+name for name in STATIC_FILES if name in ('login.js','icon.svg') or name.startswith('fonts/'))
-LEASE_WAIT_SECONDS=30
+LEASE_WAIT_SECONDS=75   # longer than LEASE_TTL, so a stale lease can never crash-loop the start
+LEASE_TTL=60
+LEASE_HEARTBEAT=15
 
 
 def lease_owner():
@@ -66,11 +68,24 @@ def lease_owner():
     return f'{socket.gethostname()}:{os.getpid()}:{secrets.token_hex(8)}'
 
 
+def _pid_alive(pid):
+    try:os.kill(pid,0)
+    except PermissionError:return True
+    except OSError:return False
+    return True
+
+
 def lease_blocks(prior,owner):
-    """Another live worker of THIS container holds the lease. A lease left by a previous container (restart or
-    redeploy: the disk moves to the new one) is stale, because only one container can mount the data disk."""
+    """Is another LIVE worker of this container holding the lease? Anything else is stale and is taken over at once:
+    a previous container (the data disk moved to us, only one container can mount it) or an earlier process of this
+    container that is gone (killed while shutting down, so it never released the lease; it can even have had our pid)."""
     if not prior or prior['expires']<=time.time():return False
-    return prior['owner'].split(':',1)[0]==owner.split(':',1)[0]
+    host,_,rest=prior['owner'].partition(':');mine,_,mine_rest=owner.partition(':')
+    if host!=mine:return False
+    try:other=int(rest.split(':',1)[0]);me=int(mine_rest.split(':',1)[0])
+    except ValueError:return True
+    if other==me:return False
+    return _pid_alive(other)
 
 
 @asynccontextmanager
@@ -83,14 +98,25 @@ async def lifespan(app):
             db.execute('BEGIN IMMEDIATE')
             prior=db.execute("SELECT * FROM leases WHERE name='coordinator'").fetchone()
             if not lease_blocks(prior,owner):
-                db.execute('INSERT OR REPLACE INTO leases VALUES(?,?,?)',('coordinator',owner,time.time()+120));break
+                db.execute('INSERT OR REPLACE INTO leases VALUES(?,?,?)',('coordinator',owner,time.time()+LEASE_TTL));break
         await asyncio.sleep(1)
     else:raise RuntimeError('Another coordinator owns this database; use one ASGI worker')
     rt.recover()
+    import signal
+    previous=signal.getsignal(signal.SIGTERM)
+    def release_on_term(signum,frame):
+        # A slow graceful shutdown (open connections) can end in a hard kill; free the lease and stop new work first,
+        # so the replacement process starts at once instead of waiting for a lease that nobody will release.
+        service.SHUTTING_DOWN=True
+        try:
+            with s.connect() as db:db.execute("DELETE FROM leases WHERE name='coordinator' AND owner=?",(owner,))
+        except Exception:pass
+        if callable(previous):previous(signum,frame)
+    with contextlib.suppress(ValueError,OSError):signal.signal(signal.SIGTERM,release_on_term)
     async def heartbeat():
         while True:
-            with s.connect() as db:db.execute("UPDATE leases SET expires=? WHERE name='coordinator' AND owner=?",(time.time()+120,owner))
-            await asyncio.sleep(20)
+            with s.connect() as db:db.execute("UPDATE leases SET expires=? WHERE name='coordinator' AND owner=?",(time.time()+LEASE_TTL,owner))
+            await asyncio.sleep(LEASE_HEARTBEAT)
     hb=asyncio.create_task(heartbeat())
     task=asyncio.create_task(service.worker()) if os.getenv('WORKER_ENABLED','true')=='true' else None
     preflight=asyncio.create_task(tinder_startup_check()) if os.getenv('TINDER_STARTUP_CHECK','false')=='true' else None
@@ -184,7 +210,7 @@ def send(body:Send):
     except PermissionError:raise HTTPException(403,'Permission revoked')
 @app.post('/api/sync')
 async def sync():
-    if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
+    if service.TICK.locked() or service.SYNC.locked():raise HTTPException(409,'Coordinator busy')
     before=len(s.notifications());drafts=len(s.all_drafts())
     try:await service.tick()
     except Exception:raise HTTPException(503,'Source synchronization failed; check browser or configuration')
@@ -227,10 +253,11 @@ def build_stats(threads,hist,outcomes):
             'per_day':[{'day':d,**per_day[d]} for d in days],'tinder_requests':req}
 @app.get('/api/state')
 def state():
-    drafts=s.all_drafts();notes=s.notifications();rows=s.threads();hist={t['id']:s.messages(t['id']) for t in rows}
+    drafts=s.all_drafts();notes=s.notifications();rows=s.threads();by_thread=s.messages_by_thread();hist={t['id']:by_thread.get(t['id'],[]) for t in rows}
     outcomes={r['thread_id']:json.loads(r['value']) for r in s.rows('SELECT * FROM outcome_state')}
     from agent import strategy
     cfg=rt.settings()
+    ctx={'cfg':cfg,'hist':hist,'grants':{g['thread_id']:g for g in s.rows('SELECT * FROM grants')}}  # read once, not per thread
     profiles={}
     for r in s.rows('SELECT thread_id,value FROM tinder_threads'):
         try:profiles[r['thread_id']]=json.loads(r['value']).get('profile')
@@ -238,10 +265,11 @@ def state():
     threads=[]
     for t in rows:
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
-        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
+        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t,ctx);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
+    mem=rt.memory_by_thread()
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
-            'memory':{t['id']:rt.memory(t['id']) for t in rows},'outcome_details':outcomes,
+            'memory':{t['id']:mem.get(t['id'],[]) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
             'actions':s.rows('SELECT * FROM actions ORDER BY updated DESC LIMIT 100'),
             'connections':s.rows('SELECT id,enabled,can_reply FROM connections'),
@@ -285,8 +313,8 @@ async def approve(draft_id:int,request:Request):
     if edited is not None:
         edited=str(edited).strip()
         if not 1<=len(edited)<=1000:raise HTTPException(422,'Wiadomość musi mieć od 1 do 1000 znaków.')
-    if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
-    async with service.LOCK:
+    try:
+      async with service.owner_lock():
         if edited is not None:
             with s.connect() as db:
                 if db.execute("UPDATE drafts SET body=? WHERE id=? AND status='pending'",(edited,draft_id)).rowcount!=1:
@@ -295,6 +323,7 @@ async def approve(draft_id:int,request:Request):
         try:return await service.execute(draft_id)
         except DispatchDenied as e:raise HTTPException(409,str(e))
         except PermissionError as e:raise HTTPException(403,str(e))
+    except service.Busy as e:raise HTTPException(409,str(e))
 class Settings(BaseModel):
     model_config=ConfigDict(extra='forbid')
     mode:__import__('typing').Literal['simulation','supervised','authorized_autonomy']='supervised'
@@ -311,12 +340,19 @@ class Settings(BaseModel):
     availability:str=Field(default='zwykle wieczory w tygodniu, w weekend elastycznie',max_length=300)
     date_ideas:list[str]=Field(default_factory=list,max_length=12)
 @app.put('/api/settings')
-def settings(body:Settings):
+async def settings(body:Settings):
     if any(len(v)>1000 or len(k)>100 for k,v in body.profile.items()) or any(len(f)>500 for f in body.feedback):raise HTTPException(422,'Setting too long')
-    rt.save_settings(body.model_dump())
-    # Re-evaluate queued autonomy eligibility without regenerating/repeating sent actions.
-    with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')")
-    return {'ok':True}
+    try:
+      async with service.owner_lock():
+        before=rt.settings_hash()
+        rt.save_settings(body.model_dump())
+        # Re-evaluate queued autonomy eligibility without regenerating/repeating sent actions.
+        with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')")
+        # New style, facts or goals: waiting drafts are rewritten now instead of turning out of date.
+        regenerating=rt.regenerate_pending() if rt.settings_hash()!=before else 0
+    except service.Busy as e:raise HTTPException(409,str(e))
+    if regenerating:service.WAKE.set()
+    return {'ok':True,'regenerating':regenerating}
 class Grant(BaseModel):
     enabled:bool=False
     participant_consent:bool=False
@@ -356,7 +392,8 @@ async def telegram(request:Request):
 
 @app.post('/api/threads/{thread_id}/regenerate')
 async def regenerate(thread_id:str):
-    async with service.LOCK:
+    try:
+      async with service.owner_lock():
         t=service.thread_by_id(thread_id)
         if not t:raise HTTPException(404,'Thread not found')
         hist=s.messages(thread_id)
@@ -366,8 +403,11 @@ async def regenerate(thread_id:str):
             if d:
                 if db.execute('SELECT 1 FROM actions WHERE draft_id=?',(d['id'],)).fetchone():raise HTTPException(409,'Attempted action cannot be regenerated')
                 db.execute("UPDATE drafts SET status='regenerate' WHERE id=?",(d['id'],))
-            db.execute("UPDATE jobs SET status='queued',available=0 WHERE thread_id=? AND anchor=?",(thread_id,hist[-1]['id']))
+            # updated=0: the owner's request goes to the front of the queue, ahead of drafts nobody asked for yet
+            db.execute("UPDATE jobs SET status='queued',available=0,updated=0 WHERE thread_id=? AND anchor=?",(thread_id,hist[-1]['id']))
         rt.enqueue(thread_id,hist[-1]['id'])
+    except service.Busy as e:raise HTTPException(409,str(e))
+    service.WAKE.set()
     return {'ok':True}
 
 class TinderConnect(BaseModel):
@@ -403,7 +443,8 @@ async def tinder_restore_deleted():
         clear_local_budget_block()
     rt.audit(None,'tinder_reimport_allowed','Owner allowed re-import of deleted Tinder conversations: %d'%n)
     async def run():
-        async with service.LOCK:await poll()
+        async with service.SYNC:await poll()
+        service.WAKE.set()
     task=asyncio.create_task(run());_BG.add(task);task.add_done_callback(_BG.discard)
     return {'restored':n,'retention_days':365,'sync':'started'}
 
@@ -458,8 +499,9 @@ async def tinder_token_delete():
 @app.post('/api/tinder/sync')
 async def tinder_sync():
     from agent.tinder import poll
-    if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
-    async with service.LOCK:await poll()
+    if service.SYNC.locked():raise HTTPException(409,'Synchronizacja już trwa')
+    async with service.SYNC:await poll()
+    service.WAKE.set()
     return {'ok':True}
 
 @app.get('/static/{name:path}')

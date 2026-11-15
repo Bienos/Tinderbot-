@@ -63,11 +63,28 @@ def test_state_survives_threads_added_during_request(store,monkeypatch):
     assert application.state()['threads']
 
 
-def test_lease_left_by_previous_container_does_not_block_startup():
-    import time
+def test_stale_lease_never_blocks_startup_but_a_live_second_worker_does():
+    import os,time
     from app import lease_blocks
-    me='host-new:40:aa'
+    me=f'host-new:{os.getpid()}:aa'
+    soon=time.time()+100
     assert not lease_blocks(None,me)
-    assert not lease_blocks({'owner':'host-old:40:bb','expires':time.time()+100},me)  # restarted container
-    assert lease_blocks({'owner':'host-new:41:cc','expires':time.time()+100},me)      # second worker here
-    assert not lease_blocks({'owner':'host-new:41:cc','expires':time.time()-1},me)    # expired
+    assert not lease_blocks({'owner':'host-old:40:bb','expires':soon},me)               # restarted container
+    assert not lease_blocks({'owner':f'host-new:{os.getpid()}:old','expires':soon},me)  # earlier process, same pid, gone
+    assert not lease_blocks({'owner':'host-new:999999:cc','expires':soon},me)           # same container, process is dead
+    assert lease_blocks({'owner':f'host-new:{os.getppid()}:cc','expires':soon},me)      # a live second worker here
+    assert not lease_blocks({'owner':f'host-new:{os.getppid()}:cc','expires':time.time()-1},me)  # expired
+
+
+async def test_sigterm_releases_the_lease_and_stops_background_work(store):
+    import os,signal
+    import app as application
+    from agent import service
+    previous=signal.getsignal(signal.SIGTERM);signal.signal(signal.SIGTERM,lambda *a:None)
+    try:
+        async with application.lifespan(application.app):
+            assert store.rows("SELECT * FROM leases WHERE name='coordinator'")
+            os.kill(os.getpid(),signal.SIGTERM)  # the handler frees the lease before anything slow can happen
+            assert not store.rows("SELECT * FROM leases WHERE name='coordinator'")
+            assert service.SHUTTING_DOWN
+    finally:signal.signal(signal.SIGTERM,previous);service.SHUTTING_DOWN=False

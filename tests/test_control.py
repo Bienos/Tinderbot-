@@ -115,6 +115,13 @@ def test_delete_account_requires_password(client):
     assert client.post('/api/login',json={'email':'ola@example.com','password':REG['password']}).status_code==401
 
 
+def test_delete_option_is_not_on_main_account_page(client):
+    assert client.get('/konto/zaawansowane',follow_redirects=False).status_code==303
+    client.post('/api/register',json=REG)
+    assert 'delete-form' not in client.get('/konto').text
+    assert 'delete-form' in client.get('/konto/zaawansowane').text
+
+
 def test_cross_origin_posts_blocked_when_origin_configured(client,monkeypatch):
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
     assert client.post('/api/register',json=REG,headers={'Origin':'https://evil.example'}).status_code==403
@@ -386,3 +393,52 @@ def test_setup_progress_without_render_access_never_pretends_to_build(client,mon
     monkeypatch.setenv('OWNER_EMAIL','owner@example.com');monkeypatch.setenv('OWNER_SERVICE_ID','srv-owner')
     client.post('/api/logout');client.post('/api/register',json={**REG,'email':'owner@example.com'})
     assert client.get('/api/me').json()['setup']['stage']=='manual'
+
+
+def test_landing_seo_head_canonical_structured_data_and_no_third_party_fonts(client,monkeypatch):
+    import json,re
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example');monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
+    html=client.get('/').text
+    assert '<link rel="canonical" href="https://iskra.example/">' in html
+    assert '<title>Iskra – asystent randkowy AI do odpowiedzi na Tinderze</title>' in html and 'noindex' not in html
+    assert 'fonts.googleapis.com' not in html and 'fonts.gstatic.com' not in html
+    assert "googleapis" not in client.get('/').headers['content-security-policy']
+    block=re.search(r'<script type="application/ld\+json">(.*?)</script>',html,re.S).group(1)
+    graph={n['@type']:n for n in json.loads(block)['@graph']}
+    assert set(graph)=={'Organization','WebSite','WebApplication','FAQPage'}
+    offer=graph['WebApplication']['offers'];assert offer['price']=='49.00' and offer['priceCurrency']=='PLN'
+    assert 'aggregateRating' not in json.dumps(graph)                       # never invent reviews
+    shown=re.findall(r'<details><summary>(.*?)</summary>',html)
+    assert [q['name'] for q in graph['FAQPage']['mainEntity']]==[re.sub(r'<[^>]+>','',s) for s in shown]  # schema = page
+    assert any('49 zł' in q['acceptedAnswer']['text'] for q in graph['FAQPage']['mainEntity'])
+
+
+def test_account_pages_are_noindex_and_legal_pages_are_indexable_with_own_canonical(client,monkeypatch):
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
+    for path in ('/zaloguj','/rejestracja','/nie-pamietam-hasla'):
+        h=client.get(path).text
+        assert '<meta name="robots" content="noindex,follow">' in h and f'<link rel="canonical" href="https://iskra.example{path}">' in h
+    for path in ('/regulamin','/prywatnosc'):
+        h=client.get(path).text
+        assert 'noindex' not in h and f'<link rel="canonical" href="https://iskra.example{path}">' in h
+        assert 'application/ld+json' not in h
+
+
+def test_robots_sitemap_and_llms_txt(client,monkeypatch):
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example');monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
+    robots=client.get('/robots.txt').text
+    assert 'User-agent: *\nAllow: /' in robots and 'Disallow: /api/' in robots and 'Sitemap: https://iskra.example/sitemap.xml' in robots
+    assert 'Disallow: /zaloguj' not in robots and 'Disallow: /rejestracja' not in robots   # noindex must stay visible to crawlers
+    sm=client.get('/sitemap.xml');assert sm.headers['content-type'].startswith('application/xml')
+    assert sm.text.count('<url>')==3 and '<loc>https://iskra.example/</loc>' in sm.text and 'zaloguj' not in sm.text
+    llms=client.get('/llms.txt').text
+    assert llms.startswith('# Iskra') and '49 zł / mies.' in llms and 'nie jest powiązana z Tinder' in llms
+
+
+def test_fonts_are_served_from_here_with_long_cache_and_unknown_names_404(client):
+    r=client.get('/assets/fonts/unbounded-latin-ext-v1.woff2')
+    assert r.status_code==200 and r.content[:4]==b'wOF2' and 'immutable' in r.headers['cache-control']
+    assert r.headers['content-type']=='font/woff2'
+    assert client.get('/assets/fonts/../app.py').status_code in (404,422) and client.get('/assets/fonts/evil.woff2').status_code==404
+    css=client.get('/assets/landing.css').text
+    assert css.count('@font-face')==4 and 'gstatic' not in css and 'font-display:swap' in css

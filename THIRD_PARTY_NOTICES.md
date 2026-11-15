@@ -18,11 +18,15 @@ not a Tinder partnership or a claim of written platform permission.
 
 # Fonts
 
-`static/fonts/` ships the Onest and Unbounded variable fonts (Latin and Latin
-Extended subsets, from the Fontsource packages `@fontsource-variable/onest` 5.3.1
-and `@fontsource-variable/unbounded` 5.3.0) so the agent panel matches the landing
-page without loading anything from a third-party server.
+The landing and account pages serve their typefaces from this server (`control/static/fonts/`), so visitors'
+browsers do not contact a third party. Both are licensed under the SIL Open Font License 1.1; the full notices
+are in `licenses/`.
 
-- Onest, Copyright 2021 The Onest Project Authors (https://github.com/simpals/onest)
-- Unbounded, Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)
-- License: SIL Open Font License 1.1; complete notices in licenses/Onest-OFL.txt and licenses/Unbounded-OFL.txt
+- Onest, Copyright 2021 The Onest Project Authors (https://github.com/googlefonts/onest): `licenses/Onest-OFL.txt`
+- Unbounded, Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded): `licenses/Unbounded-OFL.txt`
+
+The files are subsets (basic Latin and Polish letters) of the upstream variable fonts.
+
+The agent panel (`static/fonts/`) ships the full Latin and Latin Extended variable fonts
+(Fontsource `@fontsource-variable/onest` 5.3.1 and `@fontsource-variable/unbounded` 5.3.0),
+because it shows arbitrary conversation text. Same licences and notices as above.
