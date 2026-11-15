@@ -17,6 +17,7 @@ import sqlite3
 import time
 from contextlib import closing
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
@@ -174,6 +175,23 @@ async def security_headers(request: Request, call_next):
     if os.getenv('PUBLIC_ORIGIN', '').startswith('https://'):
         response.headers['Strict-Transport-Security'] = 'max-age=31536000'
     return response
+
+
+# Paths that must keep answering on the old address: Stripe's webhook, API calls, admin scripts, health checks.
+OLD_HOST_EXEMPT = ('/stripe/', '/api/', '/admin/', '/health')
+
+
+@app.middleware('http')
+async def custom_domain_redirect(request: Request, call_next):
+    """Once PUBLIC_ORIGIN is a custom domain, Render's own *.onrender.com address sends page visits there."""
+    origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
+    render_host = os.getenv('RENDER_EXTERNAL_HOSTNAME', '').strip().lower()
+    if (request.method in ('GET', 'HEAD') and render_host and origin.startswith('https://')
+            and request.headers.get('host', '').lower() == render_host and urlsplit(origin).netloc.lower() != render_host
+            and not request.url.path.startswith(OLD_HOST_EXEMPT)):
+        query = '?' + request.url.query if request.url.query else ''
+        return RedirectResponse(origin + request.url.path + query, 301)
+    return await call_next(request)
 
 
 SHARE = ('<meta property="og:type" content="website"><meta property="og:site_name" content="{{BRAND}}">'

@@ -413,6 +413,19 @@ def test_landing_seo_head_canonical_structured_data_and_no_third_party_fonts(cli
     assert any('49 zł' in q['acceptedAnswer']['text'] for q in graph['FAQPage']['mainEntity'])
 
 
+def test_old_render_address_sends_page_visits_to_the_custom_domain(client,monkeypatch):
+    monkeypatch.setenv('RENDER_EXTERNAL_HOSTNAME','old-site.onrender.com')
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://old-site.onrender.com')        # before the switch: nothing moves
+    assert client.get('/',headers={'host':'old-site.onrender.com'},follow_redirects=False).status_code==200
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://winq.example')
+    r=client.get('/konto?platnosc=ok',headers={'host':'old-site.onrender.com'},follow_redirects=False)
+    assert r.status_code==301 and r.headers['location']=='https://winq.example/konto?platnosc=ok'
+    for path in ('/health','/api/me','/admin/accounts'):                       # machines keep the old address
+        assert client.get(path,headers={'host':'old-site.onrender.com'},follow_redirects=False).status_code!=301,path
+    assert client.post('/stripe/webhook',headers={'host':'old-site.onrender.com'},content=b'{}').status_code!=301
+    assert client.get('/',follow_redirects=False).status_code==200                  # the new domain itself is served
+
+
 def test_account_pages_are_noindex_and_legal_pages_are_indexable_with_own_canonical(client,monkeypatch):
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
     for path in ('/zaloguj','/rejestracja','/nie-pamietam-hasla'):
