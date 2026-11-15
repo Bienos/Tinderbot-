@@ -504,6 +504,18 @@ async def tinder_token_delete():
     rt.audit(None,'tinder_token_deleted','Owner removed the stored Tinder token; connection disabled')
     return {'deleted':True}
 
+@app.post('/api/tinder/connections/{connection_id}/check-bio')
+async def tinder_check_bio(connection_id:str):
+    """Reads the owner's own bio now, so the AI-disclosure step answers at once instead of at the next sync."""
+    from agent.tinder import check_bio,status_update,TinderAuthError,TinderRateLimited,TinderRestriction,TinderError
+    try:return await check_bio(connection_id)
+    except TinderRestriction:
+        status_update(connection_id,error='restriction_requires_manual_review',disable=True)
+        raise HTTPException(409,'Tinder chce, żebyś sprawdził konto w oficjalnej aplikacji. Połączenie wstrzymane.')
+    except TinderRateLimited:raise HTTPException(429,'Tinder poprosił o przerwę. Spróbuj za kilka minut.')
+    except TinderAuthError:raise HTTPException(409,'Połączenie z Tinderem wygasło. Wklej nowy token w Ustawienia → Tinder.')
+    except TinderError:raise HTTPException(502,'Nie udało się teraz odczytać bio z Tindera. Spróbuj za chwilę.')
+
 @app.post('/api/tinder/sync')
 async def tinder_sync():
     from agent.tinder import poll

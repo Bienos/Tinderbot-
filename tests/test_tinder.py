@@ -444,3 +444,32 @@ async def test_owner_can_switch_off_one_conversation_in_bio_mode(source):
     await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
     with s.connect() as db:db.execute('INSERT OR REPLACE INTO grants VALUES(?,?,?,?)',(TID,0,0,0))
     assert not rt.auto_allowed(service.thread_by_id(TID))
+
+
+async def test_check_bio_answers_now_even_when_next_sync_is_far_away(source):
+    """The 'I added it, check' button reads the bio at once; a far-off next_poll used to make it do nothing."""
+    await tinder.connect();await tinder.sync_connection(CID)
+    source.owner_bio='Lubię góry i kawę'
+    r=await tinder.check_bio(CID)
+    assert r=={'found':False,'bio':'Lubię góry i kawę'}
+    assert tinder.public_status()['connections'][0]['bio_disclosure'] is False
+    source.owner_bio='Lubię góry. Używam AI czasami, a ty? 🤖'
+    with s.connect() as db:  # next scheduled sync is 15 minutes away
+        v=json.loads(db.execute('SELECT value FROM connections WHERE id=?',(CID,)).fetchone()['value']);v['next_poll']=__import__('time').time()+900
+        db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(v),CID))
+    assert (await tinder.check_bio(CID))['found'] is True
+    assert tinder.public_status()['connections'][0]['bio_disclosure'] is True
+
+
+async def test_bio_missing_from_profile_falls_back_and_never_switches_autopilot_off(source,monkeypatch):
+    """When /profile leaves the bio field out, the check asks /v2/profile, and a sync keeps the last known answer."""
+    await tinder.connect()
+    real=source.handle
+    def handle(req):
+        if req.url.path=='/profile':return httpx.Response(200,json={'data':{'_id':OWNER}})
+        if req.url.path=='/v2/profile':return httpx.Response(200,json={'data':{'user':{'_id':OWNER,'bio':'pomaga mi AI'}}})
+        return real(req)
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)))
+    assert (await tinder.check_bio(CID))=={'found':True,'bio':'pomaga mi AI'}
+    await tinder.sync_connection(CID)
+    assert tinder.public_status()['connections'][0]['bio_disclosure'] is True
