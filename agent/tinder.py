@@ -81,7 +81,7 @@ def _tinder_https(url):
 
 def profile_summary(person: dict, match: dict | None = None) -> dict:
     """Display-only profile data for the owner's dashboard: image links (Tinder hosts only), bio, age, timestamps."""
-    photos = []
+    photos, full = [], []
     for ph in (person.get('photos') or [])[:9]:
         if not isinstance(ph, dict): continue
         files = [f for f in (ph.get('processedFiles') or []) if isinstance(f, dict) and _tinder_https(f.get('url'))]
@@ -89,7 +89,10 @@ def profile_summary(person: dict, match: dict | None = None) -> dict:
         big = sorted((f for f in files if isinstance(f.get('width'), int) and f['width'] >= 320), key=lambda f: f['width'])
         url = big[0]['url'] if big else (max(files, key=lambda f: f.get('width') or 0)['url'] if files else None)
         if not url and _tinder_https(ph.get('url')): url = ph['url']
-        if url: photos.append(url)
+        if url:
+            # Full-size version for the photo viewer: the original, else the widest rendition.
+            largest = max(files, key=lambda f: f.get('width') or 0)['url'] if files else None
+            photos.append(url); full.append(ph['url'] if _tinder_https(ph.get('url')) else (largest or url))
     bio = person.get('bio'); age = None
     try:
         born = datetime.fromisoformat(str(person.get('birth_date')).replace('Z', '+00:00'))
@@ -97,7 +100,7 @@ def profile_summary(person: dict, match: dict | None = None) -> dict:
         if not 18 <= age <= 120: age = None
     except ValueError: age = None
     match = match or {}
-    return {'photos': photos, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age,
+    return {'photos': photos, 'photos_full': full, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age,
             'matched_at': _iso(match.get('created_date')), 'last_activity': _iso(match.get('last_activity_date'))}
 
 

@@ -332,23 +332,27 @@ async def register(request: Request, tasks: BackgroundTasks):
     if q('SELECT 1 FROM accounts WHERE email=?', (email,), fetch=True):
         raise HTTPException(409, 'Konto z tym adresem już istnieje. Zaloguj się.')
     mode = body.get('mode') if body.get('mode') in ('drafts', 'autopilot', 'unsure') else 'unsure'
-    comped = email in {e.strip().lower() for e in os.getenv('COMPED_EMAILS', '').split(',') if e.strip()}
+    comped = is_owner(email) or email in {e.strip().lower() for e in os.getenv('COMPED_EMAILS', '').split(',') if e.strip()}
     q('INSERT INTO accounts(email,name,pw_hash,status,mode,consent_marketing,created,comped) VALUES(?,?,?,?,?,?,?,?)',
       (email, str(body.get('name', '')).strip()[:60], hash_password(password), 'pending', mode, int(body.get('marketing') is True), time.time(), int(comped)))
     acc = q('SELECT id FROM accounts WHERE email=?', (email,), fetch=True)[0]
     tasks.add_task(mailer.welcome, email, _origin(request))
+    if is_owner(email):
+        tasks.add_task(run_provision, acc['id'], _origin(request))
     return _cookie(JSONResponse({'ok': True}), new_session(acc['id']))
 
 
 @app.post('/api/login')
-async def login(request: Request):
+async def login(request: Request, tasks: BackgroundTasks):
     body = await _json(request)
     email = str(body.get('email', '')).strip().lower()
     if _limited('login:' + _client_ip(request), 20) or _limited('login:' + email, 10):
         raise HTTPException(429, 'Za dużo prób logowania. Spróbuj za godzinę.')
-    rows = q('SELECT id,pw_hash,status FROM accounts WHERE email=?', (email,), fetch=True)
+    rows = q('SELECT id,pw_hash,status,instance_url,provision_state FROM accounts WHERE email=?', (email,), fetch=True)
     if not rows or not check_password(str(body.get('password', '')), rows[0]['pw_hash']) or rows[0]['status'] == 'disabled':
         raise HTTPException(401, 'Nieprawidłowy e-mail lub hasło.')
+    if is_owner(email) and not rows[0].get('instance_url') and rows[0].get('provision_state') != 'running':
+        tasks.add_task(run_provision, rows[0]['id'], _origin(request))  # owner registered before provisioning was set up
     return _cookie(JSONResponse({'ok': True}), new_session(rows[0]['id']))
 
 
@@ -458,7 +462,7 @@ async def billing_withdraw(request: Request, tasks: BackgroundTasks):
     if acc.get('render_service_id') and provision.enabled():
         tasks.add_task(_safe_suspend, acc['render_service_id'])
     tasks.add_task(mailer.withdrawal_confirmed, acc['email'], _origin(request))
-    owner = os.getenv('LEGAL_EMAIL', '').strip()
+    owner = os.getenv('LEGAL_EMAIL', '').strip() or os.getenv('OWNER_EMAIL', '').strip()
     if owner:
         tasks.add_task(mailer.safe_send, owner, f'Odstąpienie od umowy: konto {acc["id"]}',
                        f'Klient {acc["email"]} odstąpił od umowy. Anuluj subskrypcję w Stripe (klient {acc.get("stripe_customer")}) '
@@ -534,6 +538,8 @@ def run_provision(account_id: int, origin: str = '') -> str:
     acc = rows[0]
     if acc.get('render_service_id') or acc.get('instance_url'):
         return 'exists'
+    if is_owner(acc['email']):
+        return link_owner(acc)
     if not provision.enabled():
         q("UPDATE accounts SET provision_state='manual' WHERE id=?", (account_id,))
         return 'manual'
@@ -548,6 +554,26 @@ def run_provision(account_id: int, origin: str = '') -> str:
     q("UPDATE accounts SET status='active', instance_url=?, sso_secret=?, render_service_id=?, provision_state='done' WHERE id=?",
       (inst['url'], inst['sso_secret'], inst['service_id'], account_id))
     mailer.panel_ready(acc['email'], origin or os.getenv('PUBLIC_ORIGIN', '').rstrip('/'))
+    return 'done'
+
+
+def is_owner(email: str) -> bool:
+    return bool(email) and email.lower() == os.getenv('OWNER_EMAIL', '').strip().lower()
+
+
+def link_owner(acc: dict) -> str:
+    """The owner's account uses the bot that already runs (OWNER_SERVICE_ID): free, linked by single sign-on."""
+    sid = os.getenv('OWNER_SERVICE_ID', '').strip()
+    if not sid or not provision.api_ready():
+        q("UPDATE accounts SET comped=1, provision_state='manual' WHERE id=?", (acc['id'],))
+        return 'manual'
+    try:
+        inst = provision.link_existing(sid)
+    except Exception as exc:
+        q("UPDATE accounts SET comped=1, provision_state='failed', provision_error=? WHERE id=?", (type(exc).__name__ + ': ' + str(exc)[:240], acc['id']))
+        return 'failed'
+    q("UPDATE accounts SET status='active', comped=1, instance_url=?, sso_secret=?, provision_state='done' WHERE id=?",
+      (inst['url'], inst['sso_secret'], acc['id']))
     return 'done'
 
 

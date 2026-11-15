@@ -285,3 +285,57 @@ def test_legal_pages_fill_seller_identity(client,monkeypatch):
     r=client.get('/regulamin');assert r.status_code==200 and 'Jan Testowy' in r.text and '{{' not in r.text
     assert 'Odstąpienie od umowy' in r.text and 'art. 50' in r.text
     p=client.get('/prywatnosc');assert p.status_code==200 and 'art. 9' in p.text and '{{' not in p.text
+
+
+def _template_mock(calls):
+    import httpx,json
+    def handler(req):
+        calls.append((req.method,req.url.path,json.loads(req.content or b'{}')))
+        assert req.headers['authorization']=='Bearer rnd_test'
+        if req.method=='GET' and req.url.path=='/v1/services/srv-tpl/env-vars':
+            return httpx.Response(200,json=[{'envVar':{'key':'ANTHROPIC_API_KEY','value':'sk-ant-x'}},{'envVar':{'key':'LLM_PROVIDER','value':'anthropic'}},
+                                            {'envVar':{'key':'DASHBOARD_TOKEN','value':'never-copied'}}])
+        if req.method=='GET' and req.url.path=='/v1/services/srv-owner':
+            return httpx.Response(200,json={'id':'srv-owner','serviceDetails':{'url':'https://owner-bot.onrender.com'}})
+        if req.url.path=='/v1/services':return httpx.Response(201,json={'service':{'id':'srv-new','serviceDetails':{'url':'https://iskra-u1-ab12.onrender.com'}}})
+        return httpx.Response(200,json={})
+    return httpx.MockTransport(handler)
+
+
+def test_provision_copies_only_model_settings_from_template(client,monkeypatch):
+    import json
+    from control import provision
+    _provision_env(monkeypatch);monkeypatch.delenv('RENDER_ENV_GROUP_ID');monkeypatch.setenv('INSTANCE_TEMPLATE_SERVICE_ID','srv-tpl')
+    calls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock(calls))
+    client.post('/api/register',json=REG);aid=parse_id(client)
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_t'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    body=[c for c in calls if c[1]=='/v1/services'][0][2];env={e['key']:e['value'] for e in body['envVars']}
+    assert env['ANTHROPIC_API_KEY']=='sk-ant-x' and env['LLM_PROVIDER']=='anthropic' and env['DASHBOARD_TOKEN']!='never-copied'
+    assert not any('/env-groups/' in c[1] for c in calls)
+    assert client.get('/api/me').json()['panel_ready']
+
+
+def test_owner_account_links_existing_bot_for_free(client,monkeypatch):
+    from control import provision
+    _provision_env(monkeypatch);monkeypatch.setenv('OWNER_EMAIL','Owner@Example.com');monkeypatch.setenv('OWNER_SERVICE_ID','srv-owner')
+    monkeypatch.setenv('PUBLIC_ORIGIN','http://testserver')
+    calls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock(calls))
+    r=client.post('/api/register',json={**REG,'email':'owner@example.com'},headers={'Origin':'http://testserver'});assert r.status_code==200,r.text
+    me=client.get('/api/me');assert me.status_code==200,me.text;me=me.json()
+    assert me['has_access'] and me['panel_ready'] and me['provision_state']=='done'
+    puts={c[1]:c[2] for c in calls if c[0]=='PUT'}
+    assert len(puts['/v1/services/srv-owner/env-vars/SSO_SECRET']['value'])>=40
+    assert puts['/v1/services/srv-owner/env-vars/CONTROL_ORIGIN']=={'value':'http://testserver'}
+    assert ('POST','/v1/services/srv-owner/deploys',{}) in calls and not any(c[1]=='/v1/services' for c in calls)
+    assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://owner-bot.onrender.com/auth/sso?t=')
+
+
+def test_owner_registered_before_render_key_is_linked_on_next_login(client,monkeypatch):
+    from control import provision
+    monkeypatch.setenv('OWNER_EMAIL','owner@example.com');monkeypatch.setenv('OWNER_SERVICE_ID','srv-owner')
+    client.post('/api/register',json={**REG,'email':'owner@example.com'})
+    assert client.get('/api/me').json()['provision_state']=='manual'
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock(calls))
+    client.post('/api/logout');client.post('/api/login',json={'email':'owner@example.com','password':REG['password']})
+    assert client.get('/api/me').json()['panel_ready']

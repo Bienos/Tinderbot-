@@ -16,7 +16,8 @@ SENT: list[dict] = []  # tests read this when SMTP is not configured
 
 
 def configured() -> bool:
-    return bool(os.getenv('SMTP_HOST'))
+    # A username without its password (not set yet) counts as not configured, so nothing tries to log in.
+    return bool(os.getenv('SMTP_HOST')) and (not os.getenv('SMTP_USERNAME') or bool(os.getenv('SMTP_PASSWORD')))
 
 
 def send(to: str, subject: str, text: str) -> bool:

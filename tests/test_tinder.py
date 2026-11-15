@@ -320,7 +320,7 @@ def test_profile_summary_keeps_only_tinder_https_images_and_safe_fields():
         {'url':'https://evil.example/c.jpg'},{'processedFiles':[{'url':'https://images-ssl.gotinder.com/d.jpg'}]},'junk']})
     assert out['photos']==['https://images-ssl.gotinder.com/u/a.jpg','https://images-ssl.gotinder.com/d.jpg']
     assert out['bio']=='hi there' and 25<=out['age']<=40
-    assert profile_summary({'birth_date':'2015-01-01T00:00:00Z'})['age'] is None and profile_summary({})=={'photos':[],'bio':'','age':None,'matched_at':None,'last_activity':None}
+    assert profile_summary({'birth_date':'2015-01-01T00:00:00Z'})['age'] is None and profile_summary({})=={'photos':[],'photos_full':[],'bio':'','age':None,'matched_at':None,'last_activity':None}
 
 
 def test_restore_deleted_clears_only_tinder_tombstones(store):
@@ -341,7 +341,7 @@ def test_profile_summary_prefers_card_sized_photo_and_reads_match_times():
         {'url':'https://images-ssl.gotinder.com/84.jpg','width':84},{'url':'https://images-ssl.gotinder.com/640.jpg','width':640},
         {'url':'https://images-ssl.gotinder.com/320.jpg','width':320}]}]}
     out=profile_summary(person,{'created_date':'2026-11-10T12:00:00.000Z','last_activity_date':'2026-11-12T08:30:00Z'})
-    assert out['photos']==['https://images-ssl.gotinder.com/320.jpg']
+    assert out['photos']==['https://images-ssl.gotinder.com/320.jpg'] and out['photos_full']==['https://images-ssl.gotinder.com/full.jpg']
     assert out['matched_at'].startswith('2026-11-10T12:00') and out['last_activity'].startswith('2026-11-12T08:30')
 
 

@@ -8,13 +8,55 @@ function safeImg(u){try{let x=new URL(u);return x.protocol==='https:'&&(x.hostna
 const IMG_CACHE=new Map();
 function cachedImg(key,url,cls,alt){let i=IMG_CACHE.get(key);if(!i||i.dataset.src!==url){i=el('img',cls);i.src=url;i.dataset.src=url;i.decoding='async';i.referrerPolicy='no-referrer';IMG_CACHE.set(key,i)}i.className=cls;i.alt=alt||'';return i}
 function avatarFor(t,place='list'){let u=safeImg(t.profile?.photos?.[0]);if(u){let i=cachedImg(place+':'+t.id,u,'avatar',t.display_name);i.style.objectFit='cover';return i}return el('span','avatar',(t.display_name||'?').slice(0,1).toUpperCase())}
+const PHOTO_IDX=new Map();
+const IG_RE=/(?:^|[\s(])(?:ig|insta(?:gram)?)\s*[:\-–]?\s*@?([a-z0-9._]{2,30})/i;
+function emptyCard(text){return el('div','rempty',text)}
 function renderProfile(t){let box=document.getElementById('profile');box.replaceChildren();let p=t?.profile;
-if(!t){box.textContent='Wybierz rozmowę.';return}
-if(!p||(!p.photos.length&&!p.bio&&!p.age)){box.textContent='Brak danych profilu. Kliknij Synchronizuj po połączeniu z Tinder.';return}
-let photos=p.photos.map(safeImg).filter(Boolean);
-if(photos.length){let main=cachedImg('pmain:'+t.id,photos[0],'pmain',t.display_name);box.append(main);
-if(photos.length>1){let strip=el('div','pstrip');photos.forEach((u,k)=>{let th=cachedImg('pthumb:'+t.id+':'+k,u,'pthumb','');th.onclick=()=>{main.src=u;main.dataset.src=u};strip.append(th)});box.append(strip)}}
-box.append(el('div','pname',t.display_name+(p.age?', '+p.age:'')));if(p.bio)box.append(el('div','pbio',p.bio))}
+if(!t){box.append(emptyCard('Wybierz rozmowę, żeby zobaczyć profil.'));return}
+if(!p||(!p.photos?.length&&!p.bio&&!p.age)){box.append(emptyCard('Brak danych profilu. Kliknij Synchronizuj po połączeniu z Tinderem.'));return}
+let photos=(p.photos||[]).map(safeImg).filter(Boolean);let full=(p.photos_full||[]).map(safeImg);let big=photos.map((u,k)=>full[k]||u);
+let n=photos.length,idx=Math.min(PHOTO_IDX.get(t.id)||0,Math.max(0,n-1));
+const go=k=>{PHOTO_IDX.set(t.id,(k+n)%n);renderProfile(t)};
+let who=el('div','pover');let nm=el('b','',t.display_name);if(p.age)nm.append(el('span','',' '+p.age));who.append(nm);
+if(p.matched_at)who.append(el('small','','Dopasowanie '+fmtDate(p.matched_at)));
+if(n){let stage=el('div','pstage');stage.title='Kliknij, żeby obejrzeć zdjęcia w pełnym rozmiarze';
+ stage.append(cachedImg('pmain:'+t.id+':'+idx,photos[idx],'pmain',t.display_name+', zdjęcie '+(idx+1)+' z '+n));
+ if(n>1){let segs=el('div','psegs');for(let k=0;k<n;k++)segs.append(el('span',k===idx?'on':''));stage.append(segs);
+  for(let [cls,lab,d] of [['prev','Poprzednie zdjęcie',-1],['next','Następne zdjęcie',1]]){let b=el('button','pnav '+cls,d<0?'‹':'›');b.setAttribute('aria-label',lab);b.onclick=e=>{e.stopPropagation();go(idx+d)};stage.append(b)}}
+ let zoom=el('button','pzoom');zoom.setAttribute('aria-label','Otwórz zdjęcia w pełnym rozmiarze');zoom.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>';
+ stage.append(zoom,who);stage.onclick=()=>openViewer(big,idx,t.display_name+(p.age?', '+p.age:''));box.append(stage);
+ if(n>1){let strip=el('div','pthumbs');photos.forEach((u,k)=>{let th=cachedImg('pthumb:'+t.id+':'+k,u,'pthumb'+(k===idx?' on':''),'');th.onclick=()=>go(k);strip.append(th)});box.append(strip)}}
+else{who.className='pover flat';box.append(who)}
+let info=el('div','pinfo');if(p.bio){info.append(el('p','pbio',p.bio));let ig=p.bio.match(IG_RE);if(ig){let a=el('a','igchip','Instagram @'+ig[1]);a.href='https://www.instagram.com/'+encodeURIComponent(ig[1])+'/';a.target='_blank';a.rel='noopener noreferrer';info.append(a)}}
+else info.append(el('p','pbio muted','Brak opisu.'));
+let meta=el('div','pmeta');if(n)meta.append(el('span','',n+(n===1?' zdjęcie':n<5?' zdjęcia':' zdjęć')));if(p.last_activity)meta.append(el('span','','Aktywność '+fmtDate(p.last_activity)));if(meta.children.length)info.append(meta);
+box.append(info)}
+const NEG_SIG=/nie zadaje|krócej|ponad dobę|ponad dobie/;
+function renderPlan(t){let pb=document.getElementById('plan');pb.replaceChildren();if(!t){pb.append(emptyCard('Wybierz rozmowę.'));return}
+if(!t.plan){pb.append(emptyCard('Brak danych.'));return}let p=t.plan;
+let tone=p.move==='invite'||p.move==='settle_details'?'hot':p.stage==='fading'||p.stage==='cooldown'||p.stage==='closed'?'cold':'';
+let head=el('div','plhead'),txt=el('div','');txt.append(el('span','stchip '+tone,p.stage_label),el('div','pmove',p.move_label));
+let ring=el('div','ring '+(p.interest>=60?'good':p.interest<35?'low':''));ring.style.setProperty('--v',p.interest);ring.setAttribute('role','img');ring.setAttribute('aria-label','Zainteresowanie '+p.interest+' na 100');
+let rv=el('span','rv');rv.append(el('b','',p.interest),el('small','','zaint.'));ring.append(rv);head.append(txt,ring);pb.append(head,el('p','pwhy',p.why));
+if(p.signals?.length){let sg=el('div','sigs');for(let x of p.signals)sg.append(el('span','sigc'+(NEG_SIG.test(x)?' neg':''),x));pb.append(sg)}}
+const V={list:[],i:0,name:'',zoom:false};
+function vEl(id){return document.getElementById(id)}
+function openViewer(list,i,name){if(!list.length)return;V.list=list;V.name=name;showV(i);let d=vEl('viewer');if(!d.open)d.showModal()}
+function vZoom(on,e){V.zoom=on;let img=vEl('vimg');img.classList.toggle('zoomed',on);if(on&&e)vPan(e);else img.style.transformOrigin='50% 50%'}
+function vPan(e){let r=vEl('vstage').getBoundingClientRect(),pt=e.touches?e.touches[0]:e;let x=Math.max(0,Math.min(100,(pt.clientX-r.left)/r.width*100)),y=Math.max(0,Math.min(100,(pt.clientY-r.top)/r.height*100));vEl('vimg').style.transformOrigin=x+'% '+y+'%'}
+function showV(i){let n=V.list.length;V.i=(i+n)%n;vZoom(false);let img=vEl('vimg');img.referrerPolicy='no-referrer';img.src=V.list[V.i];img.alt=V.name+', zdjęcie '+(V.i+1)+' z '+n;
+ vEl('vcount').textContent=(V.i+1)+' / '+n;vEl('vname').textContent=V.name;vEl('vprev').hidden=vEl('vnext').hidden=n<2;
+ let th=vEl('vthumbs');th.replaceChildren();if(n>1)V.list.forEach((u,k)=>{let m=el('img',k===V.i?'on':'');m.referrerPolicy='no-referrer';m.src=u;m.alt='Zdjęcie '+(k+1);m.onclick=()=>showV(k);th.append(m)});
+ for(let d of [1,-1]){let pre=new Image();pre.referrerPolicy='no-referrer';pre.src=V.list[(V.i+d+n)%n]}}
+(function bindViewer(){let d=vEl('viewer');if(!d)return;let img=vEl('vimg'),stage=vEl('vstage'),sx=null,moved=false;
+ vEl('vclose').onclick=()=>d.close();vEl('vprev').onclick=()=>showV(V.i-1);vEl('vnext').onclick=()=>showV(V.i+1);
+ img.onclick=e=>{if(!moved)vZoom(!V.zoom,e)};stage.addEventListener('mousemove',e=>{if(V.zoom)vPan(e)});
+ stage.addEventListener('click',e=>{if(e.target===stage)d.close()});d.addEventListener('click',e=>{if(e.target===d)d.close()});
+ d.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();showV(V.i-1)}else if(e.key==='ArrowRight'){e.preventDefault();showV(V.i+1)}});
+ stage.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;moved=false},{passive:true});
+ stage.addEventListener('touchmove',e=>{if(V.zoom){vPan(e);moved=true;e.preventDefault()}else if(sx!==null&&Math.abs(e.touches[0].clientX-sx)>12)moved=true},{passive:false});
+ stage.addEventListener('touchend',e=>{if(!V.zoom&&sx!==null){let dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)showV(V.i+(dx<0?1:-1))}sx=null;setTimeout(()=>{moved=false},50)});
+ d.addEventListener('close',()=>vZoom(false))})();
 function fmtDate(v){let d=new Date(v);return isNaN(d)?'':d.toLocaleDateString('pl-PL')}
 function planChip(p){let c=el('span','pchip '+(p.move==='invite'||p.move==='settle_details'?'hot':p.stage==='fading'||p.stage==='cooldown'?'cold':''),p.stage_label);c.title=p.move_label+' · zainteresowanie '+p.interest+'/100';return c}
 function tsOf(t){return Date.parse(t.sort_at)||0}
@@ -45,8 +87,9 @@ else composer.append(el('p','',t.state_reason));
 let ctrl=el('div','controls');let pause=el('button','secondary',t.user_paused?'Wznów':'Wstrzymaj');pause.onclick=()=>flags(t.id,{paused:!t.user_paused});let archive=el('button','secondary',t.user_archived?'Przywróć z archiwum':'Archiwizuj lokalnie');archive.onclick=()=>flags(t.id,{archived:!t.user_archived});let del=el('button','secondary','Delete conversation data');del.onclick=async()=>{if(confirm('Delete locally retained data and block reimport?')){await api('/api/threads/'+encodeURIComponent(t.id),'DELETE');selected=null;await refresh()}};let regen=el('button','secondary','Regenerate draft');regen.onclick=()=>act('/api/threads/'+encodeURIComponent(t.id)+'/regenerate');ctrl.append(pause,archive,del,regen);composer.append(ctrl);
 if(['telegram','tinder'].includes(t.platform)){let grant=el('button','secondary','Automation permissions');grant.onclick=()=>showGrant(t);composer.append(grant)}
 let needs=data.drafts.find(d=>d.thread_id===t.id&&d.anchor_message_id===t.latest_message_id&&['needs_user','no_reply'].includes(d.status));if(needs)composer.append(el('p','',needs.status+': '+needs.body));
-let pb=document.getElementById('plan');pb.replaceChildren();if(t.plan){let p=t.plan;pb.append(el('div','label','Etap: '+p.stage_label),el('div','pmove',p.move_label),el('div','fact',p.why));let bar=el('div','ibar');let fill=el('div','');fill.style.width=p.interest+'%';bar.append(fill);pb.append(el('div','label','Zainteresowanie '+p.interest+'/100'),bar);for(let s of p.signals)pb.append(el('div','sig','• '+s))}else pb.textContent='Brak danych.';
-let facts=document.getElementById('facts');facts.replaceChildren();facts.append(el('div','label','Weryfikowalny stan'),el('div','fact',t.state_reason),el('div','fact','Wiadomości: '+t.message_count),el('div','fact','Następne działanie: '+t.next_action),el('div','fact','Dostęp: '+t.source_visibility));for(let m of data.memory[t.id]||[])facts.append(el('div','fact',m.kind+': '+m.value+' [source '+m.source_id+']'));let out=document.getElementById('outcomes');out.replaceChildren();let notes=(data.outcome_details[t.id]||[]);if(!notes.length)out.append(el('div','muted','Brak potwierdzonych rezultatów.'));for(let n of notes){out.append(el('div','label',n.kind),el('div','result',n.body),el('div','fact',JSON.stringify(n.details)),el('small','muted','Sources: '+n.evidence.join(', ')))}
+renderPlan(t);let facts=document.getElementById('facts');facts.replaceChildren();let kv=el('dl','kv');const row=(k,v)=>{if(v===undefined||v===null||v==='')return;kv.append(el('dt','',k),el('dd','',v))};
+row('Stan',statuses[t.state]||t.state);row('Powód',t.state_reason);row('Wiadomości',t.message_count);row('Następne działanie',t.next_action);row('Dostęp',t.source_visibility);for(let m of data.memory[t.id]||[])row(m.kind,m.value);facts.append(kv);
+let out=document.getElementById('outcomes');out.replaceChildren();let notes=(data.outcome_details[t.id]||[]);if(!notes.length)out.append(emptyCard('Na razie nic. Tu pojawią się potwierdzone ustalenia, np. termin spotkania.'));for(let n of notes){let r=el('div','oc');r.append(el('b','',n.kind),el('div','',n.body));out.append(r)}
 updateSystem();document.getElementById('pause-all').textContent=data.settings.paused?'Wznów agenta':'Wstrzymaj agenta';
 }
 async function flags(thread_id,fields){try{await api('/api/threads/'+thread_id+'/flags','POST',fields);await refresh()}catch(e){document.getElementById('status').textContent=e.message}}
@@ -127,7 +170,7 @@ build()}
 function showGrant(t){let p=panel('Permissions: '+t.display_name);p.append(el('p','','Enable only after this adult participant has agreed to AI-mediated messaging and automation has been disclosed. The owner is responsible for recording valid consent.'));let old=data.grants.find(g=>g.thread_id===t.id)||{};let fields={};for(let k of ['enabled','participant_consent','disclosed']){let[w,i]=field(k,old[k],'checkbox');fields[k]=i;p.append(w)}let save=el('button','primary','Save permissions');save.onclick=async()=>{await api('/api/threads/'+encodeURIComponent(t.id)+'/grant','PUT',Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.checked])));await refresh();document.getElementById('panel').close()};p.append(save)}
 async function pauseAll(){await api('/api/settings','PUT',{...data.settings,paused:!data.settings.paused});await refresh()}
 function showActivity(){let p=panel('Activity & reliability');p.append(el('p','','Last worker tick: '+data.worker.last_tick));for(let a of data.activity)p.append(el('p','fact',a.ts+' · '+(a.thread_id||'system')+' · '+a.event+' · '+a.detail));p.append(el('h2','','Metrics'));for(let m of data.metrics)p.append(el('p','fact',m.name+': '+m.total+' ('+m.samples+' samples)'));p.append(el('h2','','Delivery status'));for(let a of data.actions)p.append(el('p','fact',a.thread_id+' · '+a.status));for(let o of data.outbox)p.append(el('p','fact','Notification '+o.id+': '+o.status+' · attempts '+o.attempts));}
-refresh().catch(e=>document.getElementById('status').textContent=e.message);setInterval(()=>{if(!document.getElementById('panel').open)refresh().catch(()=>{})},5000)
+refresh().catch(e=>document.getElementById('status').textContent=e.message);setInterval(()=>{if(!document.getElementById('panel').open&&!document.getElementById('viewer')?.open)refresh().catch(()=>{})},5000)
 
 
 document.getElementById('tab-settings').addEventListener('click',()=>showSettings());document.getElementById('logout').addEventListener('click',logoutNow);document.getElementById('open-activity').addEventListener('click',showActivity);document.getElementById('pause-all').addEventListener('click',pauseAll);document.getElementById('close-panel').addEventListener('click',()=>document.getElementById('panel').close());
