@@ -117,6 +117,35 @@ async def sync():
     try:await service.tick()
     except Exception:raise HTTPException(503,'Source synchronization failed; check browser or configuration')
     return {'new_verified_notifications':len(s.notifications())-before,'drafts_created':len(s.all_drafts())-drafts,'source':os.getenv('DATING_AGENT_SOURCE','browser')}
+
+def build_stats(threads,hist,outcomes):
+    from collections import Counter
+    from datetime import datetime,timedelta,timezone
+    by_state=Counter(t['state'] for t in threads)
+    mine=sum(1 for t in threads for m in hist[t['id']] if m['sender']=='you');theirs=sum(1 for t in threads for m in hist[t['id']] if m['sender']!='you')
+    wrote=replied=both=0
+    for t in threads:
+        seq=[m['sender'] for m in hist[t['id']]]
+        if 'you' in seq and any(x!='you' for x in seq):both+=1
+        if 'you' in seq:
+            wrote+=1
+            if any(x!='you' for x in seq[seq.index('you'):]):replied+=1
+    today=datetime.now(timezone.utc).date();days=[(today-timedelta(days=i)).isoformat() for i in range(6,-1,-1)]
+    per_day={d:{'you':0,'them':0} for d in days}
+    for t in threads:
+        for m in hist[t['id']]:
+            d=str(m.get('created_at',''))[:10]
+            if d in per_day:per_day[d]['you' if m['sender']=='you' else 'them']+=1
+    now=time.time()
+    try:
+        req={'minute':s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?',(now-60,))[0]['n'],'hour':s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?',(now-3600,))[0]['n']}
+    except Exception:req=None
+    return {'matches':len(threads),'by_state':dict(by_state),'messages_you':mine,'messages_them':theirs,
+            'conversations_two_way':both,'we_wrote':wrote,'they_replied':replied,
+            'drafts':{r['status']:r['n'] for r in s.rows('SELECT status,COUNT(*) n FROM drafts GROUP BY status')},
+            'actions':s.rows('SELECT status,automatic,COUNT(*) n FROM actions GROUP BY status,automatic'),
+            'outcomes':dict(Counter(o['kind'] for lst in outcomes.values() for o in lst)),
+            'per_day':[{'day':d,**per_day[d]} for d in days],'tinder_requests':req}
 @app.get('/api/state')
 def state():
     drafts=s.all_drafts();notes=s.notifications();hist={t['id']:s.messages(t['id']) for t in s.threads()}
@@ -135,7 +164,7 @@ def state():
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
             'actions':s.rows('SELECT * FROM actions ORDER BY updated DESC LIMIT 100'),
             'connections':s.rows('SELECT id,enabled,can_reply FROM connections'),
-            'tinder':tinder_integration.public_status(),
+            'tinder':tinder_integration.public_status(),'stats':build_stats(threads,hist,outcomes),
             'outbox':s.rows('SELECT id,status,attempts,error FROM outbox'),
             'metrics':s.rows('SELECT name,SUM(value) AS total,COUNT(*) AS samples FROM metrics GROUP BY name')}
 class Flags(BaseModel):
