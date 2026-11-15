@@ -130,39 +130,44 @@ const STYLE_PRESETS=[
  ['Spokojnie i uprzejmie','spokojnie i uprzejmie, pełne zdania i poprawna interpunkcja, bez slangu, ciepły ton, bez presji, bez emoji poza uśmiechem od czasu do czasu']];
 const FACTS=[['imię','Imię','np. Kuba'],['wiek','Wiek','np. 29'],['miasto','Miasto','np. Warszawa'],['praca lub studia','Praca lub studia','np. projektuję aplikacje'],['zainteresowania','Zainteresowania','np. bieganie, kuchnia azjatycka, planszówki'],['co lubię robić na randce','Idealna pierwsza randka','np. kawa i spacer']];
 function showSettings(tab='general'){setView('settings');let p=document.getElementById('settings-view');p.replaceChildren();let cfg=data.settings;let result=el('div','mresult');
-let tabs=[['general','Ogólne','Jak Winq pracuje, w jakim języku pisze i jak długo trzyma rozmowy.'],['goal','Cel i spotkania','Dokąd Winq prowadzi rozmowę, jak szybko proponuje spotkanie i kiedy masz czas.'],['style','Styl i o Tobie','Jak brzmisz i co Winq może o Tobie mówić. Zmiany działają od razu, także na szkice, które już czekają.'],['tinder','Tinder','Połączenie konta, token i pełny import historii.'],['accounts','Konto','Wylogowanie, konto Winq i połączone konta.']];let shell=el('div','sv');let bar=el('nav','sv-nav');bar.setAttribute('aria-label','Sekcje ustawień');let main=el('div','sv-main');let head=el('div','sv-head');let body=el('div','sect');main.append(head,body,result);shell.append(bar,main);p.append(shell);
+let tabs=[['general','Ogólne','Jak Winq pracuje, w jakim języku pisze i jak długo trzyma rozmowy.'],['goal','Cel i spotkania','Dokąd Winq prowadzi rozmowę, jak szybko proponuje spotkanie i kiedy masz czas.'],['style','Styl i o Tobie','Jak brzmisz i co Winq może o Tobie mówić. Zmiany działają od razu, także na szkice, które już czekają.'],['tinder','Tinder','Połączenie konta, token i pełny import historii.'],['accounts','Konto','Wylogowanie, konto Winq i połączone konta.']];let shell=el('div','sv');let bar=el('nav','sv-nav');bar.setAttribute('aria-label','Sekcje ustawień');let main=el('div','sv-main');let head=el('div','sv-head');let body=el('div','sect');main.append(head,body);
+// Changes save themselves: selects and switches at once, text when you leave the field or switch section.
+let timer=null;const queue=ms=>{clearTimeout(timer);result.className='mresult';result.textContent='Zapisuję…';timer=setTimeout(()=>{timer=null;saveSettings()},ms)};
+const flush=async()=>{if(timer){clearTimeout(timer);timer=null;await saveSettings()}};
+body.addEventListener('change',e=>{if(['general','goal','style'].includes(tab)&&!e.target.closest('.nosave'))queue(200)});
+body.addEventListener('input',e=>{if(['general','goal','style'].includes(tab)&&e.target.matches('textarea,input:not([type=checkbox])')){result.className='mresult';result.textContent='Zapisze się, gdy klikniesz poza pole.'}});shell.append(bar,main);p.append(shell);
 let fields={};
-function build(){bar.replaceChildren();bar.append(el('div','sv-title','Ustawienia'));for(let [k,l] of tabs){let b=el('button','sv-item'+(tab===k?' active':''),l);b.onclick=()=>{tab=k;build()};bar.append(b)}let cur=tabs.find(x=>x[0]===tab)||tabs[0];head.replaceChildren(el('h2','',cur[1]),el('p','',cur[2]));body.replaceChildren();result.textContent='';fields={};
+function build(){bar.replaceChildren();bar.append(el('div','sv-title','Ustawienia'));for(let [k,l] of tabs){let b=el('button','sv-item'+(tab===k?' active':''),l);b.onclick=async()=>{await flush();tab=k;build()};bar.append(b)}let cur=tabs.find(x=>x[0]===tab)||tabs[0];head.replaceChildren(el('h2','',cur[1]),el('p','',cur[2]));if(['general','goal','style'].includes(tab))head.append(result);body.replaceChildren();result.className='mresult';result.textContent=['general','goal','style'].includes(tab)?'Zmiany zapisują się same.':'';fields={};
 if(tab==='general'){
  let mode=el('select','inp');for(let [v,l] of [['supervised','Normalny: Winq pisze szkice, Ty klikasz Wyślij'],['simulation','Test: tylko fikcyjne rozmowy'],['authorized_autonomy','Autopilot także poza Tinderem (np. Telegram)']]){let o=el('option','',l);o.value=v;o.selected=cfg.mode===v;mode.append(o)}fields.mode=mode;
- body.append(group('Tryb pracy','Zostaw „Normalny”. Autopilot na Tinderze włączasz przełącznikiem u góry strony: Winq odpisuje wtedy sam, z zachowaniem zabezpieczeń.',mode));
+ let modeGroup=group('Tryb pracy','Zostaw „Normalny”. Autopilota na Tinderze włączasz przyciskiem „Autopilot” u góry strony.',mode);
  let lang=el('select','inp');let langs=[['auto','Taki jak rozmówczyni (zalecane)'],['pl','Zawsze polski'],['en','Zawsze angielski']];if(!langs.some(x=>x[0]===cfg.language))langs.push([cfg.language,cfg.language]);for(let [v,l] of langs){let o=el('option','',l);o.value=v;o.selected=cfg.language===v;lang.append(o)}fields.language=lang;body.append(group('Język odpowiedzi','Z opcją zalecaną Winq odpisuje w języku, w którym napisała ona.',lang));
  let ret=el('input','inp');ret.type='number';ret.min=1;ret.max=365;ret.value=cfg.retention_days;fields.retention_days=ret;body.append(group('Jak długo trzymamy rozmowy (dni)','Rozmowy, w których od tylu dni nie ma żadnej wiadomości, są usuwane automatycznie. Maksimum 365.',ret));
  let [w,em]=toggle('Powiadomienia e-mail',cfg.email,'Wiadomość na e-mail, gdy pojawi się szkic do zatwierdzenia albo ustalicie spotkanie.');fields.email=em;body.append(w);
- let save=el('button','primary','Zapisz ustawienia');save.onclick=()=>saveSettings();let foot=el('div','mfoot');foot.append(save);body.append(foot)}
+ let adv=el('details','advanced');adv.append(el('summary','','Zaawansowane'),modeGroup);body.append(adv);}
 if(tab==='goal'){
 
  let goal=el('select','inp');for(let [v,l] of [['date','Spotkanie na żywo (Instagram jako plan B)'],['date_or_instagram','Spotkanie albo Instagram'],['instagram','Instagram'],['chat','Tylko rozmowa, bez zaproszeń']]){let o=el('option','',l);o.value=v;o.selected=(cfg.goal||'date')===v;goal.append(o)}fields.goal=goal;body.append(group('Cel','Bot prowadzi rozmowę w stronę tego celu, ale odmowa lub wahanie zawsze wygrywa.',goal));
  let pace=el('select','inp');for(let [v,l] of [['slow','Spokojne: zaproszenie po ok. 7 wymianach'],['normal','Normalne: po ok. 5 wymianach'],['fast','Szybkie: po ok. 3 wymianach']]){let o=el('option','',l);o.value=v;o.selected=(cfg.pace||'normal')===v;pace.append(o)}fields.pace=pace;body.append(group('Tempo','Tylko gdy widać zainteresowanie. Jeśli sama wspomni o wyjściu, bot zaproponuje wcześniej.',pace));
  let [iw,ig]=toggle('Instagram jako lżejszy krok',cfg.allow_instagram!==false,'Gdy odłoży spotkanie na „kiedyś", a rozmowa jest ciepła.');fields.allow_instagram=ig;body.append(iw);
  let av=el('input','inp');av.value=cfg.availability||'';fields.availability=av;body.append(group('Kiedy masz czas','Bot proponuje terminy tylko z tego opisu.',av));
- let ideas=el('textarea','inp');ideas.rows=5;ideas.value=(cfg.date_ideas&&cfg.date_ideas.length?cfg.date_ideas:['kawa albo matcha na mieście','spacer z kawą na wynos','piwo albo wino w luźnym barze','wystawa, targi albo coś w tym stylu','planszówki w barze','lody albo gofry i spacer']).join('\n');fields.date_ideas=ideas;body.append(group('Pomysły na pierwsze spotkanie','Jeden pomysł w linii. Bot dobiera ten, który pasuje do Waszej rozmowy.',ideas));
- let save=el('button','primary','Zapisz ustawienia');save.onclick=()=>saveSettings();let foot=el('div','mfoot');foot.append(save);body.append(foot)}
+ let ideas=el('textarea','inp');ideas.rows=5;ideas.value=(cfg.date_ideas&&cfg.date_ideas.length?cfg.date_ideas:['kawa albo matcha na mieście','spacer z kawą na wynos','piwo albo wino w luźnym barze','wystawa, targi albo coś w tym stylu','planszówki w barze','lody albo gofry i spacer']).join('\n');fields.date_ideas=ideas;body.append(group('Pomysły na pierwsze spotkanie','Jeden pomysł w linii. Bot dobiera ten, który pasuje do Waszej rozmowy.',ideas));}
 if(tab==='style'){
- let lib=el('div','scard');lib.append(el('div','glabel','Twój zmierzony styl'),el('div','gdesc','Ładowanie...'));body.append(lib);
+ let lib=el('div','measured');lib.append(el('div','gdesc','Sprawdzam, jak piszesz na Tinderze…'));
  let style=el('textarea','inp');style.rows=4;style.maxLength=1000;style.value=cfg.style;fields.style=style;
  let mark=()=>{for(let b of presets.children)b.classList.toggle('on',STYLE_PRESETS.some(x=>x[0]===b.textContent&&x[1]===style.value))};
- let presets=el('div','presets');for(let [name,text] of STYLE_PRESETS){let b=el('button','chipbtn',name);b.type='button';b.onclick=()=>{style.value=text;mark()};presets.append(b)}style.oninput=mark;mark();
- api('/api/style').then(r=>{lib.replaceChildren(el('div','glabel','Twój zmierzony styl'),el('div','gdesc',(r.stats.based_on==='own_messages'?'Z Twoich prawdziwych odpowiedzi na Tinderze: ':'Z korpusu przykładowych rozmów: ')+'mediana '+r.stats.median_chars+' znaków, '+r.stats.lowercase_start_pct+'% od małej litery, '+r.stats.question_pct+'% kończy się pytaniem, emoji w '+r.stats.emoji_pct+'%. Przy każdej wiadomości Winq dobiera z biblioteki ('+r.corpus_pairs+' par'+(r.own_pairs?' i '+r.own_pairs+' Twoich':'')+') najbardziej podobne sytuacje jako wzór tonu, nie faktów.'));let use=el('button','secondary','Użyj opisu z moich wiadomości');use.onclick=()=>{style.value=r.suggested_style;mark()};lib.append(use)}).catch(e=>{lib.replaceChildren(el('div','gdesc',e.message))});
- let sw=el('div','');sw.append(presets,style);body.append(group('Jak piszesz','Opisz własnymi słowami, jak brzmią Twoje wiadomości: długość, humor, emoji, wielkość liter. Winq stosuje to w każdej odpowiedzi. Zacznij od gotowego stylu i dopasuj.',sw));
+ let presets=el('div','presets');for(let [name,text] of STYLE_PRESETS){let b=el('button','chipbtn',name);b.type='button';b.onclick=()=>{style.value=text;mark();queue(0)};presets.append(b)}style.oninput=mark;mark();
+ api('/api/style').then(r=>{lib.replaceChildren();if(r.stats.based_on!=='own_messages'){lib.append(el('div','gdesc','Gdy wyślesz na Tinderze ok. 15 odpowiedzi, Winq zmierzy Twój prawdziwy styl i zaproponuje opis.'));return}
+ lib.append(el('div','gdesc','Twoje odpowiedzi na Tinderze ('+r.own_pairs+'): zwykle '+r.stats.median_chars+' znaków, '+r.stats.lowercase_start_pct+'% od małej litery, '+r.stats.question_pct+'% kończy się pytaniem, emoji w '+r.stats.emoji_pct+'%.'));
+ let use=el('button','secondary','Użyj stylu z moich wiadomości');use.type='button';use.onclick=()=>{style.value=r.suggested_style;mark();queue(0)};lib.append(use)}).catch(()=>{lib.replaceChildren(el('div','gdesc','Nie udało się zmierzyć stylu z Twoich wiadomości. To nie przeszkadza: wybierz styl powyżej.'))});
+ let sw=el('div','');sw.append(presets,style,lib);body.append(group('Jak piszesz','Kliknij gotowy styl albo opisz własnymi słowami: długość, humor, emoji, wielkość liter. Zapisuje się od razu i działa też na szkice, które już czekają.',sw));
  let profile=cfg.profile||{};let known=new Set(FACTS.map(f=>f[0]));fields.facts=[];fields.extra=[];
  let fl=el('div','factform');for(let [k,l,ph] of FACTS){let [fw,fi]=field(l,profile[k]||'');fi.placeholder=ph;fi.maxLength=300;fields.facts.push([k,fi]);fl.append(fw)}
  let extra=el('div','extrafacts');const addRow=(k,v)=>{let r=el('div','kvrow');let ki=el('input','inp');ki.placeholder='Co (np. pies)';ki.value=k;ki.maxLength=60;let vi=el('input','inp');vi.placeholder='Fakt (np. mam labradora Burka)';vi.value=v;vi.maxLength=300;r.append(ki,vi);extra.append(r);fields.extra.push([ki,vi])};
  for(let k of Object.keys(profile).filter(k=>!known.has(k)))addRow(k,profile[k]);
  let add=el('button','secondary','Dodaj własny fakt');add.type='button';add.onclick=()=>addRow('','');
  let fwrap=el('div','');fwrap.append(fl,extra,add);body.append(group('Fakty o Tobie','Tylko to, co sam tu wpiszesz, Winq może powiedzieć o Tobie. Niczego nie dopisuje ze starych wiadomości. Im więcej prawdziwych szczegółów, tym mniej odpowiedzi „do sprawdzenia”.',fwrap));
- let fb=el('textarea','inp');fb.rows=4;fb.placeholder='np. Nigdy nie używaj wykrzykników\nNie pytaj o pracę w pierwszych wiadomościach';fb.value=cfg.feedback.join('\n');fields.feedback=fb;body.append(group('Twoje zasady','Jedna zasada w linii. Winq przestrzega ich w każdej wiadomości.',fb));
- let save=el('button','primary','Zapisz ustawienia');save.onclick=()=>saveSettings();let foot=el('div','mfoot');foot.append(save);body.append(foot)}
+ let fb=el('textarea','inp');fb.rows=4;fb.placeholder='np. Nigdy nie używaj wykrzykników\nNie pytaj o pracę w pierwszych wiadomościach';fb.value=cfg.feedback.join('\n');fields.feedback=fb;body.append(group('Twoje zasady','Jedna zasada w linii. Winq przestrzega ich w każdej wiadomości.',fb));}
 if(tab==='tinder')buildTinder();
 if(tab==='accounts'){
  let me=el('div','scard');me.append(el('div','glabel','Sesja'),el('div','gdesc','Wylogowanie kończy sesję w tej przeglądarce. Bot dalej działa w tle zgodnie z ustawieniami.'));let row=el('div','btnrow');let lo=el('button','secondary','Wyloguj się');lo.onclick=logoutNow;row.append(lo);if(data.account_url){let ac=el('a','secondary','Konto Winq');ac.href=data.account_url+'/konto';row.append(ac)}me.append(row);body.append(me);
@@ -175,7 +180,7 @@ async function saveSettings(){try{let next={...cfg};const v=k=>fields[k];
  if(v('goal'))next.goal=v('goal').value;if(v('pace'))next.pace=v('pace').value;if(v('allow_instagram'))next.allow_instagram=v('allow_instagram').checked;if(v('availability'))next.availability=v('availability').value.trim();if(v('date_ideas'))next.date_ideas=v('date_ideas').value.split('\n').map(x=>x.trim()).filter(Boolean);
  if(v('style'))next.style=v('style').value.trim();if(v('feedback'))next.feedback=v('feedback').value.split('\n').map(x=>x.trim()).filter(Boolean);
  if(v('facts')){let pr={};for(let [k,i] of v('facts')){let x=i.value.trim();if(x)pr[k]=x}for(let [ki,vi] of v('extra')){let k=ki.value.trim(),x=vi.value.trim();if(k&&x)pr[k]=x}next.profile=pr}
- let r=await api('/api/settings','PUT',next);await refresh();cfg=data.settings;result.className='mresult ok';result.textContent=r.regenerating?'Zapisano. Przepisuję '+r.regenerating+(r.regenerating===1?' czekający szkic':' czekających szkiców')+' w nowym stylu. Zobaczysz je za chwilę.':'Zapisano.'}catch(e){result.className='mresult err';result.textContent=ERR_PL[e.message]||e.message}}
+ let r=await api('/api/settings','PUT',next);await refresh();cfg=data.settings;result.className='mresult ok';result.textContent=r.regenerating?'Zapisano ✓ Przepisuję '+r.regenerating+(r.regenerating===1?' czekający szkic':' czekających szkiców')+' w nowym stylu. Zobaczysz je za chwilę.':'Zapisano ✓'}catch(e){result.className='mresult err';result.textContent=ERR_PL[e.message]||e.message}}
 function buildTinder(){
  let cons=data.tinder.connections;let ts=data.tinder;
  let tok=el('div','scard');tok.append(el('div','glabel','Token Tindera'));
@@ -202,20 +207,47 @@ build()}
 function tinderConn(){return (data.tinder.connections||[])[0]}
 function apLive(c){return !!(c&&c.auto_send&&c.bio_mode&&c.bio_disclosure)}
 function updateAutopilotButton(){let b=document.getElementById('autopilot-btn');if(!b||!data)return;let c=tinderConn(),live=apLive(c),wait=!live&&!!(c&&c.auto_send);b.replaceChildren(el('span','apdot'+(live?' on':wait?' wait':'')),document.createTextNode(live?'Autopilot: włączony':wait?'Autopilot: czeka na bio':'Autopilot: wyłączony'))}
-function autopilotCard(c,after){
- const setAuto=async patch=>{await api('/api/tinder/connections/'+encodeURIComponent(c.id)+'/automation','PUT',patch);if(patch.bio_mode===true){try{await api('/api/tinder/sync','POST')}catch(e){}}await refresh();after()};
- let ap=el('div','autobox');ap.append(el('div','glabel','Autopilot'),el('div','gdesc','Winq sam odpisuje w rozmowach, w których ktoś Ci odpisał. Pierwszą wiadomość do nowego dopasowania piszesz Ty.'));
- let live=apLive(c);ap.append(el('div','callout '+(live?'ok':'warn'),live?'Autopilot działa we wszystkich rozmowach.':c.auto_send?'Autopilot czeka na informację o AI w Twoim bio (krok 1).':'Autopilot jest wyłączony. Dwa kroki i gotowe.'));
- let bio=el('div','autostep');bio.append(el('b','',(c.bio_disclosure?'✓ ':'1. ')+'Informacja o AI w Twoim bio na Tinderze'),el('div','gdesc',c.bio_disclosure?'Widzimy ją w bio. Sprawdzamy przy każdej synchronizacji; jeśli ją usuniesz, autopilot się zatrzyma.':'Osoby, z którymi piszesz, mają wiedzieć, że pomaga Ci asystent. Dodaj w aplikacji Tinder zdanie ze słowem „AI”, np.:'));
- if(!c.bio_disclosure){bio.append(el('div','bioex','Używam AI czasami, a ty? 🤖'),el('div','gdesc','Potem zaznacz poniżej. Od razu sprawdzimy Twoje bio.'))}
- let [bw,bc]=toggle('W moim bio jest informacja, że używam AI',!!c.bio_mode);bc.onchange=()=>setAuto({bio_mode:bc.checked});bio.append(bw);ap.append(bio);
- let go=el('div','autostep');go.append(el('b','','2. Włącz automatyczne wysyłanie'));let ar=el('button',c.auto_send?'secondary':'primary',c.auto_send?'Wyłącz autopilota':'Włącz autopilota');ar.onclick=()=>setAuto({enabled:!c.auto_send});go.append(ar);ap.append(go);
- ap.append(el('div','gdesc','Bezpieczniki: jeśli ktoś zapyta o bota, Winq odpowie szczerze i na luzie, że czasem pomaga Ci AI, i pisze dalej; jeśli ktoś się sprzeciwi, rozmowa wraca do Ciebie. Bot nie dopisuje kolejnych wiadomości, gdy ostatnia jest Twoja. Obowiązują limity zapytań konta. Pojedynczą rozmowę wyłączysz pod czatem („Autopilot w tej rozmowie”), a wszystko naraz przyciskiem „Wstrzymaj agenta”.'));
- return ap}
+function closePanel(){const d=document.getElementById('panel');if(d.open)d.close()}
+function startGuide(after){const t=data.tinder||{},c=tinderConn(),cfg=data.settings,live=apLive(c);
+ const box=el('div','guide'),msg=el('div','mresult');
+ const step=(n,state,title,desc,...controls)=>{const s=el('div','gstep '+state);s.append(el('span','gnum',state==='done'?'✓':String(n)));const tx=el('div','gtxt');tx.append(el('b','',title));if(desc)tx.append(el('div','gdesc',desc));if(controls.length){const r=el('div','gctl');r.append(...controls);tx.append(r)}s.append(tx);box.append(s)};
+ const fail=e=>{msg.className='mresult err';msg.textContent=ERR_PL[e.message]||e.message};
+ const setAuto=async(patch,wait)=>{msg.className='mresult';msg.textContent=wait;
+  try{await api('/api/tinder/connections/'+encodeURIComponent(c.id)+'/automation','PUT',patch);if(patch.bio_mode)await checkBio(true);await refresh();after()}catch(e){fail(e)}};
+ const checkBio=async quiet=>{if(!quiet){msg.className='mresult';msg.textContent='Sprawdzam Twoje bio na Tinderze…'}
+  try{await api('/api/tinder/sync','POST')}catch(e){if(e.status!==409&&!quiet)return fail(e)}if(!quiet){await refresh();after()}};
+ if(!data.llm_enabled)box.append(el('div','callout warn','Na serwerze brakuje klucza modelu AI, więc Winq nie napisze odpowiedzi. Daj znać obsłudze.'));
+ if(t.enabled===false)box.append(el('div','callout warn','Połączenie z Tinderem jest wyłączone na tym serwerze. Daj znać obsłudze.'));
+ // 1. Tinder
+ if(c)step(1,'done','Konto Tinder połączone',c.error?(tinderErrors[c.error]||'Połączenie wymaga uwagi.'):'');
+ else{const b=el('button','primary','Połącz Tinder');b.onclick=()=>{closePanel();showSettings('tinder')};step(1,'now','Połącz konto Tinder','Wklejasz token z tinder.com w Ustawieniach. Instrukcja jest przy polu, to ok. 2 minuty.',b)}
+ // 2. Style: one click, saved at once
+ const chips=el('div','presets');const cur=STYLE_PRESETS.find(x=>x[1]===cfg.style);
+ for(const [name,text] of STYLE_PRESETS){const b=el('button','chipbtn'+(cfg.style===text?' on':''),name);b.type='button';
+  b.onclick=async()=>{for(const x of chips.children)x.disabled=true;msg.className='mresult';msg.textContent='Zapisuję styl…';
+   try{await api('/api/settings','PUT',{...data.settings,style:text});await refresh();after()}catch(e){fail(e);for(const x of chips.children)x.disabled=false}};chips.append(b)}
+ const more=el('button','linkish','Fakty o Tobie i własne zasady →');more.type='button';more.onclick=()=>{closePanel();showSettings('style')};
+ step(2,'done','Styl: '+(cur?cur[0]:'Twój własny opis'),'Kliknij inny, jeśli chcesz. Zapisuje się od razu.',chips,more);
+ // 3. Bio disclosure
+ if(!c)step(3,'todo','Dopisz „AI” do bio na Tinderze','Najpierw połącz konto.');
+ else if(c.bio_mode&&c.bio_disclosure){const off=el('button','linkish','Usunąłem to z bio');off.type='button';off.onclick=()=>setAuto({bio_mode:false},'Zapisuję…');step(3,'done','„AI” jest w Twoim bio','Sprawdzamy to przy każdej synchronizacji. Jeśli zniknie, autopilot się zatrzyma.',off)}
+ else{const ex=el('button','bioex','Używam AI czasami, a ty? 🤖');ex.type='button';ex.title='Kliknij, żeby skopiować';
+  ex.onclick=()=>{navigator.clipboard?.writeText(ex.textContent).then(()=>{msg.className='mresult ok';msg.textContent='Skopiowane. Wklej w aplikacji Tinder: Profil → Edytuj → O mnie.'}).catch(()=>{})};
+  const done=el('button','primary',c.bio_mode?'Sprawdź ponownie':'Dodałem, sprawdź');
+  done.onclick=()=>c.bio_mode?checkBio(false):setAuto({bio_mode:true},'Sprawdzam Twoje bio na Tinderze…');
+  step(3,'now','Dopisz „AI” do bio na Tinderze',c.bio_mode?'Nie widzimy jeszcze słowa „AI” w Twoim bio. Zapisz bio w aplikacji i sprawdź ponownie (Tinder potrzebuje czasem minuty).':'Osoby, z którymi piszesz, mają wiedzieć, że pomaga Ci asystent. Dodaj w aplikacji Tinder (Profil → Edytuj → O mnie) zdanie ze słowem „AI”, np.:',ex,done)}
+ // 4. Switch on
+ if(!c)step(4,'todo','Włącz autopilota','Najpierw połącz konto.');
+ else if(live){const b=el('button','secondary','Wyłącz autopilota');b.onclick=()=>setAuto({enabled:false},'Wyłączam…');step(4,'done','Autopilot działa','Winq sam odpisuje, gdy ktoś Ci napisze. Pierwszą wiadomość do nowej pary piszesz Ty.',b)}
+ else if(c.auto_send){const b=el('button','secondary','Wyłącz autopilota');b.onclick=()=>setAuto({enabled:false},'Wyłączam…');step(4,'wait','Autopilot włączony, czeka na krok 3','Zacznie odpisywać, gdy zobaczymy „AI” w Twoim bio.',b)}
+ else{const b=el('button','primary big','Włącz autopilota');b.onclick=()=>setAuto({enabled:true},'Włączam…');step(4,'now','Włącz autopilota','Winq będzie sam odpisywać w rozmowach, w których ktoś Ci napisał.',b)}
+ box.append(msg);
+ const safe=el('details','howto');safe.append(el('summary','','Jakie są zabezpieczenia?'),el('div','gdesc','Jeśli ktoś zapyta o bota, Winq odpowie szczerze, że czasem pomaga Ci AI. Jeśli ktoś się sprzeciwi, rozmowa wraca do Ciebie. Bot nie dopisuje kolejnych wiadomości, gdy ostatnia jest Twoja. Jedną rozmowę wyłączysz pod czatem („Autopilot w tej rozmowie”), wszystko naraz przyciskiem „Wstrzymaj agenta”.'));box.append(safe);
+ return box}
+function autopilotCard(c,after){return startGuide(after)}
 function showAutopilot(){fillAutopilot(panel('Autopilot'))}
-function fillAutopilot(p){p.replaceChildren();let c=tinderConn();
- if(!c){p.append(el('p','','Autopilot działa na połączonym koncie Tinder. Najpierw podaj token w ustawieniach.'));let go=el('button','primary','Połącz Tinder');go.onclick=()=>{document.getElementById('panel').close();showSettings('tinder')};p.append(go);return}
- p.append(autopilotCard(c,()=>fillAutopilot(document.getElementById('panel-content'))))}
+function fillAutopilot(p){p.replaceChildren();
+ p.append(startGuide(()=>fillAutopilot(document.getElementById('panel-content'))))}
 function showGrant(t){let p=panel('Autopilot: '+t.display_name);let old=data.grants.find(g=>g.thread_id===t.id);let conn=data.tinder.connections.find(c=>c.id===t.connection_id)||{};
 let bioOn=t.platform==='tinder'&&conn.auto_send&&conn.bio_mode&&conn.bio_disclosure;
 if(bioOn){let off=old&&!old.enabled;p.append(el('p','',off?'Autopilot jest w tej rozmowie wyłączony'+(old.participant_consent===0&&old.disclosed===0?' (np. zapytała o AI albo wyłączyłeś go ręcznie).':'.'):'Autopilot działa tu dzięki informacji o AI w Twoim bio.'));
@@ -278,13 +310,9 @@ g.append(how,res);root.append(g);
 let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));root.append(act)}
 document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
 
-function renderOnboarding(){const box=document.getElementById('onboard');if(!box||!data)return;
- let dismissed=false;try{dismissed=localStorage.getItem('iskra-onboard-done')==='1'}catch(e){}
- const t=data.tinder||{};const steps=[
-  ['Połącz konto Tinder','Wklej token w Ustawieniach. Sprawdzimy go i zaszyfrujemy.',!!t.token_source,()=>showSettings('tinder')],
-  ['Ustaw styl i fakty o sobie','Opis stylu i kilka faktów, żeby szkice brzmiały jak Ty.',Object.keys(data.settings.profile||{}).length>0,()=>showSettings('style')],
-  ['Uruchom pełny import','Pobierzemy dopasowania, rozmowy i zdjęcia.',(t.connections||[]).some(c=>c.last_sync),()=>showSettings('tinder')]];
- const allDone=steps.every(s=>s[2]);box.hidden=dismissed||allDone||view!=='chats';if(box.hidden)return;box.replaceChildren();
- const card=el('div','ob');card.append(el('h2','','Zacznij w 3 krokach'),el('p','','Po tych krokach bot zacznie przygotowywać szkice odpowiedzi.'));
- const close=el('button','ob-close','Ukryj');close.onclick=()=>{try{localStorage.setItem('iskra-onboard-done','1')}catch(e){}box.hidden=true};card.append(close);
- const row=el('div','ob-steps');steps.forEach(([title,desc,done,go],i)=>{const s=el('div','ob-step'+(done?' done':''));s.append(el('b','',(i+1)+'. '+title),el('small','',desc));if(!done){const b=el('button','primary',i===0?'Połącz':'Przejdź');b.onclick=go;s.append(b)}row.append(s)});card.append(row);box.append(card)}
+function renderOnboarding(){const box=document.getElementById('onboard');if(!box||!data)return;updateAutopilotButton();
+ let hidden=false;try{hidden=localStorage.getItem('winq-start-hidden')==='1'}catch(e){}
+ box.hidden=hidden||apLive(tinderConn())||view!=='chats';if(box.hidden)return;box.replaceChildren();
+ const card=el('div','ob');card.append(el('h2','','Uruchom autopilota'),el('p','','4 proste kroki, ok. 3 minuty. Potem Winq sam odpisuje w Twoich rozmowach na Tinderze.'));
+ const close=el('button','ob-close','Ukryj');close.onclick=()=>{try{localStorage.setItem('winq-start-hidden','1')}catch(e){}box.hidden=true};card.append(close);
+ card.append(startGuide(()=>renderOnboarding()));box.append(card)}

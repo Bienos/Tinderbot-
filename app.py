@@ -339,20 +339,28 @@ class Settings(BaseModel):
     pace:__import__('typing').Literal['slow','normal','fast']='normal'
     availability:str=Field(default='zwykle wieczory w tygodniu, w weekend elastycznie',max_length=300)
     date_ideas:list[str]=Field(default_factory=list,max_length=12)
+_BACKGROUND=set()  # strong references to follow-up tasks still waiting for the bot
 @app.put('/api/settings')
 async def settings(body:Settings):
     if any(len(v)>1000 or len(k)>100 for k,v in body.profile.items()) or any(len(f)>500 for f in body.feedback):raise HTTPException(422,'Setting too long')
-    try:
-      async with service.owner_lock():
-        before=rt.settings_hash()
-        rt.save_settings(body.model_dump())
-        # Re-evaluate queued autonomy eligibility without regenerating/repeating sent actions.
-        with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')")
-        # New style, facts or goals: waiting drafts are rewritten now instead of turning out of date.
-        regenerating=rt.regenerate_pending() if rt.settings_hash()!=before else 0
-    except service.Busy as e:raise HTTPException(409,str(e))
-    if regenerating:service.WAKE.set()
-    return {'ok':True,'regenerating':regenerating}
+    # Saving never waits for the bot: a click on "Pause" or a new style must not fail with "busy" while a draft is
+    # being written. Settings are one quick row; anything already in flight re-checks them (settings hash) before
+    # it sends, so a draft written with the old style becomes stale instead of going out.
+    before=rt.settings_hash()
+    rt.save_settings(body.model_dump())
+    changed=rt.settings_hash()!=before
+    async def follow_up():
+        async with service.LOCK:
+            # Re-evaluate queued autonomy eligibility without regenerating/repeating sent actions.
+            with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')")
+            # New style, facts or goals: waiting drafts are rewritten now instead of turning out of date.
+            n=rt.regenerate_pending() if changed else 0
+        service.WAKE.set()
+        return n
+    regenerating=0;task=asyncio.create_task(follow_up())
+    try:regenerating=await asyncio.wait_for(asyncio.shield(task),3)
+    except asyncio.TimeoutError:_BACKGROUND.add(task);task.add_done_callback(_BACKGROUND.discard)  # finishes once the bot is free
+    return {'ok':True,'regenerating':regenerating,'saved':True}
 class Grant(BaseModel):
     enabled:bool=False
     participant_consent:bool=False
@@ -451,7 +459,7 @@ async def tinder_restore_deleted():
 @app.get('/api/style')
 def style_library():
     from agent import style
-    return {**style.library_summary(),'suggested_style':style.suggested_style()}
+    return style.library_summary()
 
 _TOKEN_ATTEMPTS=[]
 @app.post('/api/tinder/token')

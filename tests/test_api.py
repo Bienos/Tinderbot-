@@ -88,3 +88,31 @@ async def test_sigterm_releases_the_lease_and_stops_background_work(store):
             assert not store.rows("SELECT * FROM leases WHERE name='coordinator'")
             assert service.SHUTTING_DOWN
     finally:signal.signal(signal.SIGTERM,previous);service.SHUTTING_DOWN=False
+
+
+def test_settings_save_while_bot_is_busy():
+    """Pause or a new style must save at once even while the bot holds its lock writing a draft (was 409 'busy')."""
+    with tempfile.TemporaryDirectory() as temp:
+        script = r'''
+import asyncio,os,time
+from fastapi.testclient import TestClient
+from app import app
+from agent import service,runtime as rt
+with TestClient(app, headers={'Authorization':'Bearer '+os.environ['DASHBOARD_TOKEN']}) as c:
+  cfg=c.get('/api/state').json()['settings']
+  async def grab():
+    await service.LOCK.acquire()
+  c.portal.call(grab)
+  t=time.time();r=c.put('/api/settings',json={**cfg,'paused':True,'style':'krótko i na luzie'})
+  assert r.status_code==200, r.text
+  assert time.time()-t<10
+  assert rt.settings()['paused'] is True and rt.settings()['style']=='krótko i na luzie'
+  async def free():
+    service.LOCK.release()
+  c.portal.call(free)
+  s=c.get('/api/style'); assert s.status_code==200 and 'suggested_style' in s.json() and 'stats' in s.json()
+'''
+        env={**os.environ,'AGENT_DB_PATH':str(Path(temp)/'test.db'),'DATING_AGENT_SOURCE':'fixture','WORKER_ENABLED':'false','PUBLIC_ORIGIN':'http://testserver','DASHBOARD_TOKEN':'test-dashboard-token-at-least-32-chars','SEED_SIMULATOR':'true','COOKIE_SECURE':'false','TINDER_ENABLED':'false'}
+        for k in ('OPENAI_API_KEY','ANTHROPIC_API_KEY','TINDER_AUTH_TOKEN'):env.pop(k,None)
+        result=subprocess.run([sys.executable,'-c',script],capture_output=True,text=True,env=env,timeout=60)
+        assert result.returncode==0, result.stdout+'\n'+result.stderr
