@@ -25,8 +25,8 @@
 <main>
 <section class="hero">
   <div class="hero-copy">
-    <h1>Zamień nowe matche w&nbsp;<span class="hl">umówione randki.</span></h1>
-    <p class="lead">{{BRAND}} odpisuje Twoim stylem, podtrzymuje rozmowę i&nbsp;w dobrym momencie proponuje spotkanie. Ty nie siedzisz w&nbsp;czacie. Czekasz na powiadomienie, że randka jest umówiona albo że masz jej Instagram.</p>
+    <h1>Zamień matche w&nbsp;<span class="hl">umówione spotkania.</span></h1>
+    <p class="lead">{{BRAND}} pisze Twoim stylem i wie, kiedy zaprosić. Ty żyjesz swoim życiem, a&nbsp;powiadomienie przychodzi dopiero wtedy, gdy randka jest umówiona.</p>
     <div class="cta"><a class="btn" href="/rejestracja">Zacznij teraz</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
     <p class="note">Konto, płatność i połączenie w kilka minut. Anulujesz w każdej chwili.</p>
   </div>
@@ -111,24 +111,75 @@
 </section>
 
 <section id="jak" class="how">
-  <h2>Ustawiasz raz. Potem czekasz na powiadomienia.</h2>
-  <ol class="steps">
-    <li><h3>Połącz konto</h3><p>Dostajesz prywatny panel. Wklejasz token sesji, a my sprawdzamy go i szyfrujemy. Około 2 minut.</p></li>
-    <li><h3>Powiedz, jak piszesz i kiedy masz czas</h3><p>Styl, kilka faktów o sobie, wolne wieczory i pomysły na pierwsze spotkanie. Domyślne ustawienia działają od razu.</p></li>
-    <li><h3>Włącz autopilota i zajmij się swoim dniem</h3><p>{{BRAND}} prowadzi rozmowy i daje znać, gdy jest termin. Autopilota włączysz, gdy w Twoim bio na Tinderze jest informacja o pomocy AI. Do tego czasu szkice czekają na jedno kliknięcie.</p></li>
+  <div class="how-head">
+    <h2>Ustawiasz raz. <span class="hl">Potem czekasz na powiadomienia.</span></h2>
+    <p class="how-time"><span aria-hidden="true">⏱</span> Całość zajmuje kilka minut</p>
+  </div>
+  <ol class="flow">
+    <li class="fl fl1">
+      <div class="fl-art" aria-hidden="true">
+        <div class="tok"><span class="tok-k">token</span><span class="tok-v"><i>eyJhbGciOi</i><em>••••••••••</em></span><span class="tok-lock"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="3" fill="url(#fire)"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#2a0f22" stroke-width="2.4"/></svg></span></div>
+        <span class="tok-ok">✓ sprawdzony i zaszyfrowany</span>
+      </div>
+      <span class="fl-n">1</span>
+      <h3>Połącz konto</h3>
+      <p>Wklejasz token sesji w prywatnym panelu. Resztą zajmujemy się my.</p>
+    </li>
+    <li class="fl fl2">
+      <div class="fl-art" aria-hidden="true">
+        <div class="chips"><span class="on">luźno</span><span class="on">z humorem</span><span>formalnie</span><span class="on">krótko</span></div>
+        <div class="days"><span>pon</span><span>wt</span><span>śr</span><span class="on">czw</span><span>pt</span><span class="on">sob</span><span>nd</span></div>
+      </div>
+      <span class="fl-n">2</span>
+      <h3>Opisz, jak piszesz</h3>
+      <p>Styl, kilka faktów o sobie i wolne wieczory. Domyślne ustawienia działają od razu.</p>
+    </li>
+    <li class="fl fl3">
+      <div class="fl-art" aria-hidden="true">
+        <div class="auto"><span class="auto-l">Autopilot<small>wszystkie rozmowy</small></span><span class="switch"><i></i></span></div>
+        <span class="auto-bio">bio: „…czasem pomaga mi AI”</span>
+      </div>
+      <span class="fl-n">3</span>
+      <h3>Włącz autopilota</h3>
+      <p>Wystarczy wzmianka w bio, że pomaga Ci AI. Do tego czasu szkice czekają na jedno kliknięcie.</p>
+    </li>
   </ol>
+  <div class="payoff">
+    <span class="payoff-l">A potem już tylko to:</span>
+    <div class="ping"><span class="ping-ic" aria-hidden="true"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="url(#fire)"/><ellipse cx="19.5" cy="31.5" rx="7.6" ry="9.4" fill="#fff"/><path d="M32.5 34Q40.5 23 48.5 34" fill="none" stroke="#fff" stroke-width="7.4" stroke-linecap="round"/></svg></span><div><b>Randka umówiona</b><span>Ola · czw 19:00 · kawa na mieście</span></div></div>
+  </div>
 </section>
 
 <section id="kontrola" class="control">
-  <h2>Twoje konto, Twoje zasady</h2>
-  <ul class="control-list">
-    <li><b>Osobny serwer</b> Twoje rozmowy nie leżą obok cudzych.</li>
-    <li><b>Token szyfrowany AES-256</b> Nigdy nie wraca do przeglądarki ani do logów.</li>
-    <li><b>Odłączasz jednym kliknięciem</b> Token znika od razu.</li>
-    <li><b>Dane w UE</b> Serwery we Frankfurcie, przechowywanie tak długo, jak ustawisz.</li>
-    <li><b>Spokojne tempo</b> Limity zapytań i automatyczna pauza, gdy platforma prosi o przerwę.</li>
-    <li><b>Bez udawania</b> Autopilot wymaga ujawnienia AI, zgodnie z unijnym AI Act.</li>
-  </ul>
+  <div class="ctl-glow" aria-hidden="true"></div>
+  <h2>Twoje konto, <span class="hl">Twoje zasady.</span></h2>
+  <p class="ctl-lead">Zbudowaliśmy {{BRAND}} tak, żeby oddanie mu rozmów nie wymagało ślepej wiary.</p>
+  <div class="bento">
+    <article class="tile t-token">
+      <div class="t-copy"><h3>Token szyfrowany AES-256</h3><p>Nigdy nie wraca do przeglądarki ani do logów.</p></div>
+      <div class="cipher" aria-hidden="true"><span class="c-in">eyJhbGciOiJIUzI1NiJ9…</span><span class="c-arrow">→</span><span class="c-out"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+    </article>
+    <article class="tile t-server">
+      <div class="srv" aria-hidden="true"><span></span><span class="me"></span><span></span></div>
+      <h3>Osobny serwer</h3><p>Twoje rozmowy nie leżą obok cudzych.</p>
+    </article>
+    <article class="tile t-eu">
+      <div class="eu" aria-hidden="true"><svg viewBox="0 0 64 64"><g fill="url(#fire-u)"><circle cx="32" cy="10" r="3.4"/><circle cx="43" cy="12.9" r="3.4"/><circle cx="51.1" cy="21" r="3.4"/><circle cx="54" cy="32" r="3.4"/><circle cx="51.1" cy="43" r="3.4"/><circle cx="43" cy="51.1" r="3.4"/><circle cx="32" cy="54" r="3.4"/><circle cx="21" cy="51.1" r="3.4"/><circle cx="12.9" cy="43" r="3.4"/><circle cx="10" cy="32" r="3.4"/><circle cx="12.9" cy="21" r="3.4"/><circle cx="21" cy="12.9" r="3.4"/></g></svg></div>
+      <h3>Dane w Unii Europejskiej</h3><p>Przechowujemy je w UE i tylko tak długo, jak ustawisz.</p>
+    </article>
+    <article class="tile t-pace">
+      <div class="pace" aria-hidden="true"><svg viewBox="0 0 160 40" preserveAspectRatio="none"><path d="M0 20 Q10 4 20 20 T40 20 T60 20 Q72 12 84 20 T108 20 L160 20" fill="none" stroke="url(#fire)" stroke-width="3.5" stroke-linecap="round"/></svg><span class="pause">II</span></div>
+      <h3>Spokojne tempo</h3><p>Limity zapytań i automatyczna pauza, gdy platforma prosi o przerwę.</p>
+    </article>
+    <article class="tile t-off">
+      <div class="off" aria-hidden="true"><span class="switch off-sw"><i></i></span><span class="off-t">token usunięty</span></div>
+      <h3>Odłączasz jednym kliknięciem</h3><p>Token znika od razu.</p>
+    </article>
+    <article class="tile t-bio">
+      <div class="t-copy"><h3>Gra fair</h3><p>Jedno zdanie w bio, że czasem pomaga Ci AI. Tyle wystarczy, żeby było uczciwie wobec drugiej strony i zgodnie z przepisami.</p></div>
+      <div class="bio" aria-hidden="true"><span class="bio-av">K</span><div><b>Kuba, 29</b><p>Góry, dobra kawa i kiepskie żarty. <mark>Czasem pomaga mi AI ✨</mark></p></div></div>
+    </article>
+  </div>
 </section>
 
 <section id="cennik" class="pricing">
