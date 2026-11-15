@@ -23,7 +23,7 @@ def configured() -> bool:
 
 
 def send(to: str, subject: str, text: str) -> bool:
-    brand = os.getenv('BRAND_NAME', 'Iskra')
+    brand = os.getenv('BRAND_NAME', 'Winq')
     if not configured():
         SENT.append({'to': to, 'subject': subject, 'text': text})
         missing = [k for k in ('SMTP_HOST', 'SMTP_PASSWORD') if not os.getenv(k)]
@@ -52,7 +52,7 @@ def safe_send(to: str, subject: str, text: str) -> None:
 
 
 def welcome(to: str, origin: str) -> None:
-    safe_send(to, 'Witaj w Iskrze', 'Twoje konto jest gotowe.\n\nNastępny krok: wykup dostęp na stronie konta, '
+    safe_send(to, 'Witaj w Winq', 'Twoje konto jest gotowe.\n\nNastępny krok: wykup dostęp na stronie konta, '
               f'a przygotujemy Twój osobny serwer.\n{origin}/konto')
 
 
