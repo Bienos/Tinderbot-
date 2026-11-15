@@ -142,6 +142,13 @@ background:linear-gradient(120deg,{PINK},{ORANGE});box-shadow:0 18px 50px -20px 
 <div style="background:#fff1f5;border-radius:12px;padding:8px 10px;text-align:center;font-family:Unbounded,sans-serif;font-weight:700;line-height:1.2">
 <div style="font-size:12px;color:{PINK}">CZW</div><div style="font-size:16px">19:00</div></div><div><div style="font-weight:700;font-size:19px">Kawa na mieście</div>
 <div style="font-size:15px;color:#6f5866">Ola: chętnie!</div></div></div>
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" style="position:absolute;inset:0"><defs>
+<linearGradient id="ar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{PINK}"/><stop offset="1" stop-color="{ORANGE}"/></linearGradient>
+<filter id="as" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="{PINK}" flood-opacity=".35"/></filter></defs>
+<g stroke="url(#ar)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#as)">
+<path d="M996 132C1046 132 1068 160 1068 208"/><path d="M1055 196L1068 213L1081 196"/>
+<path d="M872 318C826 320 804 340 804 356"/><path d="M791 345L804 362L817 345"/>
+<path d="M1024 420C1070 420 1090 444 1090 470"/><path d="M1077 459L1090 476L1103 459"/></g></svg>
 </body></html>'''
 
 

@@ -213,7 +213,7 @@
 </section>
 
 <section id="pytania" class="faq">
-  <h2>Pytania, które warto zadać</h2>
+  <h2>Masz wątpliwości? <span class="hl">Sprawdź, zanim zaczniesz.</span></h2>
   <details><summary>Ile czasu muszę na to poświęcać?</summary><p>Konfiguracja zajmuje kilka minut. Z autopilotem nie musisz zaglądać do czatu: {{BRAND}} odpisuje, a Ty dostajesz powiadomienie w panelu i mailem, gdy ktoś potwierdzi termin, przesunie go albo poda Instagram lub numer. W trybie szkiców zatwierdzasz każdą odpowiedź jednym kliknięciem.</p></details>
   <details><summary>Czy to oficjalna integracja z aplikacją randkową?</summary><p>Nie. {{BRAND}} nie jest powiązany z Tinderem ani Match Group. Integracja jest nieoficjalna i łamie regulamin platformy, więc platforma może ograniczyć albo zablokować konto. Stosujemy ostrożne limity, ale tego ryzyka nie da się wyeliminować. Decydujesz świadomie przy podłączeniu.</p></details>
   <details><summary>Czy osoba po drugiej stronie wie, że pomaga AI?</summary><p>W trybie szkiców to Ty czytasz i wysyłasz każdą wiadomość. Autopilota włączysz dopiero, gdy w Twoim bio na Tinderze jest informacja, że używasz AI (albo w pojedynczej rozmowie, w której ta osoba o tym wie i się zgodziła). Jeśli ktoś zapyta o bota, {{BRAND}} odpowie szczerze, a gdy ktoś się sprzeciwi, rozmowa wraca do Ciebie.</p></details>
@@ -225,7 +225,26 @@
   <details><summary>Dla kogo jest {{BRAND}}?</summary><p>Dla dorosłych (18+), którzy dużo piszą na Tinderze i gubią rozmowy w natłoku obowiązków albo nie wiedzą, jak podtrzymać rozmowę. {{BRAND}} odpisuje po polsku i po angielsku.</p></details>
   <details><summary>Ile to kosztuje i jak anulować?</summary><p>Jeden plan w subskrypcji, {{PRICE}}. Cenę widzisz też przed płatnością na stronie Stripe. Anulujesz w każdej chwili w „Zarządzaj subskrypcją” na swoim koncie, a dostęp działa do końca opłaconego okresu.</p></details>
   <details><summary>Czy mogę usunąć swoje dane?</summary><p>Tak. Możesz usunąć token, pojedyncze rozmowy albo całe konto. Szczegóły w polityce prywatności.</p></details>
-  <div class="final"><p>Następny match może być już umówioną randką.</p><a class="btn" href="/rejestracja">Zacznij teraz</a></div>
+  <div class="final">
+    <div class="final-copy">
+      <p class="final-h">Twój bilet na <span class="hl">następną randkę.</span></p>
+      <a class="btn final-btn" href="/rejestracja">Odbierz bilet <span aria-hidden="true">→</span></a>
+      <small>Zakładasz konto, opłacasz dostęp, łączysz Tindera. Anulujesz w każdej chwili.</small>
+    </div>
+    <div class="pass" role="group" aria-label="Co dostajesz">
+      <div class="pass-top">
+        <span class="pass-k">{{BRAND}} · dostęp miesięczny</span>
+        <span class="pass-h">Match <span aria-hidden="true">→</span><br>randka</span>
+        <dl class="pass-grid">
+          <div><dt>Styl</dt><dd>Twój</dd></div>
+          <div><dt>Tryb</dt><dd>Autopilot / szkice</dd></div>
+          <div><dt>Język</dt><dd>PL · EN</dd></div>
+          <div><dt>Start</dt><dd>W kilka minut</dd></div>
+        </dl>
+      </div>
+      <div class="pass-bot"><span class="pass-bars" aria-hidden="true"></span><span class="pass-price">{{PRICE}}</span></div>
+    </div>
+  </div>
 </section>
 </main>
 
