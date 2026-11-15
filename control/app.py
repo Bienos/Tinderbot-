@@ -119,6 +119,8 @@ def _rate_limited(ip: str) -> bool:
 @app.post('/api/waitlist')
 async def waitlist(request: Request):
     ip = request.client.host if request.client else '?'
+    if os.getenv('TRUST_PROXY') == 'true':  # behind Render's proxy: the left-most forwarded address is the visitor
+        ip = request.headers.get('x-forwarded-for', ip).split(',')[0].strip() or ip
     if _rate_limited(ip):
         raise HTTPException(429, 'Za dużo zgłoszeń z tego adresu. Spróbuj za godzinę.')
     try:

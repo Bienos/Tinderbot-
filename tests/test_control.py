@@ -36,3 +36,10 @@ def test_honeypot_and_admin_auth_and_rate_limit(client):
     assert client.get('/admin/waitlist').status_code==401
     for i in range(5):client.post('/api/waitlist',json={**OK,'email':f'u{i}@ex.com'})
     assert client.post('/api/waitlist',json={**OK,'email':'late@ex.com'}).status_code==429
+
+
+def test_rate_limit_uses_forwarded_ip_behind_proxy(client,monkeypatch):
+    monkeypatch.setenv('TRUST_PROXY','true')
+    for i in range(5):client.post('/api/waitlist',json={**OK,'email':f'a{i}@ex.com'},headers={'X-Forwarded-For':'1.1.1.1'})
+    assert client.post('/api/waitlist',json={**OK,'email':'x@ex.com'},headers={'X-Forwarded-For':'1.1.1.1'}).status_code==429
+    assert client.post('/api/waitlist',json={**OK,'email':'y@ex.com'},headers={'X-Forwarded-For':'2.2.2.2, 10.0.0.1'}).status_code==200
