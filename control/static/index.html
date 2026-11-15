@@ -3,12 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{BRAND}} · zamień dopasowania w spotkania</title>
-<meta name="description" content="{{BRAND}} odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadne dopasowanie nie zgasło w ciszy. Ty decydujesz, co wychodzi.">
-<meta name="theme-color" content="#fff6f8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+<title>{{BRAND}} – asystent randkowy AI do odpowiedzi na Tinderze</title>
+<meta name="description" content="{{BRAND}} pisze odpowiedzi w Twoim stylu i podpowiada, kiedy zaprosić na randkę. Ty zatwierdzasz każdą wiadomość. {{PRICE}}, anulujesz w każdej chwili.">
+<meta name="theme-color" content="#fff6f8"><link rel="preload" href="/assets/fonts/onest-latin-v1.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/assets/fonts/unbounded-latin-v1.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/landing.css">
 </head>
 <body>
@@ -28,7 +25,7 @@
 <section class="hero">
   <div class="hero-copy">
     <h1>Zamień dopasowania w&nbsp;spotkania.</h1>
-    <p class="lead">{{BRAND}} odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła w ciszy. Ty tylko decydujesz, co wychodzi.</p>
+    <p class="lead">{{BRAND}} to asystent randkowy AI. Odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła w ciszy. Ty decydujesz, co wychodzi.</p>
     <div class="cta"><a class="btn" href="/rejestracja">Zacznij teraz</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
     <p class="note">Konto, płatność i połączenie w kilka minut. Anulujesz w każdej chwili.</p>
   </div>
@@ -90,7 +87,7 @@
   <ol class="steps">
     <li><h3>Połącz konto</h3><p>Dostajesz prywatny panel. Wklejasz token sesji, a my sprawdzamy go i szyfrujemy. Około 2 minut.</p></li>
     <li><h3>Powiedz, jak piszesz i czego chcesz</h3><p>Styl, kilka faktów o sobie, kiedy masz czas i pomysły na pierwsze spotkanie. Domyślne ustawienia działają od razu.</p></li>
-    <li><h3>Zatwierdzaj albo włącz autopilota</h3><p>Szkice czekają na jedno kliknięcie. Autopilot tylko w rozmowach, w których druga osoba wie o pomocy AI.</p></li>
+    <li><h3>Zatwierdzaj albo włącz autopilota</h3><p>Szkice czekają na jedno kliknięcie. Autopilota włączysz sam, gdy w Twoim bio na Tinderze jest informacja o pomocy AI.</p></li>
   </ol>
 </section>
 
@@ -109,9 +106,13 @@
 <section id="pytania" class="faq">
   <h2>Pytania, które warto zadać</h2>
   <details><summary>Czy to oficjalna integracja z aplikacją randkową?</summary><p>Nie. {{BRAND}} nie jest powiązany z Tinderem ani Match Group. Integracja jest nieoficjalna i łamie regulamin platformy, więc platforma może ograniczyć albo zablokować konto. Stosujemy ostrożne limity, ale tego ryzyka nie da się wyeliminować. Decydujesz świadomie przy podłączeniu.</p></details>
-  <details><summary>Czy osoba po drugiej stronie wie, że pomaga AI?</summary><p>W trybie szkiców to Ty czytasz i wysyłasz każdą wiadomość. Autopilota włączysz tylko w rozmowie, w której ta osoba wie o pomocy AI i się na nią zgodziła.</p></details>
+  <details><summary>Czy osoba po drugiej stronie wie, że pomaga AI?</summary><p>W trybie szkiców to Ty czytasz i wysyłasz każdą wiadomość. Autopilota włączysz dopiero, gdy w Twoim bio na Tinderze jest informacja, że używasz AI (albo w pojedynczej rozmowie, w której ta osoba o tym wie i się zgodziła). Jeśli ktoś zapyta o bota, {{BRAND}} odpowie szczerze, a gdy ktoś się sprzeciwi, rozmowa wraca do Ciebie.</p></details>
   <details><summary>Czy {{BRAND}} wymyśli coś o mnie?</summary><p>Nie. Fakty o Tobie bierze wyłącznie z tego, co sam wpiszesz. Jeśli czegoś nie wie, zostawia decyzję Tobie.</p></details>
-  <details><summary>Czy wyśle coś bez mojej wiedzy?</summary><p>Domyślnie nie: każdy szkic czeka na zatwierdzenie. Autopilota włączasz osobno dla wybranych rozmów i zatrzymujesz jednym przyciskiem.</p></details>
+  <details><summary>Czy wyśle coś bez mojej wiedzy?</summary><p>Domyślnie nie: każdy szkic czeka na zatwierdzenie. Autopilota włączasz sam jednym przełącznikiem w panelu, a wyłączasz tak samo, dla wszystkich rozmów albo dla jednej.</p></details>
+  <details><summary>Czym {{BRAND}} różni się od zwykłego ChatGPT?</summary><p>Zwykły czat musisz za każdym razem karmić przekopiowaną rozmową i opisem siebie. {{BRAND}} jest podłączona do Twojego konta, czyta rozmowę, dopasowuje się do tego, jak piszesz, i podpowiada kolejny krok: kiedy dopytać, kiedy opowiedzieć coś o sobie, a kiedy zaprosić na spotkanie. Szkic czeka w panelu, zanim otworzysz aplikację.</p></details>
+  <details><summary>Co napisać na Tinderze, gdy nie wiem, jak odpowiedzieć?</summary><p>{{BRAND}} proponuje szkic, który nawiązuje do konkretnej rzeczy, którą napisała druga osoba, w Twoim stylu: krótko, bez wymuszonych pytań i komplementów na siłę. Możesz go poprawić albo kliknąć „Napisz inaczej".</p></details>
+  <details><summary>Kiedy najlepiej zaprosić na randkę?</summary><p>Zwykle po kilku wymianach, gdy druga osoba dopytuje, żartuje i odpisuje szybko. {{BRAND}} obserwuje te sygnały i proponuje lekkie, konkretne zaproszenie tylko wtedy, gdy jest na to moment. Tempo (spokojne, normalne albo szybkie) ustawiasz sam.</p></details>
+  <details><summary>Dla kogo jest {{BRAND}}?</summary><p>Dla dorosłych (18+), którzy dużo piszą na Tinderze i gubią rozmowy w natłoku obowiązków albo nie wiedzą, jak podtrzymać rozmowę. {{BRAND}} odpisuje po polsku i po angielsku.</p></details>
   <details><summary>Ile to kosztuje i jak anulować?</summary><p>Jeden plan w subskrypcji: {{PRICE}}. Cenę widzisz też przed płatnością na stronie Stripe. Anulujesz w każdej chwili w „Zarządzaj subskrypcją" na swoim koncie, a dostęp działa do końca opłaconego okresu.</p></details>
   <details><summary>Czy mogę usunąć swoje dane?</summary><p>Tak: token, pojedyncze rozmowy albo całe konto. Szczegóły w polityce prywatności.</p></details>
 </section>

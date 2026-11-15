@@ -17,7 +17,9 @@ from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
 LOGIN='''<!doctype html><title>Conversation Agent · Sign in</title><style>body{font:17px system-ui;background:#f4f5f7;max-width:420px;margin:15vh auto}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}small{color:#666}</style><h1>Conversation Agent</h1><p>Sign in with your dashboard access token.</p><form><input type=password autocomplete=current-password required aria-label="Access token"><button>Sign in</button></form><small>The local token is stored in runtime/dashboard-token. Set DASHBOARD_TOKEN for deployment.</small><p id=error></p><script src="/static/login.js" defer></script>'''
-LEASE_WAIT_SECONDS=30
+LEASE_WAIT_SECONDS=75   # longer than LEASE_TTL, so a stale lease can never crash-loop the start
+LEASE_TTL=60
+LEASE_HEARTBEAT=15
 
 
 def lease_owner():
@@ -25,11 +27,24 @@ def lease_owner():
     return f'{socket.gethostname()}:{os.getpid()}:{secrets.token_hex(8)}'
 
 
+def _pid_alive(pid):
+    try:os.kill(pid,0)
+    except PermissionError:return True
+    except OSError:return False
+    return True
+
+
 def lease_blocks(prior,owner):
-    """Another live worker of THIS container holds the lease. A lease left by a previous container (restart or
-    redeploy: the disk moves to the new one) is stale, because only one container can mount the data disk."""
+    """Is another LIVE worker of this container holding the lease? Anything else is stale and is taken over at once:
+    a previous container (the data disk moved to us, only one container can mount it) or an earlier process of this
+    container that is gone (killed while shutting down, so it never released the lease; it can even have had our pid)."""
     if not prior or prior['expires']<=time.time():return False
-    return prior['owner'].split(':',1)[0]==owner.split(':',1)[0]
+    host,_,rest=prior['owner'].partition(':');mine,_,mine_rest=owner.partition(':')
+    if host!=mine:return False
+    try:other=int(rest.split(':',1)[0]);me=int(mine_rest.split(':',1)[0])
+    except ValueError:return True
+    if other==me:return False
+    return _pid_alive(other)
 
 
 @asynccontextmanager
@@ -42,14 +57,25 @@ async def lifespan(app):
             db.execute('BEGIN IMMEDIATE')
             prior=db.execute("SELECT * FROM leases WHERE name='coordinator'").fetchone()
             if not lease_blocks(prior,owner):
-                db.execute('INSERT OR REPLACE INTO leases VALUES(?,?,?)',('coordinator',owner,time.time()+120));break
+                db.execute('INSERT OR REPLACE INTO leases VALUES(?,?,?)',('coordinator',owner,time.time()+LEASE_TTL));break
         await asyncio.sleep(1)
     else:raise RuntimeError('Another coordinator owns this database; use one ASGI worker')
     rt.recover()
+    import signal
+    previous=signal.getsignal(signal.SIGTERM)
+    def release_on_term(signum,frame):
+        # A slow graceful shutdown (open connections) can end in a hard kill; free the lease and stop new work first,
+        # so the replacement process starts at once instead of waiting for a lease that nobody will release.
+        service.SHUTTING_DOWN=True
+        try:
+            with s.connect() as db:db.execute("DELETE FROM leases WHERE name='coordinator' AND owner=?",(owner,))
+        except Exception:pass
+        if callable(previous):previous(signum,frame)
+    with contextlib.suppress(ValueError,OSError):signal.signal(signal.SIGTERM,release_on_term)
     async def heartbeat():
         while True:
-            with s.connect() as db:db.execute("UPDATE leases SET expires=? WHERE name='coordinator' AND owner=?",(time.time()+120,owner))
-            await asyncio.sleep(20)
+            with s.connect() as db:db.execute("UPDATE leases SET expires=? WHERE name='coordinator' AND owner=?",(time.time()+LEASE_TTL,owner))
+            await asyncio.sleep(LEASE_HEARTBEAT)
     hb=asyncio.create_task(heartbeat())
     task=asyncio.create_task(service.worker()) if os.getenv('WORKER_ENABLED','true')=='true' else None
     preflight=asyncio.create_task(tinder_startup_check()) if os.getenv('TINDER_STARTUP_CHECK','false')=='true' else None
@@ -141,7 +167,7 @@ def send(body:Send):
     except PermissionError:raise HTTPException(403,'Permission revoked')
 @app.post('/api/sync')
 async def sync():
-    if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
+    if service.TICK.locked() or service.SYNC.locked():raise HTTPException(409,'Coordinator busy')
     before=len(s.notifications());drafts=len(s.all_drafts())
     try:await service.tick()
     except Exception:raise HTTPException(503,'Source synchronization failed; check browser or configuration')
@@ -242,8 +268,8 @@ async def approve(draft_id:int,request:Request):
     if edited is not None:
         edited=str(edited).strip()
         if not 1<=len(edited)<=1000:raise HTTPException(422,'Wiadomość musi mieć od 1 do 1000 znaków.')
-    if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
-    async with service.LOCK:
+    try:
+      async with service.owner_lock():
         if edited is not None:
             with s.connect() as db:
                 if db.execute("UPDATE drafts SET body=? WHERE id=? AND status='pending'",(edited,draft_id)).rowcount!=1:
@@ -252,6 +278,7 @@ async def approve(draft_id:int,request:Request):
         try:return await service.execute(draft_id)
         except DispatchDenied as e:raise HTTPException(409,str(e))
         except PermissionError as e:raise HTTPException(403,str(e))
+    except service.Busy as e:raise HTTPException(409,str(e))
 class Settings(BaseModel):
     model_config=ConfigDict(extra='forbid')
     mode:__import__('typing').Literal['simulation','supervised','authorized_autonomy']='supervised'
@@ -268,12 +295,19 @@ class Settings(BaseModel):
     availability:str=Field(default='zwykle wieczory w tygodniu, w weekend elastycznie',max_length=300)
     date_ideas:list[str]=Field(default_factory=list,max_length=12)
 @app.put('/api/settings')
-def settings(body:Settings):
+async def settings(body:Settings):
     if any(len(v)>1000 or len(k)>100 for k,v in body.profile.items()) or any(len(f)>500 for f in body.feedback):raise HTTPException(422,'Setting too long')
-    rt.save_settings(body.model_dump())
-    # Re-evaluate queued autonomy eligibility without regenerating/repeating sent actions.
-    with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')")
-    return {'ok':True}
+    try:
+      async with service.owner_lock():
+        before=rt.settings_hash()
+        rt.save_settings(body.model_dump())
+        # Re-evaluate queued autonomy eligibility without regenerating/repeating sent actions.
+        with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')")
+        # New style, facts or goals: waiting drafts are rewritten now instead of turning out of date.
+        regenerating=rt.regenerate_pending() if rt.settings_hash()!=before else 0
+    except service.Busy as e:raise HTTPException(409,str(e))
+    if regenerating:service.WAKE.set()
+    return {'ok':True,'regenerating':regenerating}
 class Grant(BaseModel):
     enabled:bool=False
     participant_consent:bool=False
@@ -313,7 +347,8 @@ async def telegram(request:Request):
 
 @app.post('/api/threads/{thread_id}/regenerate')
 async def regenerate(thread_id:str):
-    async with service.LOCK:
+    try:
+      async with service.owner_lock():
         t=service.thread_by_id(thread_id)
         if not t:raise HTTPException(404,'Thread not found')
         hist=s.messages(thread_id)
@@ -323,8 +358,11 @@ async def regenerate(thread_id:str):
             if d:
                 if db.execute('SELECT 1 FROM actions WHERE draft_id=?',(d['id'],)).fetchone():raise HTTPException(409,'Attempted action cannot be regenerated')
                 db.execute("UPDATE drafts SET status='regenerate' WHERE id=?",(d['id'],))
-            db.execute("UPDATE jobs SET status='queued',available=0 WHERE thread_id=? AND anchor=?",(thread_id,hist[-1]['id']))
+            # updated=0: the owner's request goes to the front of the queue, ahead of drafts nobody asked for yet
+            db.execute("UPDATE jobs SET status='queued',available=0,updated=0 WHERE thread_id=? AND anchor=?",(thread_id,hist[-1]['id']))
         rt.enqueue(thread_id,hist[-1]['id'])
+    except service.Busy as e:raise HTTPException(409,str(e))
+    service.WAKE.set()
     return {'ok':True}
 
 class TinderConnect(BaseModel):
@@ -360,7 +398,8 @@ async def tinder_restore_deleted():
         clear_local_budget_block()
     rt.audit(None,'tinder_reimport_allowed','Owner allowed re-import of deleted Tinder conversations: %d'%n)
     async def run():
-        async with service.LOCK:await poll()
+        async with service.SYNC:await poll()
+        service.WAKE.set()
     task=asyncio.create_task(run());_BG.add(task);task.add_done_callback(_BG.discard)
     return {'restored':n,'retention_days':365,'sync':'started'}
 
@@ -415,8 +454,9 @@ async def tinder_token_delete():
 @app.post('/api/tinder/sync')
 async def tinder_sync():
     from agent.tinder import poll
-    if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
-    async with service.LOCK:await poll()
+    if service.SYNC.locked():raise HTTPException(409,'Synchronizacja już trwa')
+    async with service.SYNC:await poll()
+    service.WAKE.set()
     return {'ok':True}
 
 @app.get('/static/{name}')
