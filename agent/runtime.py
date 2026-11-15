@@ -110,21 +110,34 @@ def job_end(job,status,error=None):
         db.execute('UPDATE jobs SET status=?,error=?,available=?,updated=? WHERE id=?',
                    (status,error,time.time()+min(300,2**min(job['attempts']+1,8)),time.time(),job['id']))
 
-def eligible(thread):
+def _connection(connection_id,ctx):
+    key=('connection',connection_id)
+    if key not in ctx:
+        found=s.rows('SELECT * FROM connections WHERE id=?',(connection_id,))
+        ctx[key]=found[0] if found else None
+    return ctx[key]
+
+def eligible(thread,ctx=None):
     """May the agent prepare drafts here and may the owner send one he approved? (Owner reviews every message.)
-    Sending without the owner's click is a separate, stricter gate: auto_allowed()."""
-    cfg=settings()
+    Sending without the owner's click is a separate, stricter gate: auto_allowed().
+    ctx is an optional per-request cache, so a listing of hundreds of threads does not re-read the same settings
+    and connection for each of them."""
+    ctx={} if ctx is None else ctx
+    cfg=ctx['cfg'] if 'cfg' in ctx else ctx.setdefault('cfg',settings())
     if thread.get('platform') not in (None,'simulator'):
-        con=s.rows('SELECT * FROM connections WHERE id=?',(thread['connection_id'],))
-        if not con or not con[0]['enabled'] or not con[0]['can_reply']:return False
+        con=_connection(thread['connection_id'],ctx)
+        if not con or not con['enabled'] or not con['can_reply']:return False
     if thread.get('platform') == 'telegram':
         # Telegram participants talk to a bot account directly: nothing is generated before their consent.
         grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
         if not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return False
     if thread.get('platform') == 'tinder':
-        from agent.tinder import connection, TinderError
-        try: connection(thread['connection_id'])
-        except TinderError: return False
+        key=('tinder_ok',thread['connection_id'])
+        if key not in ctx:
+            from agent.tinder import connection, TinderError
+            try: connection(thread['connection_id']);ctx[key]=True
+            except TinderError: ctx[key]=False
+        if not ctx[key]:return False
     return not cfg['paused'] and not thread['user_paused'] and not thread['user_archived'] and thread['source_visibility']=='available'
 
 AI_MENTION=re.compile(r"(?<![\w])(ai|a\.i\.|bot\w*|chat\s?gpt|sztuczn\w*)(?![\w])",re.I)
@@ -141,33 +154,38 @@ def ai_question(text):
     return bool(text) and bool(AI_MENTION.search(text))
 
 
-def auto_consent(thread):
+def auto_consent(thread,ctx=None):
     """Has the other person been told that AI is used here? Either an explicit per-conversation grant from the owner,
     or the owner's Tinder bio says so (checked on every sync). If she asks, the reply admits it honestly (see
     service.process_job); if she objects, the conversation goes back to the owner. The owner can switch any off."""
-    grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
+    ctx={} if ctx is None else ctx
+    if 'grants' in ctx:grants=[ctx['grants'][thread['id']]] if thread['id'] in ctx['grants'] else []
+    else:grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
     if grants and all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return True
     if grants:return False  # owner set this conversation explicitly (e.g. switched autopilot off)
     if thread.get('platform')!='tinder':return False
-    con=s.rows('SELECT value FROM connections WHERE id=?',(thread['connection_id'],))
-    value=json.loads(con[0]['value']) if con else {}
+    con=_connection(thread['connection_id'],ctx)
+    value=json.loads(con['value']) if con else {}
     if not (value.get('bio_mode') and value.get('bio_disclosure')):return False
-    if any(m['sender']=='them' and ai_objection(m['body'] or '') for m in s.messages(thread['id'])):
+    history=ctx.get('hist',{}).get(thread['id']) if ctx.get('hist') is not None else None
+    if history is None:history=s.messages(thread['id'])
+    if any(m['sender']=='them' and ai_objection(m['body'] or '') for m in history):
         with s.connect() as db:db.execute('INSERT OR IGNORE INTO grants VALUES(?,?,?,?)',(thread['id'],0,0,0))
         audit(thread['id'],'autopilot_handed_to_owner','She objected to AI; this conversation now needs the owner')
         return False
     return True
 
 
-def auto_allowed(thread):
-    cfg=settings()
-    if not eligible(thread):return False
+def auto_allowed(thread,ctx=None):
+    ctx={} if ctx is None else ctx
+    cfg=ctx['cfg'] if 'cfg' in ctx else ctx.setdefault('cfg',settings())
+    if not eligible(thread,ctx):return False
     if thread['platform']=='simulator':return cfg['mode']=='simulation'
-    con=s.rows('SELECT * FROM connections WHERE id=?',(thread['connection_id'],))
+    con=_connection(thread['connection_id'],ctx)
     platform_auto=cfg['mode']=='authorized_autonomy'
     if thread['platform']=='tinder':
-        platform_auto=cfg['mode']!='simulation' and bool(con and json.loads(con[0]['value']).get('auto_send',False))
-    return bool(platform_auto and auto_consent(thread) and con and con[0]['enabled'] and con[0]['can_reply'])
+        platform_auto=cfg['mode']!='simulation' and bool(con and json.loads(con['value']).get('auto_send',False))
+    return bool(platform_auto and auto_consent(thread,ctx) and con and con['enabled'] and con['can_reply'])
 
 def retain(thread,history):
     """Store bounded, source-linked observations, never convert questions to facts.
@@ -188,6 +206,14 @@ def retain(thread,history):
         db.execute('DELETE FROM memory WHERE thread_id=? AND source_id NOT IN (SELECT source_id FROM memory WHERE thread_id=? ORDER BY rowid DESC LIMIT 24)',(thread,thread))
 
 def memory(thread): return s.rows('SELECT * FROM memory WHERE thread_id=? ORDER BY rowid DESC LIMIT 24',(thread,))
+
+def memory_by_thread():
+    """The same 24 newest observations per thread as memory(), for every thread in one query."""
+    out={}
+    for r in s.rows('SELECT * FROM memory ORDER BY rowid DESC'):
+        mine=out.setdefault(r['thread_id'],[])
+        if len(mine)<24:mine.append(r)
+    return out
 
 def record_outcomes(thread,anchor,outcomes):
     value=json.dumps([o.as_dict() for o in outcomes],ensure_ascii=False)

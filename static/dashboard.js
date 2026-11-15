@@ -110,7 +110,8 @@ updateSystem();document.getElementById('pause-all').textContent=data.settings.pa
 async function flags(thread_id,fields){try{await api('/api/threads/'+thread_id+'/flags','POST',fields);await refresh()}catch(e){document.getElementById('status').textContent=e.message}}
 async function act(path){try{let r=await api(path,'POST');document.getElementById('status').textContent=JSON.stringify(r);await refresh()}catch(e){document.getElementById('status').textContent=e.message}}
 let lastSig='',scrollKey='';
-function dataSig(d){return JSON.stringify([d.threads,d.messages,d.drafts,d.grants,d.memory,d.settings,d.llm_enabled,d.connections,d.tinder.configured,d.tinder.connections.map(c=>[c.id,c.enabled,c.error,c.auto_send,c.bio_mode,c.bio_disclosure,c.last_sync]),{...d.stats,tinder_requests:null}])}
+const msgSig=m=>Object.keys(m).map(k=>k+':'+m[k].length+':'+(m[k].length?(m[k][m[k].length-1].id??m[k][m[k].length-1].source_id):'')).join('|');  // messages only ever get appended
+function dataSig(d){return JSON.stringify([d.threads,msgSig(d.messages),d.drafts,d.grants,msgSig(d.memory),d.settings,d.llm_enabled,d.connections,d.tinder.configured,d.tinder.connections.map(c=>[c.id,c.enabled,c.error,c.auto_send,c.bio_mode,c.bio_disclosure,c.last_sync]),{...d.stats,tinder_requests:null}])}
 function updateSystem(){updateAutopilotButton();let s=document.getElementById('system');if(s&&data)s.textContent='Tryb: '+data.settings.mode+' • Worker: '+(data.worker.running?'działa':'wyłączony')+' • LLM: '+(data.llm_enabled?'skonfigurowany':'brak')+(data.worker.error?' • '+data.worker.error:'')}
 async function refresh(){let next=await api('/api/state');let sig=dataSig(next);data=next;if(!selected||!data.threads.some(t=>t.id===selected)){let c=data.threads.filter(isConv).sort((a,b)=>tsOf(b)-tsOf(a))[0];selected=c?c.id:null}
 if(sig===lastSig||document.activeElement?.id==='draft-edit'){updateSystem();return}lastSig=sig;let side=document.getElementById('threads').parentElement,top=side.scrollTop,rost=document.getElementById('roster').scrollLeft;render();side.scrollTop=top;document.getElementById('roster').scrollLeft=rost}
@@ -241,7 +242,8 @@ function fastPoll(){if(!writing()){fastSince=0;return}if(!fastSince)fastSince=Da
 async function safeRefresh(){try{await refresh();if(failures)connBanner(false);failures=0;fastPoll()}catch(e){failures++;
  if(e.status===401){location.reload();return}
  connBanner(true,data?'Brak połączenia z serwerem. Pokazuję ostatnie dane, ponawiam…':'Łączę z serwerem… Jeśli właśnie był restart, to potrwa kilkanaście sekund.')}}
-safeRefresh();setInterval(()=>{if(!document.getElementById('panel').open&&!document.getElementById('viewer')?.open)safeRefresh()},5000)
+safeRefresh();setInterval(()=>{if(!document.hidden&&!document.getElementById('panel').open&&!document.getElementById('viewer')?.open)safeRefresh()},5000)
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('panel').open)safeRefresh()})
 
 
 document.getElementById('tab-settings').addEventListener('click',()=>showSettings());document.getElementById('queue-btn')?.addEventListener('click',()=>showQueue());document.getElementById('logout').addEventListener('click',logoutNow);document.getElementById('open-activity').addEventListener('click',showActivity);document.getElementById('autopilot-btn').addEventListener('click',showAutopilot);document.getElementById('pause-all').addEventListener('click',pauseAll);document.getElementById('close-panel').addEventListener('click',()=>document.getElementById('panel').close());

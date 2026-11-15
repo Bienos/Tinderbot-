@@ -113,6 +113,13 @@ def source_for_thread(thread_id: str):
 def messages(thread_id: str):
     return rows('SELECT * FROM messages WHERE thread_id=? ORDER BY created_at,rowid',(thread_id,))
 
+def messages_by_thread():
+    """Every thread's messages in one query, each list in the same order messages() returns it."""
+    out = {}
+    for m in rows('SELECT * FROM messages ORDER BY thread_id,created_at,rowid'):
+        out.setdefault(m['thread_id'], []).append(m)
+    return out
+
 def sync_message(item: dict):
     with connect() as db:
         db.execute('INSERT OR IGNORE INTO messages (id,thread_id,sender,body,created_at,synced_at) VALUES (?,?,?,?,?,?)',

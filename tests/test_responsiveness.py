@@ -87,3 +87,37 @@ async def test_changing_style_rewrites_waiting_drafts_instead_of_leaving_them_ou
 def test_prompt_tells_the_model_to_follow_the_owners_style_setting():
     from agent.engine import SYSTEM_PROMPT
     assert 'preferences.style' in SYSTEM_PROMPT and 'preferences.feedback' in SYSTEM_PROMPT
+
+
+async def test_listing_shortcuts_give_exactly_the_same_answers_as_the_per_thread_queries(store):
+    import json
+    await ingest_and_draft(store)
+    with s.connect() as db:  # a live Tinder-style connection with the autopilot on, so every branch is exercised
+        db.execute("INSERT OR REPLACE INTO connections(id,enabled,can_reply,user_id,value) VALUES('tinder:o',1,1,'o',?)",
+                   (json.dumps({'auto_send':True,'bio_mode':True,'bio_disclosure':True}),))
+        db.execute("INSERT OR REPLACE INTO grants VALUES('t2',0,0,0)")
+    by_thread=s.messages_by_thread()
+    assert by_thread=={t['id']:s.messages(t['id']) for t in s.threads() if s.messages(t['id'])}
+    mem=rt.memory_by_thread()
+    assert mem=={t['id']:rt.memory(t['id']) for t in s.threads() if rt.memory(t['id'])}
+    ctx={'cfg':rt.settings(),'hist':{t['id']:by_thread.get(t['id'],[]) for t in s.threads()},
+         'grants':{g['thread_id']:g for g in s.rows('SELECT * FROM grants')}}
+    for t in s.threads():
+        assert rt.eligible(t,ctx)==rt.eligible(t),t['id']
+        assert rt.auto_allowed(t,ctx)==rt.auto_allowed(t),t['id']
+        assert rt.auto_consent(t,ctx)==rt.auto_consent(t),t['id']
+
+
+def test_state_with_hundreds_of_matches_stays_fast(store):
+    import json,time
+    import app as application
+    with s.connect() as db:
+        for i in range(300):
+            tid=f'tinder:o:m{i}'
+            db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1)',(tid,f'Osoba {i}','tinder','tinder:o',f'm{i}'))
+            for j in range(20):
+                db.execute('INSERT INTO messages (id,thread_id,sender,body,created_at,synced_at) VALUES (?,?,?,?,?,?)',
+                           (f'{tid}:{j}',tid,'them' if j%2==0 else 'you','a ty co robisz w weekend?',f'2026-11-{1+j//4:02d}T10:{j:02d}:00+00:00',s.utcnow()))
+    application.state()
+    t0=time.perf_counter();r=application.state();took=time.perf_counter()-t0
+    assert len(r['threads'])>=300 and took<1.5,f'state() took {took:.2f}s'   # was ~5x slower before the shortcuts
