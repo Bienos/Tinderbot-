@@ -53,7 +53,7 @@ def test_register_login_logout_and_account_status(client):
     assert client.post('/api/register',json={**REG,'password':'krotkie'}).status_code==422
     r=client.post('/api/register',json=REG);assert r.status_code==200 and 'iskra_session' in r.cookies
     assert client.post('/api/register',json=REG).status_code==409
-    me=client.get('/api/me').json();assert me=={'email':'ola@example.com','name':'Ola','status':'pending','panel_ready':False}
+    me=client.get('/api/me').json();assert {k:me[k] for k in ('email','name','status','panel_ready','billing_enabled')}=={'email':'ola@example.com','name':'Ola','status':'pending','panel_ready':False,'billing_enabled':False}
     assert client.get('/konto/panel',follow_redirects=False).headers['location']=='/konto'
     client.post('/api/logout');client.cookies.clear()
     assert client.get('/api/me').status_code==401 and client.get('/konto',follow_redirects=False).headers['location']=='/zaloguj'
@@ -118,3 +118,46 @@ def test_share_card_meta_and_assets(client,monkeypatch):
     r=client.get('/assets/og.png');assert r.status_code==200 and r.headers['content-type']=='image/png' and r.content[:4]==b'\x89PNG'
     assert client.get('/assets/icon.svg').headers['content-type'].startswith('image/svg+xml')
     assert 'og:image' in client.get('/rejestracja').text
+
+
+def _signed(payload,secret):
+    import time,hmac,hashlib
+    ts=str(int(time.time()))
+    sig=hmac.new(secret.encode(),(ts+'.'+payload).encode(),hashlib.sha256).hexdigest()
+    return {'Stripe-Signature':f't={ts},v1={sig}','Content-Type':'application/json'}
+
+
+def test_billing_checkout_webhook_and_panel_gate(client,monkeypatch):
+    import json,stripe
+    monkeypatch.setenv('STRIPE_SECRET_KEY','sk_test_x');monkeypatch.setenv('STRIPE_PRICE_ID','price_x');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_test')
+    seen={}
+    class S:url='https://checkout.stripe.com/c/pay/cs_test'
+    def fake_create(**kw):seen.update(kw);return S
+    monkeypatch.setattr(stripe.checkout.Session,'create',staticmethod(fake_create))
+    client.post('/api/register',json=REG)
+    acc_id=None
+    out=client.post('/api/billing/checkout').json();assert out['url'].startswith('https://checkout.stripe.com/')
+    assert seen['mode']=='subscription' and seen['customer_email']=='ola@example.com' and seen['client_reference_id'].isdigit()
+    acc_id=seen['client_reference_id']
+    me=client.get('/api/me').json();assert me['has_access'] is False and me['plan_status']=='none'
+    client.post('/admin/accounts/activate',headers=ADMIN,json={'email':'ola@example.com','instance_url':'https://x.onrender.com'})
+    assert client.get('/konto/panel',follow_redirects=False).headers['location']=='/konto'   # paid access required
+    bad=client.post('/stripe/webhook',content='{}',headers={'Stripe-Signature':'t=1,v1=00','Content-Type':'application/json'});assert bad.status_code==400
+    ev=json.dumps({'id':'evt_1','object':'event','type':'checkout.session.completed','data':{'object':{'object':'checkout.session','mode':'subscription','client_reference_id':acc_id,'customer':'cus_123'}}})
+    assert client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_test')).json()=={'received':True}
+    me=client.get('/api/me').json();assert me['has_access'] and me['plan_status']=='active' and me['panel_ready'] and me['can_manage_billing']
+    assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://x.onrender.com/auth/sso?t=')
+    assert client.post('/api/billing/checkout').status_code==409
+    ev2=json.dumps({'id':'evt_2','object':'event','type':'customer.subscription.deleted','data':{'object':{'object':'subscription','customer':'cus_123','status':'canceled'}}})
+    client.post('/stripe/webhook',content=ev2,headers=_signed(ev2,'whsec_test'))
+    me=client.get('/api/me').json();assert me['plan_status']=='canceled' and not me['has_access'] and not me['panel_ready']
+    class P:url='https://billing.stripe.com/p/session/x'
+    monkeypatch.setattr(stripe.billing_portal.Session,'create',staticmethod(lambda **kw:P))
+    assert client.post('/api/billing/portal').json()['url'].startswith('https://billing.stripe.com/')
+
+
+def test_comped_account_skips_billing(client,monkeypatch):
+    monkeypatch.setenv('STRIPE_SECRET_KEY','sk_test_x');monkeypatch.setenv('STRIPE_PRICE_ID','price_x');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_test')
+    client.post('/api/register',json=REG)
+    client.post('/admin/accounts/activate',headers=ADMIN,json={'email':'ola@example.com','instance_url':'https://x.onrender.com','comped':True})
+    assert client.get('/api/me').json()['panel_ready'] is True

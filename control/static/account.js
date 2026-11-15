@@ -7,9 +7,18 @@ bind('register-form','/api/register',f=>({email:f.get('email'),name:f.get('name'
 bind('delete-form','/api/account/delete',f=>({password:f.get('password')}),()=>location.href='/');
 const logout=document.getElementById('logout');if(logout)logout.addEventListener('click',async()=>{await post('/api/logout').catch(()=>{});location.href='/'});
 const card=document.getElementById('status-card');
+function btn(text,cls,onclick,href){const b=document.createElement(href?'a':'button');b.className=cls;b.textContent=text;if(href)b.href=href;else{b.type='button';b.onclick=onclick}return b}
+async function go(url){try{const r=await post(url);location.href=r.url}catch(e){const p=document.createElement('p');p.className='err';p.textContent=e.message;card.append(p)}}
 if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{document.getElementById('hello').textContent=me.name?'Cześć, '+me.name:me.email;
- const h=document.createElement('h1'),p=document.createElement('p');card.append(h,p);
- if(me.panel_ready){h.textContent='Twój panel jest gotowy';p.textContent='Otwórz panel, połącz konto randkowe i ustaw styl. Zalogujemy Cię automatycznie.';const a=document.createElement('a');a.className='btn';a.href='/konto/panel';a.textContent='Otwórz mój panel';card.append(a)}
- else if(me.status==='disabled'){h.textContent='Konto jest wyłączone';p.textContent='Skontaktuj się z nami, jeśli to pomyłka.'}
- else{h.textContent='Jesteś na liście bety';p.textContent='Przygotowujemy Twój osobny serwer. Napiszemy mailem, gdy panel będzie gotowy. Nie musisz nic robić.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s)}
+ const h=document.createElement('h1'),p=document.createElement('p');card.append(h,p);const paidNow=new URLSearchParams(location.search).get('platnosc')==='ok';
+ const steps=document.getElementById('steps');const mark=n=>{if(steps)[...steps.children].forEach((li,i)=>li.classList.toggle('done',i<n))};
+ if(me.status==='disabled'){h.textContent='Konto jest wyłączone';p.textContent='Skontaktuj się z nami, jeśli to pomyłka.';mark(0);return}
+ if(me.panel_ready){mark(2);h.textContent='Twój panel jest gotowy';p.textContent='Otwórz panel i połącz konto Tinder. Zalogujemy Cię automatycznie.';card.append(btn('Otwórz mój panel','btn',null,'/konto/panel'))}
+ else if(me.billing_enabled&&!me.has_access&&!paidNow){mark(1);
+  if(me.plan_status==='canceled'){h.textContent='Subskrypcja jest anulowana';p.textContent='Wznów, żeby wrócić do panelu. Twoje ustawienia czekają.';card.append(btn('Wznów subskrypcję','btn',()=>go('/api/billing/checkout')))}
+  else if(me.plan_status==='past_due'||me.plan_status==='unpaid'){h.textContent='Płatność się nie powiodła';p.textContent='Zaktualizuj kartę, żeby nie stracić dostępu.';card.append(btn('Zaktualizuj płatność','btn',()=>go('/api/billing/portal')))}
+  else{h.textContent='Jeszcze jeden krok';p.textContent='Wykup dostęp, a my przygotujemy Twój osobny serwer. Płatność obsługuje Stripe, anulujesz w każdej chwili.';card.append(btn('Wykup dostęp','btn',()=>go('/api/billing/checkout')))}}
+ else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent='Stawiamy Twój osobny serwer. Napiszemy mailem, gdy panel będzie gotowy, zwykle tego samego dnia.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s)}
+ if(me.can_manage_billing)card.append(btn('Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
 }).catch(()=>location.href='/zaloguj')}
+document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));

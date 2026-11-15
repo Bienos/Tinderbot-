@@ -1,11 +1,10 @@
-<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#fff6f8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/landing.css"><title>Zaloguj się · {{BRAND}}</title></head><body class="auth-page">
-<header class="nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" class="mark" aria-hidden="true"><defs><linearGradient id="fire" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient></defs><path fill="url(#fire)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg>{{BRAND}}</a><nav aria-label="Konto"><a href="/rejestracja">Załóż konto</a></nav></header>
-<main class="auth"><div class="auth-card">
-<h1>Witaj z powrotem</h1><p>Zaloguj się, żeby otworzyć swój panel.</p>
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#fff6f8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/landing.css"><title>Zaloguj się · {{BRAND}}</title></head><body class="split">
+<aside class="split-art" aria-hidden="true"><a class="brand light" href="/"><svg viewBox="0 0 24 24" class="mark" aria-hidden="true"><defs><linearGradient id="fire" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient></defs><path fill="url(#fire)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg>{{BRAND}}</a><div class="art-copy"><p class="art-h">Twoje następne spotkanie zaczyna się od dobrej odpowiedzi.</p><ul class="art-list"><li>Szkic gotowy, zanim otworzysz aplikację</li><li>Zaproszenie we właściwym momencie</li><li>Twój styl, Twoje zasady</li></ul></div><div class="mini"><div class="m m1">a ty co robisz w weekend?</div><div class="m m2">a może kawa w czwartek wieczorem?</div><div class="m m3"><b>Czw 19:00</b> Ola: chętnie! <i>✓</i></div></div></aside>
+<main class="split-main"><div class="form-wrap">
+<nav class="top-alt">Nie masz konta? <a href="/rejestracja">Załóż konto</a></nav>
+<h1>Witaj z powrotem</h1><p class="sub">Zaloguj się, żeby otworzyć swój panel.</p>
 <form id="login-form" novalidate>
 <label>E-mail<input type="email" name="email" autocomplete="email" required></label>
-<label>Hasło<input type="password" name="password" autocomplete="current-password" required></label>
-<button class="btn" type="submit">Zaloguj się</button><p id="form-result" role="status"></p>
-</form>
-<p class="auth-alt">Nie masz konta? <a href="/rejestracja">Załóż konto</a></p>
-</div></main><script src="/assets/account.js" defer></script></body></html>
+<label>Hasło<span class="pw"><input type="password" name="password" autocomplete="current-password" required><button type="button" class="show" data-toggle="password">Pokaż</button></span></label>
+<button class="btn wide" type="submit">Zaloguj się</button><p id="form-result" role="status"></p>
+</form></div></main><script src="/assets/account.js" defer></script></body></html>

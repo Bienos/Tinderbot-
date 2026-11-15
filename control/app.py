@@ -46,6 +46,10 @@ SCHEMAS = [
 ]
 
 
+MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status', "TEXT NOT NULL DEFAULT 'none'"),
+              ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0')]
+
+
 def _pg_url() -> str:
     return os.getenv('DATABASE_URL', '').strip()
 
@@ -55,15 +59,20 @@ def q(sql: str, args: tuple = (), fetch: bool = False) -> list[dict]:
     if _pg_url():
         import psycopg
         from psycopg.rows import dict_row
-        with psycopg.connect(_pg_url(), connect_timeout=10, row_factory=dict_row) as con:
+        with psycopg.connect(_pg_url(), connect_timeout=10, row_factory=dict_row, autocommit=True) as con:
             for s in SCHEMAS:
                 con.execute(s.format(pk='BIGSERIAL PRIMARY KEY'))
+            for table, col, typ in MIGRATIONS:
+                con.execute(f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {typ}')
             cur = con.execute(sql.replace('?', '%s'), args)
             return list(cur.fetchall()) if fetch else []
     with closing(sqlite3.connect(db_path())) as con, con:
         con.row_factory = sqlite3.Row
         for s in SCHEMAS:
             con.execute(s.format(pk='INTEGER PRIMARY KEY'))
+        for table, col, typ in MIGRATIONS:
+            if col not in {r[1] for r in con.execute(f'PRAGMA table_info({table})')}:
+                con.execute(f'ALTER TABLE {table} ADD COLUMN {col} {typ}')
         cur = con.execute(sql, args)
         return [dict(r) for r in cur.fetchall()] if fetch else []
 
@@ -174,7 +183,8 @@ SHARE = ('<meta property="og:type" content="website"><meta property="og:site_nam
 def page(name: str) -> HTMLResponse:
     origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     html = (STATIC / name).read_text(encoding='utf-8').replace('</head>', SHARE + '</head>', 1)
-    return HTMLResponse(html.replace('{{ORIGIN}}', origin).replace('{{BRAND}}', BRAND))
+    price = os.getenv('PLAN_PRICE', '').strip() or 'cena widoczna przy płatności'
+    return HTMLResponse(html.replace('{{ORIGIN}}', origin).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND))
 
 
 @app.get('/')
@@ -223,7 +233,7 @@ def open_panel(request: Request):
     acc = current_account(request)
     if not acc:
         return RedirectResponse('/zaloguj', 303)
-    if acc['status'] != 'active' or not acc.get('instance_url') or not acc.get('sso_secret'):
+    if acc['status'] != 'active' or not acc.get('instance_url') or not acc.get('sso_secret') or not has_access(acc):
         return RedirectResponse('/konto', 303)
     return RedirectResponse(acc['instance_url'].rstrip('/') + '/auth/sso?t=' + sso_token(acc), 303)
 
@@ -331,7 +341,9 @@ def me(request: Request):
     if not acc:
         raise HTTPException(401, 'Nie jesteś zalogowany.')
     return {'email': acc['email'], 'name': acc.get('name') or '', 'status': acc['status'],
-            'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret'))}
+            'billing_enabled': billing_enabled(), 'plan_status': acc.get('plan_status') or 'none', 'has_access': has_access(acc),
+            'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
+            'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc)}
 
 
 @app.post('/api/account/delete')
@@ -347,6 +359,81 @@ async def delete_account(request: Request):
     return _cookie(JSONResponse({'deleted': True}), None)
 
 
+# ---- billing (Stripe Checkout + webhook + customer portal)
+def billing_enabled() -> bool:
+    return all(os.getenv(k) for k in ('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET'))
+
+
+def has_access(acc: dict) -> bool:
+    return bool(acc.get('comped')) or not billing_enabled() or acc.get('plan_status') in ('active', 'trialing')
+
+
+def _origin(request: Request) -> str:
+    return os.getenv('PUBLIC_ORIGIN', '').rstrip('/') or str(request.base_url).rstrip('/')
+
+
+@app.post('/api/billing/checkout')
+async def billing_checkout(request: Request):
+    _same_origin(request)
+    acc = current_account(request)
+    if not acc:
+        raise HTTPException(401, 'Nie jesteś zalogowany.')
+    if not billing_enabled():
+        raise HTTPException(503, 'Płatności nie są jeszcze włączone.')
+    if acc.get('plan_status') in ('active', 'trialing'):
+        raise HTTPException(409, 'Masz już aktywną subskrypcję.')
+    import stripe
+    params = dict(mode='subscription', line_items=[{'price': os.environ['STRIPE_PRICE_ID'], 'quantity': 1}],
+                  client_reference_id=str(acc['id']), success_url=_origin(request) + '/konto?platnosc=ok',
+                  cancel_url=_origin(request) + '/konto', allow_promotion_codes=True, locale='pl',
+                  metadata={'account_id': str(acc['id'])}, subscription_data={'metadata': {'account_id': str(acc['id'])}},
+                  custom_text={'submit': {'message': 'Zamawiając, prosisz o rozpoczęcie usługi przed upływem 14 dni na odstąpienie od umowy.'}})
+    if acc.get('stripe_customer'):
+        params['customer'] = acc['stripe_customer']
+    else:
+        params['customer_email'] = acc['email']
+    session = stripe.checkout.Session.create(api_key=os.environ['STRIPE_SECRET_KEY'], **params)
+    return {'url': session.url}
+
+
+@app.post('/api/billing/portal')
+async def billing_portal(request: Request):
+    _same_origin(request)
+    acc = current_account(request)
+    if not acc:
+        raise HTTPException(401, 'Nie jesteś zalogowany.')
+    if not billing_enabled() or not acc.get('stripe_customer'):
+        raise HTTPException(409, 'Brak subskrypcji do zarządzania.')
+    import stripe
+    session = stripe.billing_portal.Session.create(api_key=os.environ['STRIPE_SECRET_KEY'], customer=acc['stripe_customer'],
+                                                   return_url=_origin(request) + '/konto')
+    return {'url': session.url}
+
+
+@app.post('/stripe/webhook')
+async def stripe_webhook(request: Request):
+    """Stripe tells us about payments. The signature is verified with STRIPE_WEBHOOK_SECRET; nothing else is trusted."""
+    import stripe
+    secret = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+    if not secret:
+        raise HTTPException(503, 'Webhook not configured')
+    payload = await request.body()
+    try:
+        stripe.Webhook.construct_event(payload, request.headers.get('stripe-signature', ''), secret)  # verifies signature + age
+        event = json.loads(payload)
+    except (ValueError, stripe.SignatureVerificationError):
+        raise HTTPException(400, 'Invalid signature')
+    obj = event.get('data', {}).get('object', {})
+    if event['type'] == 'checkout.session.completed' and obj.get('mode') == 'subscription':
+        ref = str(obj.get('client_reference_id') or '')
+        if ref.isdigit():
+            q("UPDATE accounts SET stripe_customer=?, plan_status='active' WHERE id=?", (obj.get('customer'), int(ref)))
+    elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
+        status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
+        q('UPDATE accounts SET plan_status=? WHERE stripe_customer=?', (status[:30], obj.get('customer')))
+    return {'received': True}
+
+
 def _admin(request: Request):
     expected = os.getenv('ADMIN_TOKEN', '')
     supplied = request.headers.get('authorization', '').removeprefix('Bearer ').strip()
@@ -357,7 +444,7 @@ def _admin(request: Request):
 @app.get('/admin/accounts')
 def admin_accounts(request: Request):
     _admin(request)
-    rows = q('SELECT email,name,status,instance_url,mode,consent_marketing,created FROM accounts ORDER BY created DESC', fetch=True)
+    rows = q('SELECT email,name,status,plan_status,comped,instance_url,mode,consent_marketing,created FROM accounts ORDER BY created DESC', fetch=True)
     return {'count': len(rows), 'items': rows}
 
 
@@ -372,7 +459,8 @@ async def admin_activate(request: Request):
     if not q('SELECT 1 FROM accounts WHERE email=?', (email,), fetch=True):
         raise HTTPException(404, 'No such account')
     secret = secrets.token_urlsafe(32)
-    q("UPDATE accounts SET status='active', instance_url=?, sso_secret=? WHERE email=?", (url, secret, email))
+    q("UPDATE accounts SET status='active', instance_url=?, sso_secret=?, comped=? WHERE email=?",
+      (url, secret, int(body.get('comped') is True), email))
     return {'email': email, 'instance_url': url, 'sso_secret': secret}
 
 

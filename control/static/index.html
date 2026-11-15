@@ -24,7 +24,7 @@
     <svg viewBox="0 0 24 24" class="mark" aria-hidden="true"><path fill="url(#fire)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg>
     {{BRAND}}
   </a>
-  <nav aria-label="Sekcje"><a href="#efekty">Co zyskujesz</a><a href="#kontrola">Kontrola</a><a href="#pytania">Pytania</a><a href="/zaloguj">Zaloguj się</a><a class="btn small" href="/rejestracja">Załóż konto</a></nav>
+  <nav aria-label="Sekcje"><a href="#efekty">Co zyskujesz</a><a href="#cennik">Cennik</a><a href="#kontrola">Kontrola</a><a href="#pytania">Pytania</a><a href="/zaloguj">Zaloguj się</a><a class="btn small" href="/rejestracja">Załóż konto</a></nav>
 </header>
 
 <main>
@@ -32,8 +32,8 @@
   <div class="hero-copy">
     <h1>Zamień dopasowania w&nbsp;spotkania.</h1>
     <p class="lead">{{BRAND}} odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła w ciszy. Ty tylko decydujesz, co wychodzi.</p>
-    <div class="cta"><a class="btn" href="/rejestracja">Załóż konto w becie</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
-    <p class="note">Beta dla niewielkiej grupy: każda osoba dostaje własny, osobny serwer.</p>
+    <div class="cta"><a class="btn" href="/rejestracja">Zacznij teraz</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
+    <p class="note">Konto, płatność i połączenie w kilka minut. Anulujesz w każdej chwili.</p>
   </div>
 
   <figure class="spark story" aria-label="Jak działa Iskra: wiadomość, analiza sygnałów, szkic odpowiedzi, umówione spotkanie">
@@ -115,16 +115,26 @@
   <details><summary>Czy osoba po drugiej stronie wie, że pomaga AI?</summary><p>W trybie szkiców to Ty czytasz i wysyłasz każdą wiadomość. Autopilota włączysz tylko w rozmowie, w której ta osoba wie o pomocy AI i się na nią zgodziła.</p></details>
   <details><summary>Czy {{BRAND}} wymyśli coś o mnie?</summary><p>Nie. Fakty o Tobie bierze wyłącznie z tego, co sam wpiszesz. Jeśli czegoś nie wie, zostawia decyzję Tobie.</p></details>
   <details><summary>Czy wyśle coś bez mojej wiedzy?</summary><p>Domyślnie nie: każdy szkic czeka na zatwierdzenie. Autopilota włączasz osobno dla wybranych rozmów i zatrzymujesz jednym przyciskiem.</p></details>
-  <details><summary>Ile to kosztuje?</summary><p>Zapis do bety nic nie kosztuje i do niczego nie zobowiązuje. Cenę pełnej wersji podamy przed startem, a płacić zaczniesz dopiero, gdy sam się zdecydujesz.</p></details>
+  <details><summary>Ile to kosztuje i jak anulować?</summary><p>Jeden plan w subskrypcji: {{PRICE}}. Cenę widzisz też przed płatnością na stronie Stripe. Anulujesz w każdej chwili w „Zarządzaj subskrypcją" na swoim koncie, a dostęp działa do końca opłaconego okresu.</p></details>
   <details><summary>Czy mogę usunąć swoje dane?</summary><p>Tak: token, pojedyncze rozmowy albo całe konto. Szczegóły w polityce prywatności.</p></details>
 </section>
 
-<section id="beta" class="beta">
-  <div class="beta-art" aria-hidden="true"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="92" fill="url(#glow)"/><path fill="url(#fire)" transform="translate(-60 -62) scale(.62)" d="M262 196c4 22-6 37-19 51-12 13-25 26-25 47 0 11 5 20 11 27-1-16 6-26 17-33 10-8 18-18 19-33 23 17 37 40 37 66 0 33-26 59-61 59s-60-26-60-59c0-35 20-59 41-78 20-18 37-31 40-47z"/></svg></div>
-  <div class="beta-copy">
+<section id="cennik" class="pricing">
+  <div class="price-copy">
     <h2>Następne dobre dopasowanie nie musi zgasnąć.</h2>
-    <p>Załóż konto, a przygotujemy Twój osobny serwer. Rejestracja nic nie kosztuje i do niczego nie zobowiązuje.</p>
-    <div class="cta beta-cta"><a class="btn" href="/rejestracja">Załóż konto w becie</a><a class="link" href="/zaloguj">Mam już konto</a></div>
+    <p>Jeden plan, wszystko w środku. Bez umowy na czas określony: anulujesz jednym kliknięciem w portalu płatności.</p>
+  </div>
+  <div class="price-card">
+    <div class="price-head"><span class="plan">{{BRAND}}</span><span class="price">{{PRICE}}</span></div>
+    <ul>
+      <li>Własny, osobny serwer i szyfrowany token</li>
+      <li>Szkice odpowiedzi Twoim stylem</li>
+      <li>Plan każdej rozmowy i zaproszenia we właściwym momencie</li>
+      <li>Autopilot w wybranych rozmowach</li>
+      <li>Statystyki od dopasowania do spotkania</li>
+    </ul>
+    <a class="btn wide" href="/rejestracja">Zacznij teraz</a>
+    <p class="fine">Płatności obsługuje Stripe. Masz konto? <a href="/zaloguj">Zaloguj się</a></p>
   </div>
 </section>
 </main>

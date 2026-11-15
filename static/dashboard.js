@@ -23,7 +23,7 @@ function choose(id){selected=id;render()}
 function threadById(){return data?.threads.find(t=>t.id===selected)}
 function isConv(t){return (t.message_count||0)>0}
 function filtered(t){if(!isConv(t))return false;if(filter==='all')return t.state!=='archived';if(filter==='needs')return t.state==='needs_reply';if(filter==='waiting')return t.state==='waiting';if(filter==='other')return ['archived','paused','unavailable_unknown','needs_review'].includes(t.state);return true}
-function render(){if(!data)return;renderRoster();if(view==='stats')renderStats();
+function render(){if(!data)return;renderOnboarding();renderRoster();if(view==='stats')renderStats();
 const notices={rate_limited:'Tinder requested a cooldown.',server_retry_after:'Tinder requested a service cooldown.',local_request_budget:'The configured Tinder traffic budget is reached.',restriction_requires_manual_review:'Tinder needs an account check in the official app.',repeated_rate_limits_requires_review:'Repeated throttling: review the account before reconnecting.',circuit_open_requires_review:'Repeated connection failures: review the account before reconnecting.',session_expired_or_account_changed:'The Tinder session expired or account identity changed.',inbox_access_denied:'Tinder denied inbox access (HTTP 401). Check your current session in Tinder and reconnect; profile access alone is insufficient.'};
 let alerts=data.tinder.connections.filter(c=>c.error);let alert=document.getElementById('account-alert');alert.hidden=!alerts.length;alert.textContent=alerts.map(c=>(notices[c.error]||'Tinder connection needs attention.')+(c.enabled&&c.blocked_until>Date.now()/1000?' Next possible request: '+new Date(c.blocked_until*1000).toLocaleString():!c.enabled?' Automatic requests are stopped.':'')).join(' ');
 
@@ -133,7 +133,7 @@ refresh().catch(e=>document.getElementById('status').textContent=e.message);setI
 document.getElementById('tab-settings').addEventListener('click',()=>showSettings());document.getElementById('logout').addEventListener('click',logoutNow);document.getElementById('open-activity').addEventListener('click',showActivity);document.getElementById('pause-all').addEventListener('click',pauseAll);document.getElementById('close-panel').addEventListener('click',()=>document.getElementById('panel').close());
 
 let view='chats';
-function setView(v){view=v;for(let [id,name] of [['tab-chats','chats'],['tab-stats','stats'],['tab-settings','settings']])document.getElementById(id).classList.toggle('active',v===name);document.querySelector('main').hidden=v!=='chats';document.getElementById('roster-wrap').hidden=v!=='chats';document.getElementById('stats-view').hidden=v!=='stats';document.getElementById('settings-view').hidden=v!=='settings';if(v==='stats')renderStats()}
+function setView(v){view=v;for(let [id,name] of [['tab-chats','chats'],['tab-stats','stats'],['tab-settings','settings']])document.getElementById(id).classList.toggle('active',v===name);document.querySelector('main').hidden=v!=='chats';document.getElementById('roster-wrap').hidden=v!=='chats';renderOnboarding();document.getElementById('stats-view').hidden=v!=='stats';document.getElementById('settings-view').hidden=v!=='settings';if(v==='stats')renderStats()}
 async function logoutNow(){try{await api('/auth/logout','POST')}catch(e){}location.href=data&&data.account_url?data.account_url+'/zaloguj':'/'}
 function renderRoster(){let box=document.getElementById('roster');box.replaceChildren();if(!data)return;
 let todo=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a)),reply=data.threads.filter(t=>t.state==='needs_reply').sort((a,b)=>tsOf(b)-tsOf(a));
@@ -159,3 +159,14 @@ res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiti
 g.append(how,res);root.append(g);
 let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));root.append(act)}
 document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
+
+function renderOnboarding(){const box=document.getElementById('onboard');if(!box||!data)return;
+ let dismissed=false;try{dismissed=localStorage.getItem('iskra-onboard-done')==='1'}catch(e){}
+ const t=data.tinder||{};const steps=[
+  ['Połącz konto Tinder','Wklej token w Ustawieniach. Sprawdzimy go i zaszyfrujemy.',!!t.token_source,()=>showSettings('tinder')],
+  ['Ustaw styl i fakty o sobie','Opis stylu i kilka faktów, żeby szkice brzmiały jak Ty.',Object.keys(data.settings.profile||{}).length>0,()=>showSettings('style')],
+  ['Uruchom pełny import','Pobierzemy dopasowania, rozmowy i zdjęcia.',(t.connections||[]).some(c=>c.last_sync),()=>showSettings('tinder')]];
+ const allDone=steps.every(s=>s[2]);box.hidden=dismissed||allDone||view!=='chats';if(box.hidden)return;box.replaceChildren();
+ const card=el('div','ob');card.append(el('h2','','Zacznij w 3 krokach'),el('p','','Po tych krokach bot zacznie przygotowywać szkice odpowiedzi.'));
+ const close=el('button','ob-close','Ukryj');close.onclick=()=>{try{localStorage.setItem('iskra-onboard-done','1')}catch(e){}box.hidden=true};card.append(close);
+ const row=el('div','ob-steps');steps.forEach(([title,desc,done,go],i)=>{const s=el('div','ob-step'+(done?' done':''));s.append(el('b','',(i+1)+'. '+title),el('small','',desc));if(!done){const b=el('button','primary',i===0?'Połącz':'Przejdź');b.onclick=go;s.append(b)}row.append(s)});card.append(row);box.append(card)}
