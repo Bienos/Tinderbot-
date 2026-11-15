@@ -17,6 +17,7 @@ import sqlite3
 import time
 from contextlib import closing
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
@@ -164,6 +165,35 @@ async def _json(request: Request) -> dict:
     if not isinstance(body, dict):
         raise HTTPException(422, 'Nieprawidłowe dane')
     return body
+
+
+# After a custom domain is attached, the site's old addresses (Render's generated *.onrender.com and the www.
+# variant) send browsers to PUBLIC_ORIGIN, path and query kept. Links in emails already sent, bookmarks and the
+# "back to account" button of bots created before the switch keep working. Machine traffic (Stripe webhooks,
+# admin calls, API requests, health checks) is never redirected, so it keeps working on the old address too.
+NEVER_REDIRECT = ('/api/', '/admin/', '/stripe/')
+
+
+def _old_hosts(canonical: str) -> set[str]:
+    hosts = {canonical[4:] if canonical.startswith('www.') else 'www.' + canonical}
+    render_url = os.getenv('RENDER_EXTERNAL_URL', '').strip()
+    for host in (os.getenv('RENDER_EXTERNAL_HOSTNAME', ''), urlsplit(render_url).hostname if render_url else ''):
+        if host and host.strip().lower() != canonical:
+            hosts.add(host.strip().lower())
+    return hosts
+
+
+@app.middleware('http')
+async def canonical_host(request: Request, call_next):
+    origin = os.getenv('PUBLIC_ORIGIN', '').strip().rstrip('/')
+    canonical = (urlsplit(origin).hostname or '') if origin else ''
+    host = request.headers.get('host', '').split(':')[0].strip().lower()
+    path = request.url.path
+    if (canonical and request.method in ('GET', 'HEAD') and host != canonical and host in _old_hosts(canonical)
+            and path != '/health' and not path.startswith(NEVER_REDIRECT)):
+        query = request.url.query
+        return RedirectResponse(origin + path + ('?' + query if query else ''), 301)
+    return await call_next(request)
 
 
 @app.middleware('http')

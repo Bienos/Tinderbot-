@@ -554,3 +554,38 @@ def test_admin_rolls_only_fly_bots_to_a_new_image(client,monkeypatch):
     assert {c[1].split('/')[3] for c in updates}=={'iskra-u1-aaa','iskra-u4-ddd'} and all(c[2]['config']['image']=='registry.fly.io/iskra-img:git-abc' for c in updates)
     assert all(c[2]['config']['mounts'] for c in updates)                        # data volume stays attached
     assert client.post('/admin/fly/update-image',json={'image':'docker.io/evil/img'},headers=ADMIN).status_code==422
+
+
+def test_old_addresses_redirect_to_custom_domain_but_machine_traffic_does_not(client,monkeypatch):
+    import control.app as c
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://winq.example')
+    monkeypatch.setenv('RENDER_EXTERNAL_HOSTNAME','iskra-landing.onrender.com')
+    old=TestClient(c.app,base_url='https://iskra-landing.onrender.com')
+    r=old.get('/',follow_redirects=False)
+    assert r.status_code==301 and r.headers['location']=='https://winq.example/'
+    assert 'strict-transport-security' in r.headers
+    # a password-reset link mailed before the switch keeps its token
+    r=old.get('/nowe-haslo?token=abc&x=1',follow_redirects=False)
+    assert r.status_code==301 and r.headers['location']=='https://winq.example/nowe-haslo?token=abc&x=1'
+    # bots created before the switch still point "back to account" at the old address
+    assert old.get('/konto/panel',follow_redirects=False).headers['location']=='https://winq.example/konto/panel'
+    www=TestClient(c.app,base_url='https://www.winq.example')
+    assert www.get('/regulamin',follow_redirects=False).headers['location']=='https://winq.example/regulamin'
+    # Stripe webhooks, API calls, admin calls and health checks keep working on the old address
+    assert old.post('/stripe/webhook',content=b'{}').status_code!=301
+    assert old.get('/api/me',follow_redirects=False).status_code!=301
+    assert old.get('/admin/waitlist',headers=ADMIN,follow_redirects=False).status_code==200
+    assert old.get('/health').json()=={'status':'ok'}
+    assert old.post('/api/login',json={'email':'a@b.pl','password':'x'*12},follow_redirects=False).status_code!=301
+    # the domain itself and unknown hosts are served normally
+    assert TestClient(c.app,base_url='https://winq.example').get('/',follow_redirects=False).status_code==200
+    assert client.get('/',follow_redirects=False).status_code==200
+
+
+def test_no_redirect_before_a_custom_domain_is_set(client,monkeypatch):
+    import control.app as c
+    monkeypatch.setenv('RENDER_EXTERNAL_HOSTNAME','iskra-landing.onrender.com')
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra-landing.onrender.com')
+    assert TestClient(c.app,base_url='https://iskra-landing.onrender.com').get('/',follow_redirects=False).status_code==200
+    monkeypatch.delenv('PUBLIC_ORIGIN')
+    assert TestClient(c.app,base_url='https://iskra-landing.onrender.com').get('/',follow_redirects=False).status_code==200
