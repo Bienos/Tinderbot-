@@ -6,12 +6,14 @@ Messages never contain conversation content or Tinder data.
 """
 from __future__ import annotations
 
+import logging
 import os
 import smtplib
 import ssl
 from email.message import EmailMessage
 from email.utils import formataddr
 
+log = logging.getLogger('uvicorn.error')  # shows up in the service logs next to uvicorn's own lines
 SENT: list[dict] = []  # tests read this when SMTP is not configured
 
 
@@ -24,6 +26,8 @@ def send(to: str, subject: str, text: str) -> bool:
     brand = os.getenv('BRAND_NAME', 'Iskra')
     if not configured():
         SENT.append({'to': to, 'subject': subject, 'text': text})
+        missing = [k for k in ('SMTP_HOST', 'SMTP_PASSWORD') if not os.getenv(k)]
+        log.warning('mail not sent (%s): SMTP not configured, missing %s', subject, ', '.join(missing))
         return False
     msg = EmailMessage()
     msg['Subject'] = subject
@@ -35,6 +39,7 @@ def send(to: str, subject: str, text: str) -> bool:
         if os.getenv('SMTP_USERNAME'):
             s.login(os.environ['SMTP_USERNAME'], os.environ.get('SMTP_PASSWORD', ''))
         s.send_message(msg)
+    log.info('mail sent (%s) via %s', subject, os.environ['SMTP_HOST'])
     return True
 
 
@@ -42,8 +47,8 @@ def safe_send(to: str, subject: str, text: str) -> None:
     """For background tasks: a mail failure must never break signup, payment or provisioning."""
     try:
         send(to, subject, text)
-    except Exception:
-        pass
+    except Exception as exc:  # the reason only: never the password or the message body
+        log.error('mail failed (%s): %s: %s', subject, type(exc).__name__, str(exc)[:200])
 
 
 def welcome(to: str, origin: str) -> None:
