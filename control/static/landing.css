@@ -91,7 +91,7 @@ footer{max-width:1240px;margin:0 auto;padding:36px clamp(16px,5vw,64px) 60px;bor
 .hello{color:var(--muted);margin:0 0 6px!important;font-size:15px}
 .status-card{display:flex;flex-direction:column;align-items:flex-start;gap:14px}.status-card p{margin:0}
 .queue{display:flex;gap:8px}.queue span{width:10px;height:10px;border-radius:50%;background:var(--fire);animation:breathe 1.4s ease-in-out infinite}.queue span:nth-child(2){animation-delay:.2s}.queue span:nth-child(3){animation-delay:.4s}
-.danger-zone{margin-top:34px;border-top:1px solid var(--line);padding-top:18px;font-size:15px}.danger-zone summary{cursor:pointer;color:var(--muted);font-weight:600}
+.danger-zone{margin-top:40px;font-size:13px}.danger-zone summary{cursor:pointer;color:var(--muted);font-weight:500;list-style:none;opacity:.75}.danger-zone summary::-webkit-details-marker{display:none}.danger-zone summary:hover{opacity:1;text-decoration:underline}.danger-zone[open] summary{opacity:1}.danger-zone p,.danger-zone label{font-size:14px}
 .btn.danger{background:#2a0f22;box-shadow:none}
 
 /* story hero */
