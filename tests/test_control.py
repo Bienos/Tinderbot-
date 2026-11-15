@@ -10,6 +10,17 @@ def client(tmp_path,monkeypatch):
     return TestClient(c.app)
 
 
+def test_asset_urls_carry_content_version_so_deploys_beat_browser_cache(client):
+    import re
+    import control.app as c
+    for path in ('/','/rejestracja','/zaloguj'):
+        r=client.get(path)
+        assert r.headers['cache-control']=='no-cache'
+        refs=re.findall(r'/assets/([a-z]+\.(?:css|js))(\?v=[0-9a-f]+)?',r.text)
+        assert refs and all(v=='?v='+c.ASSET_VERSIONS[name] for name,v in refs)
+    assert client.get('/assets/landing.css?v='+c.ASSET_VERSIONS['landing.css']).status_code==200
+
+
 OK={'email':'Jan@Example.com','name':'Jan','mode':'drafts','adult':True,'terms':True}
 
 

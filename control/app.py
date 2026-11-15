@@ -187,13 +187,26 @@ SHARE = ('<meta property="og:type" content="website"><meta property="og:site_nam
          '<meta name="twitter:image" content="{{ORIGIN}}/assets/og.png"><link rel="icon" type="image/svg+xml" href="/assets/icon.svg">')
 
 
+ASSET_VERSIONS = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()[:10]
+                  for path in STATIC.iterdir() if path.suffix in {'.css', '.js'}}
+
+
+def versioned_assets(html: str) -> str:
+    """Asset URLs carry a content hash so a cached stylesheet never outlives a deploy."""
+    def stamp(match: re.Match) -> str:
+        version = ASSET_VERSIONS.get(match.group(1))
+        return f'/assets/{match.group(1)}?v={version}' if version else match.group(0)
+    return re.sub(r'/assets/([A-Za-z0-9_.-]+)', stamp, html)
+
+
 def page(name: str) -> HTMLResponse:
     origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     html = (STATIC / name).read_text(encoding='utf-8').replace('</head>', SHARE + '</head>', 1)
     price = os.getenv('PLAN_PRICE', '').strip() or 'cena widoczna przy płatności'
     for key, fallback in LEGAL_FIELDS.items():
         html = html.replace('{{' + key + '}}', os.getenv(key, '').strip() or fallback)
-    return HTMLResponse(html.replace('{{ORIGIN}}', origin).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND))
+    html = html.replace('{{ORIGIN}}', origin).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND)
+    return HTMLResponse(versioned_assets(html), headers={'Cache-Control': 'no-cache'})
 
 
 # Seller identity required by art. 8 of the e-services act and art. 12 of the consumer-rights act.
