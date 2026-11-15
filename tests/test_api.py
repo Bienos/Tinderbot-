@@ -76,18 +76,15 @@ def test_stale_lease_never_blocks_startup_but_a_live_second_worker_does():
     assert not lease_blocks({'owner':f'host-new:{os.getppid()}:cc','expires':time.time()-1},me)  # expired
 
 
-def test_sigterm_releases_the_lease_and_stops_background_work(tmp_path,monkeypatch):
-    import os,signal,asyncio
-    monkeypatch.setenv('AGENT_DB_PATH',str(tmp_path/'a.db'))
-    import importlib,app as application
-    from agent import service,storage as s
-    importlib.reload(application)
-    async def run():
-        async with application.lifespan(application.app):
-            assert s.rows("SELECT * FROM leases WHERE name='coordinator'")
-            os.kill(os.getpid(),signal.SIGTERM)  # handler deletes the lease before anything slow can happen
-            assert not s.rows("SELECT * FROM leases WHERE name='coordinator'")
-            assert service.SHUTTING_DOWN
+async def test_sigterm_releases_the_lease_and_stops_background_work(store):
+    import os,signal
+    import app as application
+    from agent import service
     previous=signal.getsignal(signal.SIGTERM);signal.signal(signal.SIGTERM,lambda *a:None)
-    try:asyncio.run(run())
+    try:
+        async with application.lifespan(application.app):
+            assert store.rows("SELECT * FROM leases WHERE name='coordinator'")
+            os.kill(os.getpid(),signal.SIGTERM)  # the handler frees the lease before anything slow can happen
+            assert not store.rows("SELECT * FROM leases WHERE name='coordinator'")
+            assert service.SHUTTING_DOWN
     finally:signal.signal(signal.SIGTERM,previous);service.SHUTTING_DOWN=False
