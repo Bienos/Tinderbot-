@@ -4,6 +4,8 @@ f.addEventListener('submit',async e=>{e.preventDefault();const btn=f.querySelect
 try{await post(url,build(new FormData(f)));done()}catch(err){out.className='err';out.textContent=err.message;btn.disabled=false}})}
 bind('login-form','/api/login',f=>({email:f.get('email'),password:f.get('password')}),()=>location.href='/konto');
 bind('register-form','/api/register',f=>({email:f.get('email'),name:f.get('name'),password:f.get('password'),mode:f.get('mode'),website:f.get('website'),adult:f.get('adult')==='on',terms:f.get('terms')==='on',marketing:f.get('marketing')==='on'}),()=>location.href='/konto');
+bind('forgot-form','/api/password/forgot',f=>({email:f.get('email')}),()=>{const out=document.querySelector('#forgot-form [role=status]');out.className='ok';out.textContent='Jeśli to konto istnieje, link jest już w drodze. Sprawdź też spam.';document.querySelector('#forgot-form button[type=submit]').disabled=true});
+bind('reset-form','/api/password/reset',f=>({password:f.get('password'),token:new URLSearchParams(location.search).get('t')||''}),()=>location.href='/konto');
 bind('delete-form','/api/account/delete',f=>({password:f.get('password')}),()=>location.href='/');
 const logout=document.getElementById('logout');if(logout)logout.addEventListener('click',async()=>{await post('/api/logout').catch(()=>{});location.href='/'});
 const card=document.getElementById('status-card');
@@ -18,7 +20,8 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
   if(me.plan_status==='canceled'){h.textContent='Subskrypcja jest anulowana';p.textContent='Wznów, żeby wrócić do panelu. Twoje ustawienia czekają.';card.append(btn('Wznów subskrypcję','btn',()=>go('/api/billing/checkout')))}
   else if(me.plan_status==='past_due'||me.plan_status==='unpaid'){h.textContent='Płatność się nie powiodła';p.textContent='Zaktualizuj kartę, żeby nie stracić dostępu.';card.append(btn('Zaktualizuj płatność','btn',()=>go('/api/billing/portal')))}
   else{h.textContent='Jeszcze jeden krok';p.textContent='Wykup dostęp, a my przygotujemy Twój osobny serwer. Płatność obsługuje Stripe, anulujesz w każdej chwili.';card.append(btn('Wykup dostęp','btn',()=>go('/api/billing/checkout')))}}
- else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent='Stawiamy Twój osobny serwer. Napiszemy mailem, gdy panel będzie gotowy, zwykle tego samego dnia.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s)}
+ else if(me.provision_state==='failed'){mark(2);h.textContent='Stawianie serwera się przedłuża';p.textContent='Coś poszło nie tak przy przygotowaniu Twojego serwera. Już nad tym pracujemy i napiszemy, gdy będzie gotowy.'}
+ else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut; odśwież stronę za chwilę.':'Stawiamy Twój osobny serwer. Napiszemy mailem, gdy panel będzie gotowy.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s)}
  if(me.can_manage_billing)card.append(btn('Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));

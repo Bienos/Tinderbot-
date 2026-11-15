@@ -17,8 +17,10 @@ import time
 from contextlib import closing
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+
+from control import mailer, provision
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
@@ -43,11 +45,13 @@ SCHEMAS = [
     "status TEXT NOT NULL DEFAULT 'pending', instance_url TEXT, sso_secret TEXT, mode TEXT, consent_marketing INTEGER NOT NULL DEFAULT 0, "
     'created DOUBLE PRECISION NOT NULL)',
     'CREATE TABLE IF NOT EXISTS account_sessions (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, expires DOUBLE PRECISION NOT NULL)',
+    'CREATE TABLE IF NOT EXISTS password_resets (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, expires DOUBLE PRECISION NOT NULL)',
 ]
 
 
 MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status', "TEXT NOT NULL DEFAULT 'none'"),
-              ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0')]
+              ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0'), ('accounts', 'render_service_id', 'TEXT'),
+              ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT')]
 
 
 def _pg_url() -> str:
@@ -221,6 +225,16 @@ def register_page():
     return page('register.html')
 
 
+@app.get('/nie-pamietam-hasla')
+def forgot_page():
+    return page('forgot.html')
+
+
+@app.get('/nowe-haslo')
+def reset_page():
+    return page('reset.html')
+
+
 @app.get('/konto')
 def account_page(request: Request):
     if not current_account(request):
@@ -291,7 +305,7 @@ def _client_ip(request: Request) -> str:
 
 
 @app.post('/api/register')
-async def register(request: Request):
+async def register(request: Request, tasks: BackgroundTasks):
     body = await _json(request)
     if _limited('reg:' + _client_ip(request), 5):
         raise HTTPException(429, 'Za dużo prób. Spróbuj za godzinę.')
@@ -308,9 +322,11 @@ async def register(request: Request):
     if q('SELECT 1 FROM accounts WHERE email=?', (email,), fetch=True):
         raise HTTPException(409, 'Konto z tym adresem już istnieje. Zaloguj się.')
     mode = body.get('mode') if body.get('mode') in ('drafts', 'autopilot', 'unsure') else 'unsure'
-    q('INSERT INTO accounts(email,name,pw_hash,status,mode,consent_marketing,created) VALUES(?,?,?,?,?,?,?)',
-      (email, str(body.get('name', '')).strip()[:60], hash_password(password), 'pending', mode, int(body.get('marketing') is True), time.time()))
+    comped = email in {e.strip().lower() for e in os.getenv('COMPED_EMAILS', '').split(',') if e.strip()}
+    q('INSERT INTO accounts(email,name,pw_hash,status,mode,consent_marketing,created,comped) VALUES(?,?,?,?,?,?,?,?)',
+      (email, str(body.get('name', '')).strip()[:60], hash_password(password), 'pending', mode, int(body.get('marketing') is True), time.time(), int(comped)))
     acc = q('SELECT id FROM accounts WHERE email=?', (email,), fetch=True)[0]
+    tasks.add_task(mailer.welcome, email, _origin(request))
     return _cookie(JSONResponse({'ok': True}), new_session(acc['id']))
 
 
@@ -343,6 +359,7 @@ def me(request: Request):
     return {'email': acc['email'], 'name': acc.get('name') or '', 'status': acc['status'],
             'billing_enabled': billing_enabled(), 'plan_status': acc.get('plan_status') or 'none', 'has_access': has_access(acc),
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
+            'provision_state': acc.get('provision_state') or '',
             'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc)}
 
 
@@ -425,7 +442,7 @@ async def billing_portal(request: Request):
 
 
 @app.post('/stripe/webhook')
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, tasks: BackgroundTasks):
     """Stripe tells us about payments. The signature is verified with STRIPE_WEBHOOK_SECRET; nothing else is trusted."""
     import stripe
     secret = os.getenv('STRIPE_WEBHOOK_SECRET', '')
@@ -442,10 +459,81 @@ async def stripe_webhook(request: Request):
         ref = str(obj.get('client_reference_id') or '')
         if ref.isdigit():
             q("UPDATE accounts SET stripe_customer=?, plan_status='active' WHERE id=?", (obj.get('customer'), int(ref)))
+            rows = q('SELECT email FROM accounts WHERE id=?', (int(ref),), fetch=True)
+            if rows:
+                tasks.add_task(mailer.payment_ok, rows[0]['email'], _origin(request))
+                tasks.add_task(run_provision, int(ref), _origin(request))
     elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
         status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
         q('UPDATE accounts SET plan_status=? WHERE stripe_customer=?', (status[:30], obj.get('customer')))
+        for acc in q('SELECT render_service_id FROM accounts WHERE stripe_customer=? AND render_service_id IS NOT NULL', (obj.get('customer'),), fetch=True):
+            if provision.enabled():
+                tasks.add_task(_suspend, acc['render_service_id'], status not in ('active', 'trialing'))
     return {'received': True}
+
+
+def run_provision(account_id: int, origin: str = '') -> str:
+    """Create the customer's instance once. Safe to call again: it skips accounts that already have one."""
+    rows = q('SELECT * FROM accounts WHERE id=?', (account_id,), fetch=True)
+    if not rows:
+        return 'missing'
+    acc = rows[0]
+    if acc.get('render_service_id') or acc.get('instance_url'):
+        return 'exists'
+    if not provision.enabled():
+        q("UPDATE accounts SET provision_state='manual' WHERE id=?", (account_id,))
+        return 'manual'
+    if acc.get('provision_state') == 'running':
+        return 'running'
+    q("UPDATE accounts SET provision_state='running', provision_error=NULL WHERE id=?", (account_id,))
+    try:
+        inst = provision.create_instance(account_id)
+    except Exception as exc:
+        q("UPDATE accounts SET provision_state='failed', provision_error=? WHERE id=?", (type(exc).__name__ + ': ' + str(exc)[:240], account_id))
+        return 'failed'
+    q("UPDATE accounts SET status='active', instance_url=?, sso_secret=?, render_service_id=?, provision_state='done' WHERE id=?",
+      (inst['url'], inst['sso_secret'], inst['service_id'], account_id))
+    mailer.panel_ready(acc['email'], origin or os.getenv('PUBLIC_ORIGIN', '').rstrip('/'))
+    return 'done'
+
+
+def _suspend(service_id: str, suspended: bool) -> None:
+    try:
+        provision.set_suspended(service_id, suspended)
+    except Exception:
+        pass
+
+
+# ---- password reset
+@app.post('/api/password/forgot')
+async def password_forgot(request: Request, tasks: BackgroundTasks):
+    body = await _json(request)
+    email = str(body.get('email', '')).strip().lower()
+    if _limited('forgot:' + _client_ip(request), 5) or _limited('forgot:' + email, 3):
+        raise HTTPException(429, 'Za dużo prób. Spróbuj za godzinę.')
+    rows = q('SELECT id FROM accounts WHERE email=?', (email,), fetch=True)
+    if rows:
+        raw = secrets.token_urlsafe(32)
+        q('DELETE FROM password_resets WHERE account_id=? OR expires<?', (rows[0]['id'], time.time()))
+        q('INSERT INTO password_resets VALUES(?,?,?)', (_sid(raw), rows[0]['id'], time.time() + 3600))
+        tasks.add_task(mailer.password_reset, email, _origin(request) + '/nowe-haslo?t=' + raw)
+    return {'ok': True}  # same answer either way, so the form does not reveal who has an account
+
+
+@app.post('/api/password/reset')
+async def password_reset(request: Request):
+    body = await _json(request)
+    raw, password = str(body.get('token', '')), str(body.get('password', ''))
+    if not 10 <= len(password) <= 200:
+        raise HTTPException(422, 'Hasło musi mieć co najmniej 10 znaków.')
+    rows = q('SELECT account_id FROM password_resets WHERE id=? AND expires>?', (_sid(raw), time.time()), fetch=True) if raw else []
+    if not rows:
+        raise HTTPException(400, 'Link wygasł albo był już użyty. Poproś o nowy.')
+    aid = rows[0]['account_id']
+    q('UPDATE accounts SET pw_hash=? WHERE id=?', (hash_password(password), aid))
+    q('DELETE FROM password_resets WHERE account_id=?', (aid,))
+    q('DELETE FROM account_sessions WHERE account_id=?', (aid,))
+    return _cookie(JSONResponse({'ok': True}), new_session(aid))
 
 
 def _admin(request: Request):
@@ -458,7 +546,8 @@ def _admin(request: Request):
 @app.get('/admin/accounts')
 def admin_accounts(request: Request):
     _admin(request)
-    rows = q('SELECT email,name,status,plan_status,comped,instance_url,mode,consent_marketing,created FROM accounts ORDER BY created DESC', fetch=True)
+    rows = q('SELECT email,name,status,plan_status,comped,instance_url,render_service_id,provision_state,provision_error,mode,consent_marketing,created '
+             'FROM accounts ORDER BY created DESC', fetch=True)
     return {'count': len(rows), 'items': rows}
 
 
@@ -476,6 +565,18 @@ async def admin_activate(request: Request):
     q("UPDATE accounts SET status='active', instance_url=?, sso_secret=?, comped=? WHERE email=?",
       (url, secret, int(body.get('comped') is True), email))
     return {'email': email, 'instance_url': url, 'sso_secret': secret}
+
+
+@app.post('/admin/accounts/provision')
+async def admin_provision(request: Request):
+    _admin(request)
+    body = await request.json()
+    rows = q('SELECT id FROM accounts WHERE email=?', (str(body.get('email', '')).strip().lower(),), fetch=True)
+    if not rows:
+        raise HTTPException(404, 'No such account')
+    if body.get('retry'):
+        q("UPDATE accounts SET provision_state=NULL WHERE id=? AND provision_state IN ('failed','manual')", (rows[0]['id'],))
+    return {'result': run_provision(rows[0]['id'], _origin(request))}
 
 
 @app.post('/admin/accounts/status')

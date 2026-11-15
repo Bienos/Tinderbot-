@@ -120,21 +120,32 @@
 </section>
 
 <section id="cennik" class="pricing">
-  <div class="price-copy">
-    <h2>Następne dobre dopasowanie nie musi zgasnąć.</h2>
-    <p>Jeden plan, wszystko w środku. Bez umowy na czas określony: anulujesz jednym kliknięciem w portalu płatności.</p>
+  <h2>Od rejestracji do pierwszego szkicu w kilka minut.</h2>
+  <div class="journey">
+    <ol class="stops">
+      <li><span class="dot">1</span><b>Załóż konto</b><small>e-mail i hasło, około minuty</small></li>
+      <li><span class="dot">2</span><b>Opłać dostęp</b><small>bezpiecznie przez Stripe</small></li>
+      <li><span class="dot">3</span><b>Połącz Tinder</b><small>w panelu, około 2 minut</small></li>
+    </ol>
   </div>
-  <div class="price-card">
-    <div class="price-head"><span class="plan">{{BRAND}}</span><span class="price">{{PRICE}}</span></div>
-    <ul>
-      <li>Własny, osobny serwer i szyfrowany token</li>
-      <li>Szkice odpowiedzi Twoim stylem</li>
-      <li>Plan każdej rozmowy i zaproszenia we właściwym momencie</li>
-      <li>Autopilot w wybranych rozmowach</li>
-      <li>Statystyki od dopasowania do spotkania</li>
-    </ul>
-    <a class="btn wide" href="/rejestracja">Zacznij teraz</a>
-    <p class="fine">Płatności obsługuje Stripe. Masz konto? <a href="/zaloguj">Zaloguj się</a></p>
+  <div class="ticket" role="group" aria-label="Cennik">
+    <div class="ticket-main">
+      <div class="ticket-top"><span class="ticket-brand">{{BRAND}}</span><span class="ticket-kind">dostęp miesięczny</span></div>
+      <p class="ticket-price">{{PRICE}}</p>
+      <ul>
+        <li>Szkice odpowiedzi Twoim stylem</li>
+        <li>Plan rozmowy i zaproszenie we właściwym momencie</li>
+        <li>Autopilot w wybranych rozmowach</li>
+        <li>Własny serwer i szyfrowany token</li>
+        <li>Statystyki od dopasowania do spotkania</li>
+      </ul>
+    </div>
+    <div class="ticket-stub">
+      <span class="stub-label">Bilet na</span>
+      <span class="stub-big">następne spotkanie</span>
+      <a class="btn" href="/rejestracja">Zacznij teraz</a>
+      <small>Anulujesz w każdej chwili. Masz konto? <a href="/zaloguj">Zaloguj się</a></small>
+    </div>
   </div>
 </section>
 </main>

@@ -177,3 +177,81 @@ def test_payment_link_mode_needs_no_secret_key(client,monkeypatch):
     client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_link'))
     me=client.get('/api/me').json();assert me['has_access'] and me['can_manage_billing']
     assert client.post('/api/billing/portal').json()['url'].startswith('https://billing.stripe.com/p/login/test_x?prefilled_email=')
+
+
+def _render_mock(calls,fail=False):
+    import httpx,json
+    def handler(req):
+        calls.append((req.method,req.url.path,json.loads(req.content or b'{}')))
+        assert req.headers['authorization']=='Bearer rnd_test'
+        if fail:return httpx.Response(500,json={'message':'boom'})
+        if req.url.path=='/v1/services':return httpx.Response(201,json={'service':{'id':'srv-new','serviceDetails':{'url':'https://iskra-u1-ab12.onrender.com'}},'deployId':'dep-1'})
+        return httpx.Response(200,json={})
+    return httpx.MockTransport(handler)
+
+
+def _provision_env(monkeypatch):
+    for k,v in {'RENDER_API_KEY':'rnd_test','RENDER_OWNER_ID':'tea-x','RENDER_ENV_GROUP_ID':'evg-x','PUBLIC_ORIGIN':''}.items():monkeypatch.setenv(k,v)
+    monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/t');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_p')
+
+
+def test_paid_checkout_provisions_instance_once_and_cancel_suspends(client,monkeypatch):
+    import json
+    from control import provision,mailer
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls));mailer.SENT.clear()
+    client.post('/api/register',json=REG)
+    ref=client.get('/admin/accounts',headers=ADMIN).json()  # account exists
+    aid=parse_id(client)
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_p'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))      # Stripe retry: no second server
+    created=[c for c in calls if c[1]=='/v1/services']
+    assert len(created)==1
+    body=created[0][2];env={e['key']:e['value'] for e in body['envVars']}
+    assert body['serviceDetails']['disk']['mountPath']=='/var/data' and body['ownerId']=='tea-x'
+    assert len(env['TOKEN_ENCRYPTION_KEY'])>=43 and len(env['SSO_SECRET'])>=40 and 'ANTHROPIC_API_KEY' not in env and 'TINDER_AUTH_TOKEN' not in env
+    assert ('POST','/v1/env-groups/evg-x/services/srv-new',{}) in calls and ('POST','/v1/services/srv-new/deploys',{}) in calls
+    me=client.get('/api/me').json();assert me['panel_ready'] and me['provision_state']=='done'
+    assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://iskra-u1-ab12.onrender.com/auth/sso?t=')
+    assert [m['subject'] for m in mailer.SENT]==['Witaj w Iskrze','Płatność przyjęta','Twój panel jest gotowy','Płatność przyjęta']
+    ev2=json.dumps({'type':'customer.subscription.deleted','data':{'object':{'customer':'cus_p','status':'canceled'}}})
+    client.post('/stripe/webhook',content=ev2,headers=_signed(ev2,'whsec_p'))
+    assert calls[-1][:2]==('POST','/v1/services/srv-new/suspend')
+
+
+def parse_id(client):
+    from urllib.parse import urlparse,parse_qs
+    return parse_qs(urlparse(client.post('/api/billing/checkout').json()['url']).query)['client_reference_id'][0]
+
+
+def test_failed_provision_is_recorded_and_retryable(client,monkeypatch):
+    import json
+    from control import provision
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls,fail=True))
+    client.post('/api/register',json=REG);aid=parse_id(client)
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_f'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    assert client.get('/api/me').json()['provision_state']=='failed'
+    monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls))
+    assert client.post('/admin/accounts/provision',headers=ADMIN,json={'email':'ola@example.com','retry':True}).json()=={'result':'done'}
+
+
+def test_comped_emails_are_free_on_signup(client,monkeypatch):
+    monkeypatch.setenv('COMPED_EMAILS','boss@example.com, ola@example.com');monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/t');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_p')
+    client.post('/api/register',json=REG)
+    me=client.get('/api/me').json();assert me['has_access'] is True and me['billing_enabled'] is True
+
+
+def test_password_reset_flow(client):
+    from control import mailer
+    mailer.SENT.clear();client.post('/api/register',json=REG);client.cookies.clear()
+    assert client.post('/api/password/forgot',json={'email':'nobody@example.com'}).json()=={'ok':True}
+    assert client.post('/api/password/forgot',json={'email':'ola@example.com'}).json()=={'ok':True}
+    link=[m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło'][-1]['text'].split('\n')[1]
+    token=link.split('t=',1)[1]
+    assert client.post('/api/password/reset',json={'token':token,'password':'krotkie'}).status_code==422
+    assert client.post('/api/password/reset',json={'token':token,'password':'nowe-dlugie-haslo'}).json()=={'ok':True}
+    assert client.post('/api/password/reset',json={'token':token,'password':'nowe-dlugie-haslo'}).status_code==400   # single use
+    client.cookies.clear()
+    assert client.post('/api/login',json={'email':'ola@example.com','password':'nowe-dlugie-haslo'}).status_code==200
+    assert client.get('/nie-pamietam-hasla').status_code==200 and client.get('/nowe-haslo').status_code==200
