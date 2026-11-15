@@ -6,6 +6,7 @@ No swiping, login extraction, stealth headers, CAPTCHA handling or private-token
 from __future__ import annotations
 import asyncio
 import hashlib
+import uuid
 import json
 import os
 import re
@@ -90,7 +91,13 @@ class TinderClient:
         self.client = httpx.AsyncClient(
             base_url=BASE_URL, timeout=10, transport=transport, follow_redirects=False, trust_env=False,
             headers={'X-Auth-Token': auth_token, 'Accept': 'application/json',
-                     'User-Agent': 'ConversationAgent/1.0 (OpenDate-derived)'})
+                     'User-Agent': 'ConversationAgent/1.0 (OpenDate-derived)',
+                     # Tinder's v2 inbox rejects bare requests (HTTP 401). These are the plain
+                     # client-identification headers; override via env when Tinder bumps versions.
+                     'platform': 'web', 'Accept-Language': os.getenv('TINDER_LOCALE', 'en-GB'),
+                     'app-version': os.getenv('TINDER_APP_VERSION', '1074202'),
+                     'tinder-version': os.getenv('TINDER_VERSION', '7.42.2'),
+                     'persistent-device-id': os.getenv('TINDER_DEVICE_ID') or str(uuid.uuid5(uuid.NAMESPACE_URL, 'conversation-agent:' + self.credential_hash))})
 
     async def __aenter__(self): return self
     async def __aexit__(self, *args): await self.client.aclose()
