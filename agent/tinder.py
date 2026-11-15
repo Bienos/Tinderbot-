@@ -1,0 +1,479 @@
+"""Unofficial Tinder adapter, adapted from OpenDate (MIT), pinned in THIRD_PARTY_NOTICES.md.
+
+Read-only retries are bounded. Message POSTs execute once; receipts require read-back.
+No swiping, login extraction, stealth headers, CAPTCHA handling or private-token logging.
+"""
+from __future__ import annotations
+import asyncio
+import hashlib
+import json
+import os
+import re
+import time
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+import httpx
+from agent import storage as s, runtime as rt
+from agent import tinder_traffic as traffic
+
+BASE_URL = 'https://api.gotinder.com'
+ID = re.compile(r'^[A-Za-z0-9_-]{1,160}$')
+
+class TinderError(Exception):
+    """Only controlled, nonsecret error codes are allowed in exception messages."""
+class TinderAuthError(TinderError): pass
+class TinderRestriction(TinderAuthError): pass
+class TinderProtocolError(TinderError): pass
+class TinderRejected(TinderError): pass
+class TinderUnavailable(TinderError): pass
+class TinderUncertain(TinderError): pass
+class TinderRateLimited(TinderError):
+    def __init__(self, delay=60):
+        self.delay = max(15, delay)
+        self.existing=False
+        self.reason='rate_limited'
+        super().__init__('rate_limited')
+
+def active_cooldown(delay):
+    limited=TinderRateLimited(delay);limited.existing=True;limited.reason='cooldown_active'
+    return limited
+
+@dataclass(frozen=True)
+class Page:
+    items: list[dict]
+    complete: bool
+
+
+def ident(value: Any) -> str:
+    if not isinstance(value, str) or not ID.fullmatch(value):
+        raise TinderProtocolError('invalid_source_identity')
+    return value
+
+
+def timestamp(value: Any) -> str:
+    if not isinstance(value, str): raise TinderProtocolError('missing_message_timestamp')
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if dt.tzinfo is None: raise ValueError()
+        return dt.astimezone(timezone.utc).isoformat()
+    except ValueError:
+        raise TinderProtocolError('invalid_message_timestamp') from None
+
+
+def token() -> str:
+    value = os.getenv('TINDER_AUTH_TOKEN', '').strip()
+    if not value or len(value) > 4096 or any(ord(c) < 33 or ord(c) > 126 for c in value):
+        raise TinderAuthError('tinder_token_missing_or_invalid')
+    return value
+
+
+def fingerprint() -> str:
+    return hashlib.sha256(token().encode()).hexdigest()
+
+
+def configured() -> bool:
+    return os.getenv('TINDER_ENABLED', 'false').lower() == 'true' and bool(os.getenv('TINDER_AUTH_TOKEN', '').strip())
+
+
+def poll_interval() -> int:
+    try: return max(60, min(3600, int(os.getenv('TINDER_POLL_INTERVAL', '180'))))
+    except ValueError: return 180
+
+
+class TinderClient:
+    """OpenDate-derived async HTTP connector, without its mutation retry/synthetic receipt paths."""
+    def __init__(self, auth_token: str, *, transport=None, max_pages: int = 20):
+        self.max_pages = max(1, max_pages)
+        self.credential_hash=hashlib.sha256(auth_token.encode()).hexdigest()
+        self.reconnect=False
+        self.client = httpx.AsyncClient(
+            base_url=BASE_URL, timeout=10, transport=transport, follow_redirects=False, trust_env=False,
+            headers={'X-Auth-Token': auth_token, 'Accept': 'application/json',
+                     'User-Agent': 'ConversationAgent/1.0 (OpenDate-derived)'})
+
+    async def __aenter__(self): return self
+    async def __aexit__(self, *args): await self.client.aclose()
+
+    def pause_account(self,reason):
+        for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):
+            state=json.loads(row['value'])
+            if state.get('credential_fingerprint')==self.credential_hash:
+                status_update(row['id'],error=reason,disable=True)
+
+    def restriction(self,reason):
+        self.pause_account('restriction_requires_manual_review')
+        raise TinderRestriction(reason)
+
+    async def request(self, method: str, path: str, **kwargs) -> dict:
+        # Only exact-host relative paths constructed by this module are accepted.
+        if not path.startswith('/') or path.startswith('//') or '://' in path:
+            raise TinderProtocolError('invalid_request_path')
+        attempts = 3 if method == 'GET' else 1
+        for attempt in range(attempts):
+            # Respect account cooldowns even for explicit reconnect attempts and read retries.
+            for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%'"):
+                state=json.loads(row['value'])
+                if state.get('credential_fingerprint')!=self.credential_hash:continue
+                if state.get('blocked_until',0)>time.time():raise active_cooldown(state['blocked_until']-time.time())
+                if not row['enabled'] and not self.reconnect:raise TinderAuthError('connection_paused')
+            try:traffic.claim_request()
+            except traffic.TrafficBudget as exc:
+                limited=TinderRateLimited(exc.delay);limited.reason='local_request_budget';raise limited from None
+            try:
+                async with self.client.stream(method,path,**kwargs) as stream:
+                    chunks=bytearray()
+                    async for chunk in stream.aiter_bytes():
+                        chunks.extend(chunk)
+                        if len(chunks)>4*1024*1024:raise TinderProtocolError('source_response_too_large')
+                    response=httpx.Response(stream.status_code,headers=stream.headers,content=bytes(chunks),request=stream.request)
+            except httpx.TransportError:
+                if method != 'GET': raise TinderUncertain('send_delivery_unknown') from None
+                if attempt + 1 == attempts: raise TinderUnavailable('read_transport_failed') from None
+                await asyncio.sleep(2 ** attempt); continue
+            if response.status_code in (403,423,451):self.restriction('account_restriction_requires_review')
+            if response.status_code==401:
+                self.pause_account('session_expired_or_access_denied')
+                raise TinderAuthError('session_expired_or_access_denied')
+            if response.status_code == 429:
+                try:delay=traffic.retry_after(response.headers.get('Retry-After'))
+                except OverflowError:self.restriction('cooldown_requires_manual_review')
+                raise TinderRateLimited(delay)
+            if response.status_code == 404: raise TinderUnavailable('source_not_observed')
+            if 500 <= response.status_code:
+                if response.headers.get('Retry-After'):
+                    try:delay=traffic.retry_after(response.headers['Retry-After'])
+                    except OverflowError:self.restriction('cooldown_requires_manual_review')
+                    if method!='GET':
+                        for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):
+                            state=json.loads(row['value'])
+                            if state.get('credential_fingerprint')==self.credential_hash:status_update(row['id'],error='server_retry_after',delay=delay)
+                        raise TinderUncertain('send_server_result_unknown')
+                    limited=TinderRateLimited(delay);limited.reason='server_retry_after';raise limited
+                if method != 'GET': raise TinderUncertain('send_server_result_unknown')
+                if attempt + 1 == attempts: raise TinderUnavailable('source_server_error')
+                await asyncio.sleep(2 ** attempt); continue
+            if 300 <= response.status_code < 400: self.restriction('redirect_requires_review')
+            if not 200 <= response.status_code < 300: raise TinderRejected('request_rejected')
+            content_type=response.headers.get('Content-Type','').lower()
+            if 'text/html' in content_type and any(word in response.text[:4096].lower() for word in ('captcha','verify you are human','account suspended','challenge')):
+                self.restriction('verification_requires_manual_review')
+            try: data = response.json()
+            except ValueError:
+                if method != 'GET': raise TinderUncertain('send_receipt_invalid') from None
+                raise TinderProtocolError('invalid_source_json') from None
+            if not isinstance(data, dict): raise TinderProtocolError('unexpected_source_shape')
+            # Only top-level service status markers are examined, never partner message text.
+            if data.get('requires_verification') is True or data.get('captcha') or data.get('challenge'):
+                self.restriction('verification_requires_manual_review')
+            return data
+        raise TinderUnavailable('read_failed')
+
+    async def profile(self) -> str:
+        data = await self.request('GET', '/profile')
+        root = data.get('data', data)
+        if not isinstance(root, dict): raise TinderProtocolError('invalid_profile')
+        user = root.get('user', root)
+        if not isinstance(user, dict): raise TinderProtocolError('invalid_profile')
+        return ident(user.get('_id') or user.get('id'))
+
+    async def pages(self, path: str, key: str, count: int) -> Page:
+        collected = {}; cursor = None; seen = set()
+        for _ in range(self.max_pages):
+            params = {'count': count}
+            if cursor: params['page_token'] = cursor
+            data = await self.request('GET', path, params=params)
+            block = data.get('data')
+            if not isinstance(block, dict) or not isinstance(block.get(key), list):
+                raise TinderProtocolError('invalid_paginated_response')
+            for raw in block[key]:
+                if not isinstance(raw, dict): raise TinderProtocolError('invalid_source_record')
+                rid = ident(raw.get('_id') or raw.get('id'))
+                if rid in collected and collected[rid] != raw: raise TinderProtocolError('conflicting_duplicate_record')
+                collected[rid] = raw
+            cursor = block.get('next_page_token')
+            if not cursor: return Page(list(collected.values()), True)
+            if not isinstance(cursor, str) or len(cursor) > 4096 or cursor in seen:
+                raise TinderProtocolError('invalid_pagination_cursor')
+            seen.add(cursor)
+        return Page(list(collected.values()), False)
+
+    async def matches(self) -> Page: return await self.pages('/v2/matches', 'matches', 60)
+
+    async def messages(self, match_id: str, owner_id: str, person_id: str, thread_id: str) -> Page:
+        page = await self.pages(f'/v2/matches/{ident(match_id)}/messages', 'messages', 100)
+        items = []
+        for raw in page.items:
+            if raw.get('match_id') is not None and raw['match_id'] != match_id:
+                raise TinderProtocolError('message_conversation_mismatch')
+            sender = raw.get('from')
+            if sender not in (owner_id, person_id): raise TinderProtocolError('unknown_message_sender')
+            other = person_id if sender == owner_id else owner_id
+            if raw.get('to') is not None and raw['to'] != other:
+                raise TinderProtocolError('message_recipient_mismatch')
+            text = raw.get('message')
+            if not isinstance(text, str) or not text.strip() or len(text)>8000: raise TinderProtocolError('unsupported_message_content')
+            items.append({'id': f'{thread_id}:{ident(raw.get("_id") or raw.get("id"))}',
+                          'thread_id': thread_id, 'sender': 'you' if sender == owner_id else 'them',
+                          'body': text, 'created_at': timestamp(raw.get('sent_date') or raw.get('created_date'))})
+        # Preserve source newest-first tie ordering when normalizing to chronological order.
+        items.reverse(); items.sort(key=lambda m: m['created_at'])
+        return Page(items, page.complete)
+
+    async def send_once(self, match_id: str, text: str) -> dict:
+        data = await self.request('POST', f'/user/matches/{ident(match_id)}', json={'message': text})
+        result = data.get('data', data)
+        if not isinstance(result, dict): raise TinderUncertain('send_receipt_missing')
+        try: ident(result.get('_id') or result.get('id'))
+        except TinderProtocolError: raise TinderUncertain('send_receipt_missing') from None
+        return result
+
+
+def client() -> TinderClient:
+    """One injection point for offline contract tests; production host is never configurable."""
+    return TinderClient(token())
+
+
+def connection(connection_id: str) -> tuple[dict, dict]:
+    rows = s.rows('SELECT * FROM connections WHERE id=?', (connection_id,))
+    if not rows or not rows[0]['id'].startswith('tinder:'): raise TinderAuthError('tinder_connection_missing')
+    row = rows[0]; value = json.loads(row['value'])
+    if not configured() or not row['enabled'] or value.get('credential_fingerprint') != fingerprint():
+        raise TinderAuthError('tinder_connection_disabled_or_credential_changed')
+    if value.get('blocked_until', 0) > time.time(): raise active_cooldown(value['blocked_until'] - time.time())
+    return row, value
+
+
+def status_update(connection_id: str, *, error=None, delay=0, disable=False, polled=False):
+    with s.connect() as db:
+        row = db.execute('SELECT value,enabled FROM connections WHERE id=?', (connection_id,)).fetchone()
+        if not row: return
+        value = json.loads(row['value']); value['error'] = error
+        if error=='rate_limited':
+            events=[t for t in value.get('rate_limit_events',[]) if t>time.time()-86400]+[time.time()]
+            value['rate_limit_events']=events[-3:]
+            delay=max(delay,300*(2**min(len(events)-1,6)))
+            if len(events)>=3:disable=True;value['error']='repeated_rate_limits_requires_review'
+        value['next_poll'] = time.time() + delay
+        if error in ('rate_limited','local_request_budget','server_retry_after'):value['blocked_until']=max(value.get('blocked_until',0),time.time()+delay)
+        if polled:
+            value['last_sync'] = s.utcnow();value['failures']=0
+        elif error and error not in ('rate_limited','local_request_budget'):
+            value['failures']=value.get('failures',0)+1
+            if value['failures']>=3: disable=True;value['error']='circuit_open_requires_review'
+        db.execute('UPDATE connections SET value=?,enabled=CASE WHEN ? THEN 0 ELSE enabled END WHERE id=?',
+                   (json.dumps(value), int(disable), connection_id))
+        paused_now=disable and bool(row['enabled'])
+        reason=value.get('error') or 'account_review_required'
+    if paused_now:rt.audit(None,'tinder_connection_paused',reason)
+
+
+async def connect() -> str:
+    if not configured(): raise TinderAuthError('set_tinder_enabled_and_token_locally')
+    async with client() as api:
+        api.reconnect=True
+        owner = await api.profile()
+    expected = os.getenv('TINDER_OWNER_ID', '').strip()
+    if expected and owner != expected: raise TinderAuthError('account_identity_mismatch')
+    cid = f'tinder:{owner}'
+    value = {'platform': 'tinder', 'unofficial': True, 'credential_fingerprint': fingerprint(),
+             'error': None, 'last_sync': None, 'next_poll': 0, 'blocked_until': 0,
+             'auto_send': True, 'owner_attested': True}
+    with s.connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        # Reconnecting must never silently restore revoked thread grants or another account.
+        db.execute("UPDATE connections SET enabled=0 WHERE id LIKE 'tinder:%'")
+        db.execute('INSERT OR REPLACE INTO connections VALUES(?,?,?,?,?)', (cid, 1, 1, owner, json.dumps(value)))
+    rt.audit(None, 'tinder_connected', 'Unofficial account connected; automatic sending enabled for consented threads')
+    return cid
+
+
+def replace_history(thread_id: str, items: list[dict]):
+    """Reconcile only a complete source snapshot, including edits and removed message content."""
+    old = s.source_for_thread(thread_id)
+    if rt.history_hash(old) == rt.history_hash(items): return
+    with s.connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        db.execute('DELETE FROM source_messages WHERE thread_id=?', (thread_id,))
+        db.execute('DELETE FROM messages WHERE thread_id=?', (thread_id,))
+        db.execute('DELETE FROM memory WHERE thread_id=?', (thread_id,))
+        db.execute('DELETE FROM outcome_state WHERE thread_id=?', (thread_id,))
+        for m in items:
+            db.execute('INSERT INTO source_messages VALUES(?,?,?,?,?)',
+                       (m['id'], thread_id, m['sender'], m['body'], m['created_at']))
+
+
+async def _history(api: TinderClient, thread: dict, owner: str) -> list[dict]:
+    con, _ = connection(thread['connection_id'])
+    value = s.rows('SELECT value FROM tinder_threads WHERE thread_id=?', (thread['id'],))
+    if not value or con['user_id'] != owner: raise TinderAuthError('account_identity_mismatch')
+    person = json.loads(value[0]['value'])['person_id']
+    page = await api.messages(thread['chat_id'], owner, person, thread['id'])
+    if not page.complete: raise TinderProtocolError('incomplete_message_history')
+    replace_history(thread['id'], page.items)
+    return page.items
+
+
+async def sync_connection(connection_id: str):
+    con, prior_state = connection(connection_id)
+    changed=False
+    from agent.service import ingest
+    async with client() as api:
+        owner = await api.profile()
+        if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
+        page = await api.matches(); observed = set()
+        listing_signature=hashlib.sha256(json.dumps([(m.get('_id') or m.get('id'),traffic.metadata_key(m)) for m in page.items],sort_keys=True).encode()).hexdigest()
+        changed=prior_state.get('listing_signature')!=listing_signature
+        for match in page.items:
+            # Check account revocation after each network await, before retaining data.
+            connection(connection_id)
+            match_id = ident(match.get('_id') or match.get('id')); person = match.get('person')
+            if not isinstance(person, dict): raise TinderProtocolError('invalid_match_person')
+            person_id = ident(person.get('_id') or person.get('id'))
+            tid = f'tinder:{owner}:{match_id}'; observed.add(tid)
+            if s.rows('SELECT 1 FROM tombstones WHERE thread_id=?', (tid,)): continue
+            saved=s.rows('SELECT value FROM tinder_threads WHERE thread_id=?',(tid,))
+            cached=json.loads(saved[0]['value']) if saved else {}
+            activity_key=traffic.metadata_key(match)
+            with s.connect() as db:
+                db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1) '
+                           'ON CONFLICT(id) DO UPDATE SET display_name=excluded.display_name',
+                           (tid, str(person.get('name') or 'Tinder contact')[:100], 'tinder', connection_id, match_id))
+                db.execute('INSERT OR REPLACE INTO tinder_threads VALUES(?,?)', (tid, json.dumps({**cached,'person_id':person_id})))
+            thread = next(t for t in s.threads() if t['id'] == tid)
+            if not traffic.should_read(thread,cached,activity_key):continue
+            previous_hash=rt.history_hash(s.source_for_thread(tid))
+            try:
+                history = await _history(api, thread, owner)
+                changed=changed or previous_hash!=rt.history_hash(history)
+                s.set_thread_flags(tid, visibility='available')
+                thread['source_visibility'] = 'available'; ingest(thread, history)
+                with s.connect() as db:db.execute('UPDATE tinder_threads SET value=? WHERE thread_id=?',(json.dumps({**cached,'person_id':person_id,'activity_key':activity_key,'last_read':time.time()}),tid))
+            except TinderProtocolError:
+                s.set_thread_flags(tid, visibility='not_observed')
+                rt.audit(tid, 'tinder_thread_needs_review', 'Incomplete, unsupported or ambiguous message data; no send')
+            except TinderUnavailable:
+                s.set_thread_flags(tid, visibility='not_observed')
+        if page.complete:
+            for thread in s.threads():
+                if thread['connection_id'] == connection_id and thread['id'] not in observed:
+                    s.set_thread_flags(thread['id'], visibility='not_observed')
+    idle_rounds=0 if changed else prior_state.get('idle_rounds',0)+1
+    delay=min(poll_interval()*(2**min(idle_rounds,5)),max(poll_interval(),traffic.integer('TINDER_IDLE_POLL_INTERVAL',900,60,86400)))
+    with s.connect() as db:
+        row=db.execute('SELECT value FROM connections WHERE id=?',(connection_id,)).fetchone();value=json.loads(row['value'])
+        value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature})
+        db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),connection_id))
+    status_update(connection_id, delay=delay, polled=True)
+
+
+async def poll():
+    if not configured() or rt.settings()['paused']: return
+    for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):
+        value = json.loads(row['value'])
+        if max(value.get('next_poll', 0), value.get('blocked_until', 0)) > time.time(): continue
+        try: await sync_connection(row['id'])
+        except TinderRateLimited as exc:
+            if not exc.existing:status_update(row['id'],error=exc.reason,delay=exc.delay)
+        except TinderRestriction:status_update(row['id'],error='restriction_requires_manual_review',disable=True)
+        except TinderAuthError: status_update(row['id'], error='session_expired_or_account_changed', disable=True)
+        except TinderError: status_update(row['id'], error='source_sync_failed', delay=poll_interval())
+        except Exception: status_update(row['id'], error='unexpected_sync_failure', delay=poll_interval())
+
+
+class TinderAdapter:
+    async def snapshot(self, thread):
+        try:
+            con, _ = connection(thread['connection_id'])
+            async with client() as api:
+                owner = await api.profile()
+                if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
+                return await _history(api, thread, owner)
+        except TinderRestriction:
+            status_update(thread['connection_id'],error='restriction_requires_manual_review',disable=True)
+            raise
+        except TinderAuthError:
+            status_update(thread['connection_id'],error='session_expired_or_account_changed',disable=True)
+            raise
+        except TinderRateLimited as exc:
+            if not exc.existing:status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)
+            raise
+
+    async def reconcile(self, thread, action_id):
+        # Without a concrete provider receipt, text matching cannot establish delivery identity.
+        rows = s.rows('SELECT * FROM tinder_receipts WHERE action_id=? AND thread_id=?', (action_id, thread['id']))
+        if not rows or rows[0]['next_check']>time.time(): return None
+        with s.connect() as db:db.execute('UPDATE tinder_receipts SET next_check=? WHERE action_id=?',(time.time()+poll_interval(),action_id))
+        try: fresh = await self.snapshot(thread)
+        except TinderError: return None
+        row = rows[0]
+        draft = s.rows('SELECT d.body FROM drafts d JOIN actions a ON a.draft_id=d.id WHERE a.id=?', (action_id,))
+        if not draft: return None
+        for m in fresh:
+            if m['id'] == row['message_id'] and m['sender'] == 'you' and m['body'] == draft[0]['body']:
+                return m['id']
+        return None
+
+    async def send(self, thread, text, action_id, anchor):
+        from agent.adapters import StaleAction
+        from agent.service import ingest
+        reserved = s.rows('SELECT a.*,d.body,c.history_hash,c.settings_hash FROM actions a JOIN drafts d ON d.id=a.draft_id '
+                          'JOIN draft_context c ON c.draft_id=d.id WHERE a.id=? AND a.thread_id=?', (action_id, thread['id']))
+        if not reserved or reserved[0]['status'] != 'sending' or reserved[0]['body'] != text:
+            raise StaleAction('Unreserved Tinder action')
+        action = reserved[0]
+        con, _ = connection(thread['connection_id'])
+        async with client() as api:
+            owner = await api.profile()
+            if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
+            fresh = await _history(api, thread, owner)
+            ingest(thread, fresh)
+            if not fresh or fresh[-1]['id'] != anchor or rt.history_hash(fresh) != action['history_hash']:
+                raise StaleAction('New or edited Tinder message invalidates draft')
+            # Navigation/network awaits can allow pause, mode changes, grant revocation or deletion.
+            current = next((t for t in s.threads() if t['id'] == thread['id']), None)
+            grants = s.rows('SELECT * FROM grants WHERE thread_id=?', (thread['id'],))
+            connection(thread['connection_id'])
+            if not current or not rt.eligible(current) or rt.settings_hash() != action['settings_hash']:
+                raise StaleAction('Conversation, account or profile permission changed')
+            if not grants or not all(grants[0][k] for k in ('enabled', 'participant_consent', 'disclosed')):
+                raise StaleAction('Thread consent or disclosure revoked')
+            if action['automatic'] and not rt.auto_allowed(current): raise StaleAction('Automatic sending paused')
+            from agent.dispatch import guard
+            guard(thread['id'],action_id,text,anchor,fresh)
+            try:
+                result = await api.send_once(thread['chat_id'], text)
+            except TinderRestriction:
+                status_update(thread['connection_id'],error='restriction_requires_manual_review',disable=True)
+                raise TinderUncertain('restriction_delivery_unverified') from None
+            except TinderAuthError:
+                status_update(thread['connection_id'], error='session_expired_or_access_denied', disable=True)
+                raise TinderRejected('session_expired_or_access_denied') from None
+            except TinderRateLimited as exc:
+                if not exc.existing:status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)
+                raise TinderRejected(exc.reason) from None
+            mid = f'{thread["id"]}:{ident(result.get("_id") or result.get("id"))}'
+            if any(m['id']==mid for m in fresh):raise TinderUncertain('send_receipt_reuses_existing_message')
+            # Persist candidate BEFORE read-back, to allow recovery after a verifier crash.
+            with s.connect() as db: db.execute('INSERT INTO tinder_receipts(action_id,thread_id,message_id) VALUES(?,?,?)', (action_id, thread['id'], mid))
+            verified = await _history(api, thread, owner)
+            ingest(thread,verified)
+            for m in verified:
+                if m['id'] == mid and m['sender'] == 'you' and m['body'] == text:
+                    with s.connect() as db:
+                        row=db.execute('SELECT value FROM connections WHERE id=?',(thread['connection_id'],)).fetchone();value=json.loads(row['value'])
+                        value.update({'idle_rounds':0,'next_poll':time.time()+poll_interval()})
+                        db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),thread['connection_id']))
+                    return mid
+            raise TinderUncertain('send_not_yet_observed')
+
+
+def public_status():
+    connections = []
+    for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%'"):
+        value = json.loads(row['value'])
+        connections.append({'id': row['id'], 'enabled': bool(row['enabled']), 'unofficial': True,
+                            'auto_send': bool(value.get('auto_send',False)),
+                            'error': value.get('error'), 'last_sync': value.get('last_sync'),
+                            'next_poll': value.get('next_poll', 0), 'blocked_until':value.get('blocked_until',0), 'failures':value.get('failures',0)})
+    return {'configured': configured(), 'unofficial': True, 'connections': connections}

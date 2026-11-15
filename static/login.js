@@ -1,0 +1,1 @@
+document.querySelector('form').onsubmit=async e=>{e.preventDefault();let r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:document.querySelector('input').value})});if(r.ok)location.reload();else document.querySelector('#error').textContent='Sign in failed'}

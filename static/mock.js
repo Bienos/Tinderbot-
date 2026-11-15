@@ -1,0 +1,10 @@
+
+let data,active,limit=3;
+async function load(){ data=await(await fetch('/api/mock/source')).json(); document.querySelector('#threads').replaceChildren();
+for(let th of data.threads.slice(0,limit)){let b=document.createElement('button');b.className='thread';b.textContent=th.display_name;b.dataset.threadButton=th.id;b.addEventListener('click',()=>openThread(th.id));document.querySelector('#threads').append(b)}
+let more=document.createElement('button');more.dataset.loadMore='';more.textContent='Load more conversations';more.hidden=limit>=data.threads.length;more.onclick=async()=>{more.disabled=true;limit+=3;await load()};document.querySelector('#threads').append(more);
+if(data.threads.length)openThread(active||data.threads[0].id);document.body.dataset.sourceReady='true';}
+function openThread(id){active=id;for(let x of document.querySelectorAll('.thread'))x.classList.toggle('active',x.dataset.threadButton===id);
+let box=document.querySelector('#messages');box.replaceChildren();box.dataset.threadId=id;for(let msg of data.messages[id]){let el=document.createElement('div');el.className='bubble '+msg.sender;el.dataset.messageId=msg.id;el.dataset.actionId=msg.action_id||'';el.dataset.sender=msg.sender;el.dataset.createdAt=msg.created_at;el.textContent=msg.body;box.appendChild(el)}box.scrollTop=box.scrollHeight;}
+document.querySelector('[data-send-button]').addEventListener('click',async()=>{let input=document.querySelector('[data-chat-input]');let text=input.value.trim();if(!text||!active)return;const res=await fetch('/api/mock/send',{method:'POST',headers:{'Content-Type':'application/json','X-Agent-Request':'dashboard'},body:JSON.stringify({thread_id:active,body:text,action_id:input.dataset.action||crypto.randomUUID(),anchor:input.dataset.anchor||data.messages[active].at(-1)?.id||''})});if(!res.ok){alert('Send rejected');return}input.value='';delete input.dataset.action;delete input.dataset.anchor;await load();});
+load();setInterval(()=>{if(!document.querySelector('[data-chat-input]').value)load()},3000);

@@ -1,0 +1,68 @@
+{
+  "method": "manual source review and local regressions; not a managed/deep scan",
+  "scope": "dating-agent-browser-c-v3",
+  "findings": [
+    {
+      "id": "SEC-01",
+      "severity": "High (conditional)",
+      "title": "Invalid credential file could fail open",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_empty_token_file_fails_closed"
+    },
+    {
+      "id": "SEC-02",
+      "severity": "Medium",
+      "title": "Master credential reused as nonrevocable browser cookie",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_cookie_not_master_credential_and_logout_invalidates_replay"
+    },
+    {
+      "id": "SEC-03",
+      "severity": "High integrity",
+      "title": "Rejected draft could dispatch after asynchronous refresh",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_rejection_during_source_refresh_cannot_be_sent"
+    },
+    {
+      "id": "SEC-04",
+      "severity": "High authorization",
+      "title": "Telegram final dispatch missed late permission/source changes",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_telegram_grant_revoked_after_reservation_prevents_dispatch"
+    },
+    {
+      "id": "SEC-05",
+      "severity": "Medium",
+      "title": "SMTP default TLS context did not verify certificate/hostname",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_smtp_requires_verified_tls_context"
+    },
+    {
+      "id": "SEC-06",
+      "severity": "Medium scope-control",
+      "title": "Connecting Tinder could change Telegram execution mode",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_connecting_tinder_does_not_escalate_telegram_autonomy"
+    },
+    {
+      "id": "SEC-07",
+      "severity": "Medium privacy",
+      "title": "Telegram conversation could become model-eligible before consent",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_no_external_generation_before_telegram_consent"
+    },
+    {
+      "id": "SEC-08",
+      "severity": "Medium availability",
+      "title": "Request bodies could be buffered/parsed without an early limit",
+      "status": "fixed",
+      "regression": "tests/test_security.py::test_unauthenticated_oversize_body_and_chunked_body_rejected"
+    }
+  ],
+  "tests": 113,
+  "known_python_advisories": 0,
+  "audited_python_packages": 29,
+  "live_provider_tests": false,
+  "exhaustive": false,
+  "initial_security_suite_tests": 94
+}

@@ -1,0 +1,18 @@
+Continue deploying the existing application from dating-agent-account-controls.zip. Extract it and work in dating-agent-browser-c-v3. Use the existing implementation; do not restart architecture/research or replace it with a demo.
+
+The owner's target repository/hosting provider will be supplied separately. Before external writes, identify the actual target and use the permissions already granted in this session. Do not invent credentials, live results, account authorization or a successful deployment.
+
+Read README.md, .env.example, docs/DEPLOYMENT.md, docs/TINDER.md, docs/ACCOUNT_RISK.md, docs/SECURITY_REVIEW.md and reports/VALIDATION.md. Inspect applicable AGENTS.md instructions. Preserve existing tests and third-party MIT attribution.
+
+Goals:
+1. Publish the source to the specified PRIVATE GitHub repository. Include .gitignore/.env.example; never upload .env, runtime data, browser sessions, real chat data, private databases or credentials.
+2. Configure the selected always-on host using the supplied Dockerfile/compose.yaml or a justified native equivalent. Use one ASGI worker/coordinator and persistent protected runtime storage. Validate the container build/runtime: only Compose configuration and native execution were previously verified.
+3. Use the host's secure environment/secret configuration. The owner enters OPENAI_API_KEY and their own Tinder session credential locally or through the provider's secret UI; never ask them to paste secrets into chat or commit them. No login scraping, token harvesting, CAPTCHA bypass, spoofed identifiers or account rotation.
+4. Set PUBLIC_ORIGIN to the exact real dashboard origin, use TLS/access protection for remote access and retain secure session/host/CSRF/CSP controls. Preserve request/send budgets, server cooldowns, circuit breakers, exact-ID verification, uncertain-delivery blocking and pause/revoke controls.
+5. Automatic Tinder replies must remain on for the explicitly connected account with the existing one-time thread consent/disclosure grants. No per-message approval should be added. Connecting Tinder must not change Telegram's execution mode. Global pause and simulation must still prevent live sends.
+6. For a clean live-only instance, set SEED_SIMULATOR=false before first startup on a fresh database; never erase existing private data without explicit authorization. Disabling the local simulator does not replace Tinder with mock HTTP.
+7. Run the appropriate existing tests, check health/dashboard authentication, worker progress, persistent storage across restart and permission revocation. Existing baseline: 113 passing tests, including three actual Chromium tests against the fictional simulator; all Tinder contract tests are mocked.
+8. Once the owner has securely configured credentials and authorized a consenting test thread, verify live identity, thread synchronization and actual provider receipt/read-back. Do not claim live Tinder compatibility or successful messaging before that evidence exists. Keep the account's unofficial status and possibility of restriction clear.
+9. Deliver the private repository URL, deployment URL/access method, actual validation evidence, restart/update instructions, backup/deletion procedure, costs actually confirmed and any remaining blockers.
+
+GitHub stores source but is not the worker host. GitHub Pages cannot run this FastAPI/SQLite worker, and GitHub Actions is not an always-on replacement. A temporary assistant workspace is not permanent hosting. Do not provision a paid service or expose the private dashboard until the owner has selected the target and the concrete deployment is ready to review.

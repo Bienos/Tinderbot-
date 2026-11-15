@@ -1,0 +1,47 @@
+[
+  {
+    "name": "session",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
+    "sha256": "ced67b25b21a47a83ac6e7ef4da58e05db4257bdc561dfdede698567ce33c1be",
+    "bytes": 158030,
+    "status": "fetched",
+    "date": "2026-11-15"
+  },
+  {
+    "name": "csrf",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+    "sha256": "6d80f6050fa764367341143a6e41754cca1c25ff35214bbbf75edac198d717ad",
+    "bytes": 158090,
+    "status": "fetched",
+    "date": "2026-11-15"
+  },
+  {
+    "name": "llm",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html",
+    "sha256": "f7bd6d8b5c0544daa538de8488e938e4a73b2116fbec25e272ac6d9d10e9d7e8",
+    "bytes": 127877,
+    "status": "fetched",
+    "date": "2026-11-15"
+  },
+  {
+    "name": "smtp",
+    "url": "https://docs.python.org/3/library/smtplib.html",
+    "sha256": "5dd04dccebee6e514e2f11471d2aa7d39377fc9dd46b324f9a9ecb7c4baca3f8",
+    "bytes": 94194,
+    "status": "fetched",
+    "date": "2026-11-15"
+  },
+  {
+    "name": "host",
+    "url": "https://www.starlette.io/middleware/",
+    "status": "URLError"
+  },
+  {
+    "name": "logging",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html",
+    "sha256": "131131e5764f5387d1fc629ee0f9d61e2189cae43206bad40aa835fc8072c38d",
+    "bytes": 108735,
+    "status": "fetched",
+    "date": "2026-11-15"
+  }
+]

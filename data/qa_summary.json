@@ -1,0 +1,13 @@
+{
+  "old_single_turn_scenarios": 300,
+  "independently_authored_full_conversations": 200,
+  "counterfactual_forks": 200,
+  "new_full_dialogue_records": 400,
+  "combined_total_test_records": 700,
+  "source_records": 40,
+  "originals_by_language": {
+    "pl": 168,
+    "en": 32
+  },
+  "source_license_policy": "Only links, titles, annotations and newly written synthetic conversations; no reproduction of third-party raw chats."
+}

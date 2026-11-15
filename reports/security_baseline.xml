@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="10" time="0.742" timestamp="2026-11-15T02:24:46.959272+00:00" hostname="5c23637562a0"><testcase classname="tests.test_security" name="test_empty_token_file_fails_closed" time="0.019"><failure message="Failed: DID NOT RAISE RuntimeError">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff177bbf2c0&gt;
+
+    def test_empty_token_file_fails_closed(store,monkeypatch):
+        monkeypatch.delenv('DASHBOARD_TOKEN');(s.DB_PATH.parent/'dashboard-token').write_text('')
+&gt;       with pytest.raises(RuntimeError):auth.token()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/test_security.py:11: Failed</failure></testcase><testcase classname="tests.test_security" name="test_token_file_symlink_is_rejected" time="0.017"><failure message="Failed: DID NOT RAISE RuntimeError">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff177bbcbf0&gt;
+
+    def test_token_file_symlink_is_rejected(store,monkeypatch):
+        monkeypatch.delenv('DASHBOARD_TOKEN')
+        target=s.DB_PATH.parent/'other';target.write_text(SECRET)
+        (s.DB_PATH.parent/'dashboard-token').symlink_to(target)
+&gt;       with pytest.raises(RuntimeError):auth.token()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/test_security.py:17: Failed</failure></testcase><testcase classname="tests.test_security" name="test_cookie_not_master_credential_and_logout_invalidates_replay" time="0.060"><failure message="AssertionError: assert 'test-dashboard-token-at-least-32-chars' != 'test-dashboard-token-at-least-32-chars'">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff177c081a0&gt;
+
+    def test_cookie_not_master_credential_and_logout_invalidates_replay(store,monkeypatch):
+        from app import app
+        monkeypatch.setenv('PUBLIC_ORIGIN','http://testserver')
+        with TestClient(app) as c:
+            r=c.post('/auth/login',json={'token':SECRET});assert r.status_code==200
+&gt;           cookie=r.cookies['agent_session'];assert cookie!=SECRET
+                                              ^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: assert 'test-dashboard-token-at-least-32-chars' != 'test-dashboard-token-at-least-32-chars'
+
+tests/test_security.py:24: AssertionError</failure></testcase><testcase classname="tests.test_security" name="test_host_header_rebinding_is_rejected_even_with_valid_bearer" time="0.037"><failure message="AssertionError: assert 200 == 400&#10; +  where 200 = &lt;Response [200 OK]&gt;.status_code&#10; +    where &lt;Response [200 OK]&gt; = get('/api/state', headers={'Host': 'evil.example'})&#10; +      where get = &lt;starlette.testclient.TestClient object at 0x7ff177b82e70&gt;.get">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+
+    def test_host_header_rebinding_is_rejected_even_with_valid_bearer(store):
+        from app import app
+        with TestClient(app,headers={'Authorization':'Bearer '+SECRET}) as c:
+&gt;           assert c.get('/api/state',headers={'Host':'evil.example'}).status_code==400
+E           AssertionError: assert 200 == 400
+E            +  where 200 = &lt;Response [200 OK]&gt;.status_code
+E            +    where &lt;Response [200 OK]&gt; = get('/api/state', headers={'Host': 'evil.example'})
+E            +      where get = &lt;starlette.testclient.TestClient object at 0x7ff177b82e70&gt;.get
+
+tests/test_security.py:33: AssertionError</failure></testcase><testcase classname="tests.test_security" name="test_unauthenticated_oversize_body_and_chunked_body_rejected" time="0.022"><failure message="AssertionError: assert 422 == 413&#10; +  where 422 = &lt;Response [422 Unprocessable Entity]&gt;.status_code&#10; +    where &lt;Response [422 Unprocessable Entity]&gt; = post('/auth/login', content=(b'x' * 70000), headers={'Content-Type': 'application/json'})&#10; +      where post = &lt;starlette.testclient.TestClient object at 0x7ff177b82ae0&gt;.post">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+
+    def test_unauthenticated_oversize_body_and_chunked_body_rejected(store):
+        from app import app
+        with TestClient(app) as c:
+&gt;           assert c.post('/auth/login',content=b'x'*70000,headers={'Content-Type':'application/json'}).status_code==413
+E           AssertionError: assert 422 == 413
+E            +  where 422 = &lt;Response [422 Unprocessable Entity]&gt;.status_code
+E            +    where &lt;Response [422 Unprocessable Entity]&gt; = post('/auth/login', content=(b'x' * 70000), headers={'Content-Type': 'application/json'})
+E            +      where post = &lt;starlette.testclient.TestClient object at 0x7ff177b82ae0&gt;.post
+
+tests/test_security.py:38: AssertionError</failure></testcase><testcase classname="tests.test_security" name="test_login_page_has_security_headers_and_no_inline_script_permission" time="0.028"><failure message="AssertionError: assert None == 'no-store'&#10; +  where None = get('Cache-Control')&#10; +    where get = Headers({'content-length': '910', 'content-type': 'text/html; charset=utf-8'}).get&#10; +      where Headers({'content-length': '910', 'content-type': 'text/html; charset=utf-8'}) = &lt;Response [401 Unauthorized]&gt;.headers">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+
+    def test_login_page_has_security_headers_and_no_inline_script_permission(store):
+        from app import app
+        with TestClient(app) as c:
+            r=c.get('/');assert r.status_code==401
+&gt;           assert r.headers.get('Cache-Control')=='no-store'
+E           AssertionError: assert None == 'no-store'
+E            +  where None = get('Cache-Control')
+E            +    where get = Headers({'content-length': '910', 'content-type': 'text/html; charset=utf-8'}).get
+E            +      where Headers({'content-length': '910', 'content-type': 'text/html; charset=utf-8'}) = &lt;Response [401 Unauthorized]&gt;.headers
+
+tests/test_security.py:45: AssertionError</failure></testcase><testcase classname="tests.test_security" name="test_rejection_during_source_refresh_cannot_be_sent" time="0.185"><failure message="Failed: DID NOT RAISE StaleAction">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff177b83380&gt;
+
+    async def test_rejection_during_source_refresh_cannot_be_sent(store,monkeypatch):
+        await service.sync_all()
+        while (job:=rt.claim()):await service.process_job(job)
+        d=next(d for d in s.all_drafts() if d['thread_id']=='t1')
+        class Reject(FixtureAdapter):
+            async def snapshot(self,t):s.set_draft_status(d['id'],'rejected');return await super().snapshot(t)
+        monkeypatch.setattr(service,'adapter',lambda t:Reject())
+        before=len(s.source_for_thread('t1'))
+&gt;       with pytest.raises(StaleAction):await service.execute(d['id'])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE StaleAction
+
+tests/test_security.py:57: Failed</failure></testcase><testcase classname="tests.test_security" name="test_telegram_grant_revoked_after_reservation_prevents_dispatch" time="0.026"><failure message="Failed: DID NOT RAISE any of (StaleAction, PermissionError)">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff177b82ab0&gt;
+
+    async def test_telegram_grant_revoked_after_reservation_prevents_dispatch(store,monkeypatch):
+        import agent.adapters as adapters
+        thread='tg:con:999';item={'id':thread+':7','thread_id':thread,'sender':'them','body':'hello','created_at':s.utcnow()}
+        with s.connect() as db:
+            db.execute('INSERT INTO connections VALUES(?,?,?,?,?)',('con',1,1,'123','{}'))
+            db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1)',(thread,'Test','telegram','con','999'))
+            db.execute('INSERT INTO source_messages VALUES(?,?,?,?,?)',tuple(item[k] for k in ('id','thread_id','sender','body','created_at')))
+            db.execute('INSERT INTO grants VALUES(?,?,?,?)',(thread,1,1,1))
+        s.sync_message(item);s.upsert_draft(thread,item['id'],'reply','LLM-reviewed:test');d=s.all_drafts()[0]
+        cfg=rt.settings();cfg['mode']='authorized_autonomy';rt.save_settings(cfg)
+        with s.connect() as db:
+            db.execute('INSERT INTO draft_context VALUES(?,?,?)',(d['id'],rt.settings_hash(),rt.history_hash([item])))
+            db.execute('INSERT INTO actions VALUES(?,?,?,?,?,?,?,?)',('action',d['id'],thread,item['id'],'sending',None,time.time(),1))
+            db.execute("UPDATE drafts SET status='sending' WHERE id=?",(d['id'],))
+            db.execute('UPDATE grants SET enabled=0 WHERE thread_id=?',(thread,))
+        monkeypatch.setenv('TELEGRAM_BOT_TOKEN','fake')
+        calls=[]
+        def handler(req):calls.append(req);return httpx.Response(200,json={'ok':True,'result':{'message_id':8,'chat':{'id':999}}})
+        client=httpx.AsyncClient;monkeypatch.setattr(adapters.httpx,'AsyncClient',lambda **kw:client(transport=httpx.MockTransport(handler),**kw))
+&gt;       with pytest.raises((StaleAction,PermissionError)):await TelegramAdapter().send(service.thread_by_id(thread),'reply','action',item['id'])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE any of (StaleAction, PermissionError)
+
+tests/test_security.py:79: Failed</failure></testcase><testcase classname="tests.test_security" name="test_smtp_requires_verified_tls_context" time="0.031"><failure message="assert (None is not None)">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff1771add90&gt;
+
+    def test_smtp_requires_verified_tls_context(store,monkeypatch):
+        from agent import notify
+        cfg=rt.settings();cfg['email']=True;rt.save_settings(cfg)
+        for k,v in {'SMTP_HOST':'smtp.example','NOTIFY_TO':'owner@example','NOTIFY_FROM':'agent@example'}.items():monkeypatch.setenv(k,v)
+        contexts=[]
+        class SMTP:
+            def __init__(self,*a,**kw):pass
+            def __enter__(self):return self
+            def __exit__(self,*a):pass
+            def starttls(self,context=None):contexts.append(context)
+            def send_message(self,*a):pass
+        monkeypatch.setattr(notify.smtplib,'SMTP',SMTP)
+        notify.maybe_email('date_confirmed','','',1)
+&gt;       assert contexts[0] is not None and contexts[0].verify_mode==ssl.CERT_REQUIRED and contexts[0].check_hostname
+E       assert (None is not None)
+
+tests/test_security.py:95: AssertionError</failure></testcase><testcase classname="tests.test_security" name="test_connecting_tinder_does_not_escalate_telegram_autonomy" time="0.026"><failure message="AssertionError: assert not True&#10; +  where True = &lt;function auto_allowed at 0x7ff178a613a0&gt;({'id': 'tg:con:999', 'display_name': 'Test', 'user_paused': 0, 'user_archived': 0, ...})&#10; +    where &lt;function auto_allowed at 0x7ff178a613a0&gt; = rt.auto_allowed&#10; +    and   {'id': 'tg:con:999', 'display_name': 'Test', 'user_paused': 0, 'user_archived': 0, ...} = &lt;function thread_by_id at 0x7ff177d4eb60&gt;('tg:con:999')&#10; +      where &lt;function thread_by_id at 0x7ff177d4eb60&gt; = service.thread_by_id">store = &lt;module 'agent.storage' from '/workspace/dating-agent-browser-c-v3/agent/storage.py'&gt;
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7ff1771caa80&gt;
+
+    async def test_connecting_tinder_does_not_escalate_telegram_autonomy(store,monkeypatch):
+        from agent import tinder
+        tid='tg:con:999'
+        with s.connect() as db:
+            db.execute('INSERT INTO connections VALUES(?,?,?,?,?)',('con',1,1,'123','{}'))
+            db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1)',(tid,'Test','telegram','con','999'))
+            db.execute('INSERT INTO grants VALUES(?,?,?,?)',(tid,1,1,1))
+        assert not rt.auto_allowed(service.thread_by_id(tid))
+        monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN','fake')
+        monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient('fake',transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'data':{'_id':'owner'}}))))
+        await tinder.connect()
+&gt;       assert not rt.auto_allowed(service.thread_by_id(tid))
+E       AssertionError: assert not True
+E        +  where True = &lt;function auto_allowed at 0x7ff178a613a0&gt;({'id': 'tg:con:999', 'display_name': 'Test', 'user_paused': 0, 'user_archived': 0, ...})
+E        +    where &lt;function auto_allowed at 0x7ff178a613a0&gt; = rt.auto_allowed
+E        +    and   {'id': 'tg:con:999', 'display_name': 'Test', 'user_paused': 0, 'user_archived': 0, ...} = &lt;function thread_by_id at 0x7ff177d4eb60&gt;('tg:con:999')
+E        +      where &lt;function thread_by_id at 0x7ff177d4eb60&gt; = service.thread_by_id
+
+tests/test_security.py:108: AssertionError</failure></testcase></testsuite></testsuites>

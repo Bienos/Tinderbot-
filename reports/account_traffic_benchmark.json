@@ -1,0 +1,23 @@
+{
+  "method": "httpx.MockTransport with two fictional matches, not a live ban/detection test",
+  "current": {
+    "threads": 2,
+    "unchanged_polls": 5,
+    "warmup_requests": 5,
+    "unchanged_poll_requests": 10,
+    "send_workflow_requests": 6,
+    "message_posts": 1,
+    "verified_sends": 1
+  },
+  "baseline": {
+    "threads": 2,
+    "unchanged_polls": 5,
+    "warmup_requests": 5,
+    "unchanged_poll_requests": 20,
+    "send_workflow_requests": 8,
+    "message_posts": 1,
+    "verified_sends": 1
+  },
+  "unchanged_poll_request_reduction_percent": 50.0,
+  "send_workflow_request_reduction_percent": 25.0
+}

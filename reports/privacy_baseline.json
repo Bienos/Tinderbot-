@@ -1,0 +1,6 @@
+{
+  "before_security_fix": {
+    "telegram_generation_eligible_without_consent_grant": true
+  },
+  "actual_provider_call_made": false
+}

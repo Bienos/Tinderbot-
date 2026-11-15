@@ -1,0 +1,64 @@
+[
+  {
+    "name": "terms",
+    "url": "https://policies.tinder.com/terms/intl/en/",
+    "bytes": 265166,
+    "sha256": "6561ea78ba0271e5b65629fe527c8dfbf312d68df98bf829739f821aaf3d9df3",
+    "date": "2026-11-15",
+    "status": "fetched"
+  },
+  {
+    "name": "bans",
+    "url": "https://www.help.tinder.com/hc/en-us/articles/360009042331-My-account-is-banned",
+    "bytes": 99011,
+    "sha256": "9a03649aaf0cc1111acd53266020c1e5f40bd53136c49c74e814fd968536ff04",
+    "date": "2026-11-15",
+    "status": "fetched"
+  },
+  {
+    "name": "restrictions",
+    "url": "https://www.help.tinder.com/api/v2/help_center/articles/search.json?query=automation",
+    "bytes": 66943,
+    "sha256": "2b657d799281ce58cf6ea2fb4b259893aafb192596f1850bb75f3dec87abb0e8",
+    "date": "2026-11-15",
+    "status": "fetched",
+    "titles": [
+      [
+        "Privacy FAQs",
+        "https://www.help.tinder.com/hc/en-us/articles/5349453268877-Privacy-FAQs"
+      ],
+      [
+        "Age Checks at Tinder",
+        "https://www.help.tinder.com/hc/en-us/articles/41083211035917-Age-Checks-at-Tinder"
+      ],
+      [
+        "Appeal Center glossary",
+        "https://www.help.tinder.com/hc/en-us/articles/22258326365197-Appeal-Center-glossary"
+      ],
+      [
+        "Photo Check data and privacy information",
+        "https://www.help.tinder.com/hc/en-us/articles/26147205007885-Photo-Check-data-and-privacy-information"
+      ],
+      [
+        "Photo-Based Suggestions",
+        "https://www.help.tinder.com/hc/en-us/articles/33703773897357-Photo-Based-Suggestions"
+      ]
+    ]
+  },
+  {
+    "name": "rfc429",
+    "url": "https://www.rfc-editor.org/rfc/rfc6585.html#section-4",
+    "bytes": 23151,
+    "sha256": "423d8b867e8f2d4b15ee37d3aaa370ff7ece430aae50690440e4934987bce348",
+    "date": "2026-11-15",
+    "status": "fetched"
+  },
+  {
+    "name": "retry_after",
+    "url": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after",
+    "bytes": 1187554,
+    "sha256": "d431760660ea44e130f6e919dab216df2d0b3a490567a98089267523368fe1e5",
+    "date": "2026-11-15",
+    "status": "fetched"
+  }
+]

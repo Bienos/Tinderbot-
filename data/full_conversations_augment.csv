@@ -1,0 +1,2401 @@
+﻿id,family_id,variant,origin,language,theme,expected_outcome,turn_count,formatted_transcript,source_ids,recommended_next_action
+FULL-001,FULL-001,independently_authored,original_synthetic_not_real_private_messages,pl,techno,open,6,"USER: zobaczyłem u ciebie dużo imprezowych zdjęć, to przypadek czy regularny sport?
+MATCH: hahah regularny, ale z przerwami na regenerację
+USER: czyli prawdziwy endurance, gdzie ostatnio byłaś?
+MATCH: na małej imprezie w Pradze
+USER: lepiej niż w Warszawie?
+MATCH: inne klimaty, ale trochę tęskniłam za domem",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-001-FORK,FULL-001,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: zobaczyłem u ciebie dużo imprezowych zdjęć, to przypadek czy regularny sport?
+MATCH: hahah regularny, ale z przerwami na regenerację
+USER: czyli prawdziwy endurance, gdzie ostatnio byłaś?
+MATCH: na małej imprezie w Pradze
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-002,FULL-002,independently_authored,original_synthetic_not_real_private_messages,pl,techno,proposed,6,"USER: w opisie masz hardgroove, szanuję
+MATCH: a ty w ogóle słuchasz czy tylko znasz hasło?
+USER: słucham, ale bez egzaminu z tracklisty proszę
+MATCH: dobra, oszczędzę cię haha
+USER: to może kiedyś wymienimy się muzyką przy kawie?
+MATCH: spoko pomysł, zobaczmy jak nam się rozmawia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-002-FORK,FULL-002,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: w opisie masz hardgroove, szanuję
+MATCH: a ty w ogóle słuchasz czy tylko znasz hasło?
+USER: słucham, ale bez egzaminu z tracklisty proszę
+MATCH: dobra, oszczędzę cię haha
+USER: wolisz jeszcze chwilę popisać tutaj?
+MATCH: tak, na razie bez umawiania się",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-003,FULL-003,independently_authored,original_synthetic_not_real_private_messages,pl,techno,open,6,"USER: to zdjęcie spod sceny wygląda jak bardzo dobra noc
+MATCH: była, chociaż wracałam dwie godziny
+USER: czyli lepiej było jechać na after niż do domu
+MATCH: dokładnie tak żałowałam w połowie drogi
+USER: i pewnie rano obiecałaś sobie koniec imprez
+MATCH: jasne, na jakieś cztery dni xd",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-003-FORK,FULL-003,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: to zdjęcie spod sceny wygląda jak bardzo dobra noc
+MATCH: była, chociaż wracałam dwie godziny
+USER: czyli lepiej było jechać na after niż do domu
+MATCH: dokładnie tak żałowałam w połowie drogi
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-004,FULL-004,independently_authored,original_synthetic_not_real_private_messages,pl,techno,date_confirmed,6,"USER: mówiłaś że lubisz małe koncerty
+MATCH: tak, dużo bardziej niż wielkie festiwale
+USER: w piątek jest kameralny koncert, może pójdziemy?
+MATCH: w sumie chętnie, gdzie?
+USER: w klubie przy Nowym Świecie, piątek 20:00 przy wejściu?
+MATCH: tak, piątek o 20 przy wejściu pasuje",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-004-FORK,FULL-004,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: mówiłaś że lubisz małe koncerty
+MATCH: tak, dużo bardziej niż wielkie festiwale
+USER: w piątek jest kameralny koncert, może pójdziemy?
+MATCH: w sumie chętnie, gdzie?
+USER: super, na pewno termin zostaje bez zmian?
+MATCH: przepraszam, muszę jednak potwierdzić grafik",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-005,FULL-005,independently_authored,original_synthetic_not_real_private_messages,pl,techno,boundary,6,"USER: jakie masz ulubione miejsce na imprezy?
+MATCH: ostatnio rzadko wychodzę, wolę spokojniejsze rzeczy
+USER: rozumiem, nie będę ci robił planu na maraton klubowy
+MATCH: hahaha dzięki, kawa brzmi bardziej jak mój sport
+USER: mogę z tym żyć
+MATCH: dobrze wiedzieć",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-005-FORK,FULL-005,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: jakie masz ulubione miejsce na imprezy?
+MATCH: ostatnio rzadko wychodzę, wolę spokojniejsze rzeczy
+USER: rozumiem, nie będę ci robił planu na maraton klubowy
+MATCH: hahaha dzięki, kawa brzmi bardziej jak mój sport
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-006,FULL-006,independently_authored,original_synthetic_not_real_private_messages,pl,techno,open,6,"USER: słuchasz muzyki też w pracy czy tylko poza nią?
+MATCH: w pracy muszę mieć ciszę, inaczej odpływam
+USER: u mnie odwrotnie, cisza mnie rozprasza
+MATCH: to byśmy nie wytrzymali w jednym biurze
+USER: albo każde z nas w słuchawkach
+MATCH: kompromis już na etapie matche'a, pięknie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-006-FORK,FULL-006,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: słuchasz muzyki też w pracy czy tylko poza nią?
+MATCH: w pracy muszę mieć ciszę, inaczej odpływam
+USER: u mnie odwrotnie, cisza mnie rozprasza
+MATCH: to byśmy nie wytrzymali w jednym biurze
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-007,FULL-007,independently_authored,original_synthetic_not_real_private_messages,pl,techno,open,6,"USER: czy ten festiwal na zdjęciu to był w Chorwacji?
+MATCH: tak! poznałeś po tym kurzu?
+USER: po tym i po minie człowieka bez snu
+MATCH: czuję się zaatakowana XD
+USER: ale w pozytywnym sensie
+MATCH: dobra, wybaczam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-007-FORK,FULL-007,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: czy ten festiwal na zdjęciu to był w Chorwacji?
+MATCH: tak! poznałeś po tym kurzu?
+USER: po tym i po minie człowieka bez snu
+MATCH: czuję się zaatakowana XD
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-008,FULL-008,independently_authored,original_synthetic_not_real_private_messages,pl,techno,open,6,"USER: mam pytanie o twój top 3 tracków, ale boję się że się rozpiszesz
+MATCH: no i słusznie, to poważna sprawa
+USER: to zacznij od jednego
+MATCH: ostatnio katuję jeden set z berlińskiego radia
+USER: podrzuć tytuł, sprawdzę
+MATCH: dobra, poszukam linka",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-008-FORK,FULL-008,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,techno,counterfactual_changed_context,6,"USER: mam pytanie o twój top 3 tracków, ale boję się że się rozpiszesz
+MATCH: no i słusznie, to poważna sprawa
+USER: to zacznij od jednego
+MATCH: ostatnio katuję jeden set z berlińskiego radia
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-009,FULL-009,independently_authored,original_synthetic_not_real_private_messages,pl,food,open,6,"USER: pizza z ananasem to żart czy deklaracja w profilu?
+MATCH: deklaracja i nie zamierzam przepraszać
+USER: szanuję odwagę, ale jeszcze się zastanowię
+MATCH: wszyscy tak mówią zanim spróbują
+USER: najpierw muszę to mentalnie przetrawić
+MATCH: haha dam ci czas",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-009-FORK,FULL-009,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: pizza z ananasem to żart czy deklaracja w profilu?
+MATCH: deklaracja i nie zamierzam przepraszać
+USER: szanuję odwagę, ale jeszcze się zastanowię
+MATCH: wszyscy tak mówią zanim spróbują
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-010,FULL-010,independently_authored,original_synthetic_not_real_private_messages,pl,food,proposed,6,"USER: widzę że szukasz najlepszego ramenu w mieście
+MATCH: tak i na razie wygrywa jeden mały lokal
+USER: zdradzisz nazwę czy to tajemnica?
+MATCH: może kiedyś ci pokażę
+USER: brzmi jak propozycja wspólnego testu
+MATCH: może być, najpierw sprawdzę czy zasługujesz",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-010-FORK,FULL-010,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: widzę że szukasz najlepszego ramenu w mieście
+MATCH: tak i na razie wygrywa jeden mały lokal
+USER: zdradzisz nazwę czy to tajemnica?
+MATCH: może kiedyś ci pokażę
+USER: wolisz jeszcze chwilę popisać tutaj?
+MATCH: tak, na razie bez umawiania się",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-011,FULL-011,independently_authored,original_synthetic_not_real_private_messages,pl,food,open,6,"USER: twoje zdjęcie z ogromnym croissantem mnie rozbawiło
+MATCH: był większy niż moja głowa
+USER: wygląda na bardzo rozsądne śniadanie
+MATCH: dokładnie, tylko rozsądne decyzje
+USER: a kawa do tego była chociaż dobra?
+MATCH: najlepsza w tym miejscu",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-011-FORK,FULL-011,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: twoje zdjęcie z ogromnym croissantem mnie rozbawiło
+MATCH: był większy niż moja głowa
+USER: wygląda na bardzo rozsądne śniadanie
+MATCH: dokładnie, tylko rozsądne decyzje
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-012,FULL-012,independently_authored,original_synthetic_not_real_private_messages,pl,food,date_confirmed,6,"USER: pamiętasz tę kawiarnię o której pisałaś?
+MATCH: jasne, ta z kardamonowymi bułkami
+USER: to co, sobota o 12:00 przy wejściu?
+MATCH: sobota mi pasuje, ale 12:30 lepiej
+USER: dobra, sobota 12:30 przy wejściu do kawiarni
+MATCH: potwierdzam, do zobaczenia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-012-FORK,FULL-012,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: pamiętasz tę kawiarnię o której pisałaś?
+MATCH: jasne, ta z kardamonowymi bułkami
+USER: to co, sobota o 12:00 przy wejściu?
+MATCH: sobota mi pasuje, ale 12:30 lepiej
+USER: super, na pewno termin zostaje bez zmian?
+MATCH: przepraszam, muszę jednak potwierdzić grafik",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-013,FULL-013,independently_authored,original_synthetic_not_real_private_messages,pl,food,open,6,"USER: w profilu masz gotowanie, ale co najczęściej robisz?
+MATCH: makarony, bo prawie nie da się ich zepsuć
+USER: to brzmi jak wyzwanie rzucone losowi
+MATCH: raz mi się udało zepsuć nawet makaron
+USER: dobra, co się stało?
+MATCH: zapomniałam wody i przypaliłam garnek",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-013-FORK,FULL-013,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: w profilu masz gotowanie, ale co najczęściej robisz?
+MATCH: makarony, bo prawie nie da się ich zepsuć
+USER: to brzmi jak wyzwanie rzucone losowi
+MATCH: raz mi się udało zepsuć nawet makaron
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-014,FULL-014,independently_authored,original_synthetic_not_real_private_messages,pl,food,boundary,6,"USER: masz ochotę kiedyś na sushi?
+MATCH: wolałabym coś bez ryby, nie jem jej
+USER: jasne, nie wiedziałem
+MATCH: luz, włoskie jedzenie zawsze się sprawdza
+USER: zanotowane, nie będę namawiał na sushi
+MATCH: doceniam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-014-FORK,FULL-014,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: masz ochotę kiedyś na sushi?
+MATCH: wolałabym coś bez ryby, nie jem jej
+USER: jasne, nie wiedziałem
+MATCH: luz, włoskie jedzenie zawsze się sprawdza
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-015,FULL-015,independently_authored,original_synthetic_not_real_private_messages,pl,food,open,6,"USER: co jest bardziej kontrowersyjne, ketchup na pizzy czy mleko przed płatkami?
+MATCH: mleko przed płatkami, bez dyskusji
+USER: a ja właśnie tak robię
+MATCH: o nie, mamy poważny problem
+USER: da się to jakoś naprawić?
+MATCH: musisz pokazać że masz inne zalety",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-015-FORK,FULL-015,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: co jest bardziej kontrowersyjne, ketchup na pizzy czy mleko przed płatkami?
+MATCH: mleko przed płatkami, bez dyskusji
+USER: a ja właśnie tak robię
+MATCH: o nie, mamy poważny problem
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-016,FULL-016,independently_authored,original_synthetic_not_real_private_messages,pl,food,open,6,"USER: szukam miejsca na dobrą herbatę, masz jakieś typy?
+MATCH: serio herbata, nie kawa?
+USER: tak, kawa robi ze mnie lokomotywę
+MATCH: to akurat rozumiem
+USER: herbata mniej dramatyczna
+MATCH: mam jedno miejsce na Powiślu",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-016-FORK,FULL-016,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,food,counterfactual_changed_context,6,"USER: szukam miejsca na dobrą herbatę, masz jakieś typy?
+MATCH: serio herbata, nie kawa?
+USER: tak, kawa robi ze mnie lokomotywę
+MATCH: to akurat rozumiem
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-017,FULL-017,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: czemu masz na zdjęciu tyle owiec?
+MATCH: Islandia, tam one rządzą
+USER: czyli to ich kraj, my tylko zwiedzamy
+MATCH: dokładnie i patrzą na ciebie z wyższością
+USER: a pogoda chociaż była łaskawa?
+MATCH: cztery pory roku w jeden dzień",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-017-FORK,FULL-017,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: czemu masz na zdjęciu tyle owiec?
+MATCH: Islandia, tam one rządzą
+USER: czyli to ich kraj, my tylko zwiedzamy
+MATCH: dokładnie i patrzą na ciebie z wyższością
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-018,FULL-018,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: wolisz city break czy tydzień bez planu?
+MATCH: bez planu, ale bilet muszę kupić miesiąc wcześniej
+USER: spontaniczność z excela
+MATCH: coś w tym stylu xd
+USER: w sumie rozsądny chaos
+MATCH: idealnie mnie podsumowałeś",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-018-FORK,FULL-018,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: wolisz city break czy tydzień bez planu?
+MATCH: bez planu, ale bilet muszę kupić miesiąc wcześniej
+USER: spontaniczność z excela
+MATCH: coś w tym stylu xd
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-019,FULL-019,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: na zdjęciu wygląda jak Lizbona
+MATCH: trafione! byłeś?
+USER: jeszcze nie, mam ją na liście
+MATCH: jedź, ale przygotuj nogi na te górki
+USER: czyli buty, nie eleganckie ambicje
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-019-FORK,FULL-019,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: na zdjęciu wygląda jak Lizbona
+MATCH: trafione! byłeś?
+USER: jeszcze nie, mam ją na liście
+MATCH: jedź, ale przygotuj nogi na te górki
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-020,FULL-020,independently_authored,original_synthetic_not_real_private_messages,pl,travel,proposed,6,"USER: pisałaś że niedawno przeprowadziłaś się do Warszawy
+MATCH: tak, dalej odkrywam miasto
+USER: masz już swoje ulubione miejsce?
+MATCH: na razie bulwary i jedna kawiarnia
+USER: można kiedyś zrobić spacer po twoich odkryciach
+MATCH: brzmi miło, pogadajmy jeszcze chwilę tutaj",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-020-FORK,FULL-020,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: pisałaś że niedawno przeprowadziłaś się do Warszawy
+MATCH: tak, dalej odkrywam miasto
+USER: masz już swoje ulubione miejsce?
+MATCH: na razie bulwary i jedna kawiarnia
+USER: wolisz jeszcze chwilę popisać tutaj?
+MATCH: tak, na razie bez umawiania się",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-021,FULL-021,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: jesteś osobą od planowania lotów czy od spóźniania się?
+MATCH: od sprawdzania bramki co trzy minuty
+USER: czyli bezpiecznie podróżować z tobą
+MATCH: chyba że zgubię paszport, co się zdarzyło
+USER: to już brzmi jak historia
+MATCH: i to długa",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-021-FORK,FULL-021,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: jesteś osobą od planowania lotów czy od spóźniania się?
+MATCH: od sprawdzania bramki co trzy minuty
+USER: czyli bezpiecznie podróżować z tobą
+MATCH: chyba że zgubię paszport, co się zdarzyło
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-022,FULL-022,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: góry czy morze?
+MATCH: morze zimą, góry latem
+USER: interesujący wybór, czemu na odwrót?
+MATCH: bo latem nad morzem są tłumy
+USER: fair, logika mocna
+MATCH: dokładnie, cisza wygrywa",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-022-FORK,FULL-022,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: góry czy morze?
+MATCH: morze zimą, góry latem
+USER: interesujący wybór, czemu na odwrót?
+MATCH: bo latem nad morzem są tłumy
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-023,FULL-023,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: skąd to zdjęcie z bardzo kolorowej ulicy?
+MATCH: z Porto, dostałam tam chyba milion kroków
+USER: przynajmniej darmowa siłownia
+MATCH: schody policzyłam jako osobną dyscyplinę
+USER: i lokalne jedzenie po treningu
+MATCH: obowiązkowo",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-023-FORK,FULL-023,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: skąd to zdjęcie z bardzo kolorowej ulicy?
+MATCH: z Porto, dostałam tam chyba milion kroków
+USER: przynajmniej darmowa siłownia
+MATCH: schody policzyłam jako osobną dyscyplinę
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-024,FULL-024,independently_authored,original_synthetic_not_real_private_messages,pl,travel,open,6,"USER: próbowałaś kiedyś wyjazdu bez rezerwacji noclegu?
+MATCH: raz i nigdy więcej
+USER: aż tak źle?
+MATCH: spałam na kanapie u obcych znajomych znajomych
+USER: brzmi jak lekcja na całe życie
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-024-FORK,FULL-024,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,travel,counterfactual_changed_context,6,"USER: próbowałaś kiedyś wyjazdu bez rezerwacji noclegu?
+MATCH: raz i nigdy więcej
+USER: aż tak źle?
+MATCH: spałam na kanapie u obcych znajomych znajomych
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-025,FULL-025,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: ten pies na zdjęciu wygląda na szefa domu
+MATCH: bo nim jest
+USER: jakie ma największe wymagania?
+MATCH: trzy spacery i uwaga non stop
+USER: bardziej wymagający niż współlokator
+MATCH: zdecydowanie i głośniej chrapie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-025-FORK,FULL-025,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: ten pies na zdjęciu wygląda na szefa domu
+MATCH: bo nim jest
+USER: jakie ma największe wymagania?
+MATCH: trzy spacery i uwaga non stop
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-026,FULL-026,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: kot ma minę jakby cię oceniał
+MATCH: codziennie, nawet jak śpi
+USER: to chyba ciężka relacja
+MATCH: ale przynajmniej nie każe mi odpisywać od razu
+USER: to wygrywa z ludźmi na apkach
+MATCH: trochę tak haha",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-026-FORK,FULL-026,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: kot ma minę jakby cię oceniał
+MATCH: codziennie, nawet jak śpi
+USER: to chyba ciężka relacja
+MATCH: ale przynajmniej nie każe mi odpisywać od razu
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-027,FULL-027,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: ile masz roślin, bo na zdjęciu jest dżungla?
+MATCH: chyba 27, przestałam liczyć
+USER: jest jakaś, która najbardziej dramatyzuje?
+MATCH: monstera, obraża się co tydzień
+USER: brzmi znajomo
+MATCH: to może jesteś monsterą w ludzkiej postaci",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-027-FORK,FULL-027,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: ile masz roślin, bo na zdjęciu jest dżungla?
+MATCH: chyba 27, przestałam liczyć
+USER: jest jakaś, która najbardziej dramatyzuje?
+MATCH: monstera, obraża się co tydzień
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-028,FULL-028,independently_authored,original_synthetic_not_real_private_messages,pl,pets,boundary,6,"USER: masz ochotę na spacer z psami?
+MATCH: mój pies boi się obcych psów, więc raczej nie
+USER: jasne, nie ma problemu
+MATCH: za to sama lubię spacery
+USER: to bez psiego stresu kiedyś
+MATCH: o tym można pomyśleć",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-028-FORK,FULL-028,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: masz ochotę na spacer z psami?
+MATCH: mój pies boi się obcych psów, więc raczej nie
+USER: jasne, nie ma problemu
+MATCH: za to sama lubię spacery
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-029,FULL-029,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: ten twój królik serio chodzi na smyczy?
+MATCH: tak, ale tylko jak ma humor
+USER: czyli często zostajesz z pustą smyczą?
+MATCH: praktycznie zawsze
+USER: mimo wszystko szanuję ambicję
+MATCH: on chyba nie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-029-FORK,FULL-029,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: ten twój królik serio chodzi na smyczy?
+MATCH: tak, ale tylko jak ma humor
+USER: czyli często zostajesz z pustą smyczą?
+MATCH: praktycznie zawsze
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-030,FULL-030,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: w opisie piszesz że wolisz koty niż ludzi
+MATCH: czasem tak jest
+USER: uczciwe, kot przynajmniej nie robi small talku
+MATCH: dokładnie, tylko żąda jedzenia
+USER: bez zbędnych pytań
+MATCH: najlepszy model komunikacji",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-030-FORK,FULL-030,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: w opisie piszesz że wolisz koty niż ludzi
+MATCH: czasem tak jest
+USER: uczciwe, kot przynajmniej nie robi small talku
+MATCH: dokładnie, tylko żąda jedzenia
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-031,FULL-031,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: twój pies ma sweter czy mi się wydaje?
+MATCH: ma, bo zimą marznie
+USER: bardziej stylowy ode mnie
+MATCH: to akurat nisko zawieszona poprzeczka xd
+USER: bezlitośnie
+MATCH: zaczęliśmy od szczerości",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-031-FORK,FULL-031,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: twój pies ma sweter czy mi się wydaje?
+MATCH: ma, bo zimą marznie
+USER: bardziej stylowy ode mnie
+MATCH: to akurat nisko zawieszona poprzeczka xd
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-032,FULL-032,independently_authored,original_synthetic_not_real_private_messages,pl,pets,open,6,"USER: ktoś na zdjęciu trzyma papugę, to twoja?
+MATCH: mojej siostry, bardzo dużo gada
+USER: powtarza jakieś kompromitujące teksty?
+MATCH: mówi moje imię kiedy ktoś otwiera lodówkę
+USER: genialna strategia
+MATCH: niestety działa",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-032-FORK,FULL-032,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pets,counterfactual_changed_context,6,"USER: ktoś na zdjęciu trzyma papugę, to twoja?
+MATCH: mojej siostry, bardzo dużo gada
+USER: powtarza jakieś kompromitujące teksty?
+MATCH: mówi moje imię kiedy ktoś otwiera lodówkę
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-033,FULL-033,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: masz w opisie że uwielbiasz horrory, które są naprawdę straszne?
+MATCH: prawie żadne mnie już nie ruszają
+USER: a ja się boję nawet muzyki na początku
+MATCH: to ze mną nie miałbyś łatwo
+USER: przynajmniej ktoś by wiedział co się dzieje na ekranie
+MATCH: słusznie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-033-FORK,FULL-033,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: masz w opisie że uwielbiasz horrory, które są naprawdę straszne?
+MATCH: prawie żadne mnie już nie ruszają
+USER: a ja się boję nawet muzyki na początku
+MATCH: to ze mną nie miałbyś łatwo
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-034,FULL-034,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: kończysz seriale czy odpuszczasz w połowie?
+MATCH: odpuszczam bez wyrzutów sumienia
+USER: odważna postawa
+MATCH: życie za krótkie na słabe sezony
+USER: trochę chciałbym tak umieć
+MATCH: polecam, dużo wolnego czasu",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-034-FORK,FULL-034,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: kończysz seriale czy odpuszczasz w połowie?
+MATCH: odpuszczam bez wyrzutów sumienia
+USER: odważna postawa
+MATCH: życie za krótkie na słabe sezony
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-035,FULL-035,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: książka w ręku na zdjęciu to rekwizyt czy czytałaś?
+MATCH: czytałam i nawet skończyłam
+USER: dobra, wygrałaś przesłuchanie
+MATCH: a ty ostatnio co przeczytałeś?
+USER: teraz jestem w połowie reportażu
+MATCH: o czym?",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-035-FORK,FULL-035,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: książka w ręku na zdjęciu to rekwizyt czy czytałaś?
+MATCH: czytałam i nawet skończyłam
+USER: dobra, wygrałaś przesłuchanie
+MATCH: a ty ostatnio co przeczytałeś?
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-036,FULL-036,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: jaki film uważasz za totalnie przereklamowany?
+MATCH: boję się powiedzieć, ludzie mnie zjedzą
+USER: obiecuję tylko lekko ocenić
+MATCH: nie przepadam za musicalami
+USER: bezpiecznie, jeszcze się kwalifikujesz
+MATCH: ulga ogromna",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-036-FORK,FULL-036,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: jaki film uważasz za totalnie przereklamowany?
+MATCH: boję się powiedzieć, ludzie mnie zjedzą
+USER: obiecuję tylko lekko ocenić
+MATCH: nie przepadam za musicalami
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-037,FULL-037,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: wolisz kino czy oglądanie pod kocem?
+MATCH: kino, ale bez chrupania obok
+USER: a ja bez popcornu nie umiem
+MATCH: będziemy mieli problem
+USER: mogę kupić żelki, są cichsze
+MATCH: to już jakaś negocjacja",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-037-FORK,FULL-037,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: wolisz kino czy oglądanie pod kocem?
+MATCH: kino, ale bez chrupania obok
+USER: a ja bez popcornu nie umiem
+MATCH: będziemy mieli problem
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-038,FULL-038,independently_authored,original_synthetic_not_real_private_messages,pl,film,proposed,6,"USER: wspominałaś o wystawie zdjęć w centrum
+MATCH: tak, jeszcze nie byłam
+USER: ja też nie, może kiedyś razem zajrzymy
+MATCH: chętnie, ale mam teraz ciężki tydzień
+USER: luz, nie ma pośpiechu
+MATCH: odezwę się jak ogarnę pracę",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-038-FORK,FULL-038,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: wspominałaś o wystawie zdjęć w centrum
+MATCH: tak, jeszcze nie byłam
+USER: ja też nie, może kiedyś razem zajrzymy
+MATCH: chętnie, ale mam teraz ciężki tydzień
+USER: wolisz jeszcze chwilę popisać tutaj?
+MATCH: tak, na razie bez umawiania się",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-039,FULL-039,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: team audiobooki czy papier?
+MATCH: papier, audiobooki mnie usypiają
+USER: u mnie odwrotnie, czytam trzy strony i zasypiam
+MATCH: czyli potrzebujesz ciekawszej książki
+USER: albo większej kawy
+MATCH: to też możliwe",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-039-FORK,FULL-039,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: team audiobooki czy papier?
+MATCH: papier, audiobooki mnie usypiają
+USER: u mnie odwrotnie, czytam trzy strony i zasypiam
+MATCH: czyli potrzebujesz ciekawszej książki
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-040,FULL-040,independently_authored,original_synthetic_not_real_private_messages,pl,film,open,6,"USER: wybierasz serial po ocenie czy po okładce?
+MATCH: po tym czy znajomi przestaną o nim mówić
+USER: bardzo pragmatyczne
+MATCH: chcę rozumieć memy
+USER: motywacja naukowa
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-040-FORK,FULL-040,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,film,counterfactual_changed_context,6,"USER: wybierasz serial po ocenie czy po okładce?
+MATCH: po tym czy znajomi przestaną o nim mówić
+USER: bardzo pragmatyczne
+MATCH: chcę rozumieć memy
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-041,FULL-041,independently_authored,original_synthetic_not_real_private_messages,pl,sport,open,6,"USER: biegasz dla przyjemności czy żeby móc jeść więcej?
+MATCH: trochę jedno i drugie
+USER: rozsądne podejście
+MATCH: a ty uprawiasz coś regularnie?
+USER: gram czasem w tenisa
+MATCH: nigdy nie umiałam dobrze serwować",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-041-FORK,FULL-041,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: biegasz dla przyjemności czy żeby móc jeść więcej?
+MATCH: trochę jedno i drugie
+USER: rozsądne podejście
+MATCH: a ty uprawiasz coś regularnie?
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-042,FULL-042,independently_authored,original_synthetic_not_real_private_messages,pl,sport,open,6,"USER: ten rower na zdjęciu wygląda na droższy niż mój komputer
+MATCH: wolałabym nie robić rachunku
+USER: za późno na to pytanie?
+MATCH: zdecydowanie
+USER: to zapytam gdzie nim jeździsz
+MATCH: najczęściej pod Warszawą",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-042-FORK,FULL-042,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: ten rower na zdjęciu wygląda na droższy niż mój komputer
+MATCH: wolałabym nie robić rachunku
+USER: za późno na to pytanie?
+MATCH: zdecydowanie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-043,FULL-043,independently_authored,original_synthetic_not_real_private_messages,pl,sport,open,6,"USER: podobno chodzisz na ściankę, trudne to?
+MATCH: na początku bardziej śmieszne niż trudne
+USER: to brzmi jak mój poziom
+MATCH: dużo spadania, trochę sukcesów
+USER: najważniejsze że materace są
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-043-FORK,FULL-043,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: podobno chodzisz na ściankę, trudne to?
+MATCH: na początku bardziej śmieszne niż trudne
+USER: to brzmi jak mój poziom
+MATCH: dużo spadania, trochę sukcesów
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-044,FULL-044,independently_authored,original_synthetic_not_real_private_messages,pl,sport,proposed,6,"USER: lubisz grać w ping-ponga?
+MATCH: ostatnio wróciłam do tego po latach
+USER: ja też, ale mój refleks ma opóźnienie
+MATCH: to możemy zrobić bardzo wyrównany mecz
+USER: może kiedyś zagramy?
+MATCH: czemu nie, ale bez wielkich oczekiwań sportowych",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-044-FORK,FULL-044,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: lubisz grać w ping-ponga?
+MATCH: ostatnio wróciłam do tego po latach
+USER: ja też, ale mój refleks ma opóźnienie
+MATCH: to możemy zrobić bardzo wyrównany mecz
+USER: wolisz jeszcze chwilę popisać tutaj?
+MATCH: tak, na razie bez umawiania się",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-045,FULL-045,independently_authored,original_synthetic_not_real_private_messages,pl,sport,open,6,"USER: na zdjęciu jesteś na desce, długo jeździsz?
+MATCH: pierwsza próba, zdjęcie robi dobre wrażenie xd
+USER: czyli marketing na najwyższym poziomie
+MATCH: dokładnie, przewróciłam się po dwóch sekundach
+USER: ale zdjęcie zostało
+MATCH: i o to chodziło",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-045-FORK,FULL-045,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: na zdjęciu jesteś na desce, długo jeździsz?
+MATCH: pierwsza próba, zdjęcie robi dobre wrażenie xd
+USER: czyli marketing na najwyższym poziomie
+MATCH: dokładnie, przewróciłam się po dwóch sekundach
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-046,FULL-046,independently_authored,original_synthetic_not_real_private_messages,pl,sport,open,6,"USER: jesteś rannym ptaszkiem czy ćwiczysz po pracy?
+MATCH: po pracy, rano jestem nieobecna
+USER: rozsądnie, rano też nie negocjuję
+MATCH: nawet kawy nie pomaga?
+USER: dopiero druga
+MATCH: to znam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-046-FORK,FULL-046,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: jesteś rannym ptaszkiem czy ćwiczysz po pracy?
+MATCH: po pracy, rano jestem nieobecna
+USER: rozsądnie, rano też nie negocjuję
+MATCH: nawet kawy nie pomaga?
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-047,FULL-047,independently_authored,original_synthetic_not_real_private_messages,pl,sport,open,6,"USER: widzę medal, gratulacje
+MATCH: dzięki! to był mój pierwszy półmaraton
+USER: i co, drugi już zaplanowany?
+MATCH: jeszcze nie wiem czy nogi mi wybaczyły
+USER: uczciwie
+MATCH: tydzień po nadal o nim pamiętają",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-047-FORK,FULL-047,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: widzę medal, gratulacje
+MATCH: dzięki! to był mój pierwszy półmaraton
+USER: i co, drugi już zaplanowany?
+MATCH: jeszcze nie wiem czy nogi mi wybaczyły
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-048,FULL-048,independently_authored,original_synthetic_not_real_private_messages,pl,sport,boundary,6,"USER: mówiłaś o wspólnej wspinaczce, może w weekend?
+MATCH: wolę pierwsze spotkanie w spokojniejszym miejscu
+USER: pewnie, ma sens
+MATCH: kawa albo spacer byłby super
+USER: bez problemu, luźny plan
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-048-FORK,FULL-048,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,sport,counterfactual_changed_context,6,"USER: mówiłaś o wspólnej wspinaczce, może w weekend?
+MATCH: wolę pierwsze spotkanie w spokojniejszym miejscu
+USER: pewnie, ma sens
+MATCH: kawa albo spacer byłby super
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-049,FULL-049,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: czym zajmujesz się na co dzień?
+MATCH: projektuję wnętrza, teraz dużo małych mieszkań
+USER: czyli potrafisz wygrać walkę o miejsce na szafkę
+MATCH: chciałabym, nie zawsze
+USER: chyba większość ludzi ma ten problem
+MATCH: zdecydowanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-049-FORK,FULL-049,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: czym zajmujesz się na co dzień?
+MATCH: projektuję wnętrza, teraz dużo małych mieszkań
+USER: czyli potrafisz wygrać walkę o miejsce na szafkę
+MATCH: chciałabym, nie zawsze
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-050,FULL-050,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: wolisz pracę z domu czy biuro?
+MATCH: z domu, ale czasem muszę wyjść do ludzi
+USER: ja mam podobnie, inaczej zaczynam gadać do roślin
+MATCH: to może być nawet lepsze od niektórych spotkań
+USER: szczególnie tych o statusie statusu
+MATCH: hahah dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-050-FORK,FULL-050,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: wolisz pracę z domu czy biuro?
+MATCH: z domu, ale czasem muszę wyjść do ludzi
+USER: ja mam podobnie, inaczej zaczynam gadać do roślin
+MATCH: to może być nawet lepsze od niektórych spotkań
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-051,FULL-051,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: jesteś lekarzem czy to tylko fartuch na zdjęciu?
+MATCH: studiuję medycynę, jeszcze długa droga
+USER: czyli sesja nie wybacza
+MATCH: absolutnie nie, żyję w notatkach
+USER: rozumiem, nie będę robił egzaminu z anatomii
+MATCH: bardzo doceniam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-051-FORK,FULL-051,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: jesteś lekarzem czy to tylko fartuch na zdjęciu?
+MATCH: studiuję medycynę, jeszcze długa droga
+USER: czyli sesja nie wybacza
+MATCH: absolutnie nie, żyję w notatkach
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-052,FULL-052,independently_authored,original_synthetic_not_real_private_messages,pl,work,boundary,6,"USER: masz ochotę na kawę w czwartek?
+MATCH: pracuję wtedy do późna, nie dam rady
+USER: jasne, bez problemu
+MATCH: w przyszłym tygodniu powinno być luźniej
+USER: daj znać jak będziesz wiedziała
+MATCH: okej",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-052-FORK,FULL-052,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: masz ochotę na kawę w czwartek?
+MATCH: pracuję wtedy do późna, nie dam rady
+USER: jasne, bez problemu
+MATCH: w przyszłym tygodniu powinno być luźniej
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-053,FULL-053,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: w profilu masz że prowadzisz własną firmę
+MATCH: tak, mały sklep z rękodziełem
+USER: musisz mieć dużo cierpliwości
+MATCH: szczególnie do pakowania zamówień
+USER: to chyba najmniej instagramowa część biznesu
+MATCH: zdecydowanie XD",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-053-FORK,FULL-053,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: w profilu masz że prowadzisz własną firmę
+MATCH: tak, mały sklep z rękodziełem
+USER: musisz mieć dużo cierpliwości
+MATCH: szczególnie do pakowania zamówień
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-054,FULL-054,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: jeszcze studiujesz czy już pełna dorosłość?
+MATCH: niby pracuję, ale nie czuję się dorosła
+USER: podobno to zostaje na zawsze
+MATCH: nie strasz mnie
+USER: przepraszam, miało być pocieszenie
+MATCH: średnio wyszło hah",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-054-FORK,FULL-054,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: jeszcze studiujesz czy już pełna dorosłość?
+MATCH: niby pracuję, ale nie czuję się dorosła
+USER: podobno to zostaje na zawsze
+MATCH: nie strasz mnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-055,FULL-055,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: jaki był twój najbardziej absurdalny dzień w pracy?
+MATCH: klient spytał czy możemy cofnąć poniedziałek
+USER: rozumiem tę prośbę
+MATCH: ja też ale nie mam takich uprawnień
+USER: szkoda, potencjalnie duży biznes
+MATCH: patent czeka",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-055-FORK,FULL-055,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: jaki był twój najbardziej absurdalny dzień w pracy?
+MATCH: klient spytał czy możemy cofnąć poniedziałek
+USER: rozumiem tę prośbę
+MATCH: ja też ale nie mam takich uprawnień
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-056,FULL-056,independently_authored,original_synthetic_not_real_private_messages,pl,work,open,6,"USER: dużo podróżujesz zawodowo?
+MATCH: czasami, ale wolałabym dla przyjemności
+USER: to różnica, lotnisko o szóstej rano mniej romantyczne
+MATCH: dokładnie, zwłaszcza przy opóźnieniach
+USER: co ci się podoba najbardziej w tych wyjazdach?
+MATCH: odkrywanie małych knajpek wieczorem",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-056-FORK,FULL-056,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,work,counterfactual_changed_context,6,"USER: dużo podróżujesz zawodowo?
+MATCH: czasami, ale wolałabym dla przyjemności
+USER: to różnica, lotnisko o szóstej rano mniej romantyczne
+MATCH: dokładnie, zwłaszcza przy opóźnieniach
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-057,FULL-057,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: twój opis brzmi jak ostrzeżenie przed złymi żartami
+MATCH: bo jestem ich źródłem
+USER: czyli trzeba przygotować się psychicznie
+MATCH: dokładnie, ostatnia szansa na ucieczkę
+USER: już za późno, match został zaakceptowany
+MATCH: podpisane, zapieczętowane",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-057-FORK,FULL-057,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: twój opis brzmi jak ostrzeżenie przed złymi żartami
+MATCH: bo jestem ich źródłem
+USER: czyli trzeba przygotować się psychicznie
+MATCH: dokładnie, ostatnia szansa na ucieczkę
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-058,FULL-058,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: co oznacza ten dziwny napis w bio?
+MATCH: cytat z filmu, który oglądam za często
+USER: jestem trochę zawiedziony że to nie tajny kod
+MATCH: może właśnie jest
+USER: w takim razie nie zdradzaj
+MATCH: dobra, zostawmy tajemnicę",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-058-FORK,FULL-058,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: co oznacza ten dziwny napis w bio?
+MATCH: cytat z filmu, który oglądam za często
+USER: jestem trochę zawiedziony że to nie tajny kod
+MATCH: może właśnie jest
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-059,FULL-059,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: masz trzy zdjęcia i na każdym inny kolor włosów
+MATCH: aktualny jest ten najciemniejszy, chyba
+USER: czyli nikt nie nadąża
+MATCH: nawet ja
+USER: dobra, będę pytał co tydzień
+MATCH: rozsądnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-059-FORK,FULL-059,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: masz trzy zdjęcia i na każdym inny kolor włosów
+MATCH: aktualny jest ten najciemniejszy, chyba
+USER: czyli nikt nie nadąża
+MATCH: nawet ja
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-060,FULL-060,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: jaka jest najbardziej niepopularna opinia jaką masz?
+MATCH: nie rozumiem fenomenu brunchu
+USER: odważne słowa w Warszawie
+MATCH: wiem, będę musiała się ukrywać
+USER: dam znać jak zaczną szukać
+MATCH: już słyszę syreny",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-060-FORK,FULL-060,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: jaka jest najbardziej niepopularna opinia jaką masz?
+MATCH: nie rozumiem fenomenu brunchu
+USER: odważne słowa w Warszawie
+MATCH: wiem, będę musiała się ukrywać
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-061,FULL-061,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: twój pies wygląda jakby prowadził konto za ciebie
+MATCH: nie wykluczam, ma więcej charyzmy
+USER: to z kim właściwie rozmawiam?
+MATCH: z działem obsługi człowieka
+USER: obsługa działa całkiem sprawnie
+MATCH: dziękujemy za opinię",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-061-FORK,FULL-061,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: twój pies wygląda jakby prowadził konto za ciebie
+MATCH: nie wykluczam, ma więcej charyzmy
+USER: to z kim właściwie rozmawiam?
+MATCH: z działem obsługi człowieka
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-062,FULL-062,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: to zdjęcie na deszczu wygląda dramatycznie
+MATCH: parasol złamał się pięć sekund wcześniej
+USER: idealne wyczucie czasu
+MATCH: przyjaciółka nie pomogła tylko robiła zdjęcie
+USER: dobrze że ktoś dokumentował historię
+MATCH: jej wersja była jeszcze gorsza",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-062-FORK,FULL-062,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: to zdjęcie na deszczu wygląda dramatycznie
+MATCH: parasol złamał się pięć sekund wcześniej
+USER: idealne wyczucie czasu
+MATCH: przyjaciółka nie pomogła tylko robiła zdjęcie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-063,FULL-063,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: twierdzisz że masz talent do gotowania wody
+MATCH: tylko czasem przypalam
+USER: imponujące osiągnięcie
+MATCH: dziękuję, pracowałam nad nim latami
+USER: jakie kolejne umiejętności w planie?
+MATCH: tost bez alarmu przeciwpożarowego",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-063-FORK,FULL-063,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: twierdzisz że masz talent do gotowania wody
+MATCH: tylko czasem przypalam
+USER: imponujące osiągnięcie
+MATCH: dziękuję, pracowałam nad nim latami
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-064,FULL-064,independently_authored,original_synthetic_not_real_private_messages,pl,humor,open,6,"USER: na zdjęciu widać maskotkę większą od ciebie
+MATCH: wygrałam ją na festynie
+USER: ile prób kosztowała ta chwała?
+MATCH: nie liczmy, będę smutna
+USER: dobra, zostawmy legendę
+MATCH: dziękuję za zrozumienie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-064-FORK,FULL-064,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,humor,counterfactual_changed_context,6,"USER: na zdjęciu widać maskotkę większą od ciebie
+MATCH: wygrałam ją na festynie
+USER: ile prób kosztowała ta chwała?
+MATCH: nie liczmy, będę smutna
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-065,FULL-065,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: w profilu wspomniałaś o ceramice
+MATCH: tak, chodzę na warsztaty od miesiąca
+USER: już są jakieś arcydzieła?
+MATCH: na razie trzy krzywe kubki
+USER: brzmi bardzo artystycznie
+MATCH: tak to sobie tłumaczę",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-065-FORK,FULL-065,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: w profilu wspomniałaś o ceramice
+MATCH: tak, chodzę na warsztaty od miesiąca
+USER: już są jakieś arcydzieła?
+MATCH: na razie trzy krzywe kubki
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-066,FULL-066,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: grasz na jakimś instrumencie?
+MATCH: uczę się pianina od pół roku
+USER: co już potrafisz zagrać?
+MATCH: kawałek jednej piosenki i parę błędów
+USER: czyli koncert jeszcze przed nami
+MATCH: spokojnie, najpierw palce",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-066-FORK,FULL-066,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: grasz na jakimś instrumencie?
+MATCH: uczę się pianina od pół roku
+USER: co już potrafisz zagrać?
+MATCH: kawałek jednej piosenki i parę błędów
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-067,FULL-067,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: po co ci aż tyle analogowych aparatów?
+MATCH: lubię zdjęcia, które nie wychodzą od razu
+USER: i niespodzianki po wywołaniu
+MATCH: czasami połowa kliszy to przypadkowe buty
+USER: sztuka współczesna
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-067-FORK,FULL-067,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: po co ci aż tyle analogowych aparatów?
+MATCH: lubię zdjęcia, które nie wychodzą od razu
+USER: i niespodzianki po wywołaniu
+MATCH: czasami połowa kliszy to przypadkowe buty
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-068,FULL-068,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: widzę szachownicę, lubisz grać?
+MATCH: tak, ale jestem agresywna i przez to przegrywam
+USER: brzmi jak ja przy planszówkach
+MATCH: nie pozwolę ci wygrać z litości
+USER: nawet bym nie chciał
+MATCH: dobra odpowiedź",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-068-FORK,FULL-068,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: widzę szachownicę, lubisz grać?
+MATCH: tak, ale jestem agresywna i przez to przegrywam
+USER: brzmi jak ja przy planszówkach
+MATCH: nie pozwolę ci wygrać z litości
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-069,FULL-069,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: robiłaś kiedyś własne meble?
+MATCH: raz składałam regał i wyszedł pod kątem
+USER: autorski projekt
+MATCH: producent chyba miał inne zdanie
+USER: najważniejsze że stoi
+MATCH: to określenie względne",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-069-FORK,FULL-069,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: robiłaś kiedyś własne meble?
+MATCH: raz składałam regał i wyszedł pod kątem
+USER: autorski projekt
+MATCH: producent chyba miał inne zdanie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-070,FULL-070,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: piszesz że kolekcjonujesz stare mapy, jak to się zaczęło?
+MATCH: dostałam jedną od dziadka i przepadłam
+USER: fajna historia
+MATCH: a ty masz jakieś nietypowe hobby?
+USER: czasem wyszukuję stare plakaty koncertowe
+MATCH: to akurat brzmi ciekawie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-070-FORK,FULL-070,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: piszesz że kolekcjonujesz stare mapy, jak to się zaczęło?
+MATCH: dostałam jedną od dziadka i przepadłam
+USER: fajna historia
+MATCH: a ty masz jakieś nietypowe hobby?
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-071,FULL-071,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: dużo grasz w planszówki?
+MATCH: tak, ale znajomi już nie chcą ze mną grać
+USER: bo zawsze wygrywasz?
+MATCH: bo za długo czytam instrukcje
+USER: to jest odpowiedzialność, nie wada
+MATCH: powiedz to im",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-071-FORK,FULL-071,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: dużo grasz w planszówki?
+MATCH: tak, ale znajomi już nie chcą ze mną grać
+USER: bo zawsze wygrywasz?
+MATCH: bo za długo czytam instrukcje
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-072,FULL-072,independently_authored,original_synthetic_not_real_private_messages,pl,hobbies,open,6,"USER: skąd pomysł na naukę włoskiego?
+MATCH: po wakacjach uznałam że czas
+USER: i jak idzie?
+MATCH: umiem zamówić pizzę i przeprosić
+USER: w sumie najważniejsze podstawy
+MATCH: absolutnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-072-FORK,FULL-072,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,hobbies,counterfactual_changed_context,6,"USER: skąd pomysł na naukę włoskiego?
+MATCH: po wakacjach uznałam że czas
+USER: i jak idzie?
+MATCH: umiem zamówić pizzę i przeprosić
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-073,FULL-073,independently_authored,original_synthetic_not_real_private_messages,pl,social,open,6,"USER: oglądasz dużo reelsów czy udajesz że nie?
+MATCH: niestety za dużo
+USER: mam podobny problem, znikają godziny
+MATCH: zwłaszcza te z gotowaniem
+USER: które potem i tak kończy się kanapką
+MATCH: dokładnie XD",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-073-FORK,FULL-073,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: oglądasz dużo reelsów czy udajesz że nie?
+MATCH: niestety za dużo
+USER: mam podobny problem, znikają godziny
+MATCH: zwłaszcza te z gotowaniem
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-074,FULL-074,independently_authored,original_synthetic_not_real_private_messages,pl,social,instagram_shared,6,"USER: gdzie wrzucasz te zdjęcia analogowe?
+MATCH: głównie na instagramie
+USER: masz jakieś publiczne konto z pracami?
+MATCH: tak, jak chcesz zobaczyć to [IG_HANDLE]
+USER: dzięki, zerknę później
+MATCH: spoko",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-074-FORK,FULL-074,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: gdzie wrzucasz te zdjęcia analogowe?
+MATCH: głównie na instagramie
+USER: masz jakieś publiczne konto z pracami?
+MATCH: tak, jak chcesz zobaczyć to [IG_HANDLE]
+USER: dzięki, mogę zapisać ten kontakt?
+MATCH: jednak wolę, żebyśmy na razie zostali tutaj",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-075,FULL-075,independently_authored,original_synthetic_not_real_private_messages,pl,social,boundary,6,"USER: wolisz pisać tutaj czy na insta?
+MATCH: wolę zostać na Tinderze na razie
+USER: jasne, nie ma sprawy
+MATCH: dzięki, tak mi wygodniej
+USER: to wracamy do twojej historii o kocie
+MATCH: hahaha dobrze",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-075-FORK,FULL-075,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: wolisz pisać tutaj czy na insta?
+MATCH: wolę zostać na Tinderze na razie
+USER: jasne, nie ma sprawy
+MATCH: dzięki, tak mi wygodniej
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-076,FULL-076,independently_authored,original_synthetic_not_real_private_messages,pl,social,open,6,"USER: twoje zdjęcia wyglądają jak z aparatu, nie z telefonu
+MATCH: bo robi je moja koleżanka fotografka
+USER: niezły luksus
+MATCH: czasem płacę jej pizzą
+USER: ekonomia współpracy
+MATCH: najlepiej działający system",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-076-FORK,FULL-076,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: twoje zdjęcia wyglądają jak z aparatu, nie z telefonu
+MATCH: bo robi je moja koleżanka fotografka
+USER: niezły luksus
+MATCH: czasem płacę jej pizzą
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-077,FULL-077,independently_authored,original_synthetic_not_real_private_messages,pl,social,open,6,"USER: masz jakieś guilty pleasure na youtube?
+MATCH: oglądam filmiki z remontów kuchni
+USER: to brzmi niewinnie
+MATCH: dopóki nie zaczynam przemeblowywać swojej
+USER: zaczęło się niewinnie, skończyło przykręcaniem szafek
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-077-FORK,FULL-077,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: masz jakieś guilty pleasure na youtube?
+MATCH: oglądam filmiki z remontów kuchni
+USER: to brzmi niewinnie
+MATCH: dopóki nie zaczynam przemeblowywać swojej
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-078,FULL-078,independently_authored,original_synthetic_not_real_private_messages,pl,social,instagram_shared,6,"USER: wspominałaś o swojej galerii rysunków
+MATCH: tak, trzymam ją na insta
+USER: jeśli chcesz, możesz podesłać
+MATCH: jasne, mam profil [IG_HANDLE]
+USER: dzięki, fajnie będzie zobaczyć
+MATCH: tylko się nie śmiej z pierwszych prac",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-078-FORK,FULL-078,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: wspominałaś o swojej galerii rysunków
+MATCH: tak, trzymam ją na insta
+USER: jeśli chcesz, możesz podesłać
+MATCH: jasne, mam profil [IG_HANDLE]
+USER: dzięki, mogę zapisać ten kontakt?
+MATCH: jednak wolę, żebyśmy na razie zostali tutaj",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-079,FULL-079,independently_authored,original_synthetic_not_real_private_messages,pl,social,open,6,"USER: odpisujesz szybciej na wiadomości czy na memy?
+MATCH: memy mają pierwszeństwo
+USER: rozumiem hierarchię
+MATCH: ważne sprawy muszą poczekać
+USER: czyli dobry mem to inwestycja
+MATCH: zdecydowanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-079-FORK,FULL-079,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: odpisujesz szybciej na wiadomości czy na memy?
+MATCH: memy mają pierwszeństwo
+USER: rozumiem hierarchię
+MATCH: ważne sprawy muszą poczekać
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-080,FULL-080,independently_authored,original_synthetic_not_real_private_messages,pl,social,boundary,6,"USER: mogę cię dodać na Instagramie?
+MATCH: nie podaję konta zanim kogoś poznam
+USER: jasne, nie trzeba
+MATCH: dzięki za zrozumienie
+USER: w takim razie opowiedz o tej wycieczce z profilu
+MATCH: chętnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-080-FORK,FULL-080,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,social,counterfactual_changed_context,6,"USER: mogę cię dodać na Instagramie?
+MATCH: nie podaję konta zanim kogoś poznam
+USER: jasne, nie trzeba
+MATCH: dzięki za zrozumienie
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-081,FULL-081,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_proposed,6,"USER: mówiłaś że lubisz kawę przy Nowym Świecie
+MATCH: tak, to mój ulubiony rejon
+USER: może kawa w czwartek po pracy?
+MATCH: brzmi dobrze, ale nie wiem jeszcze o której kończę
+USER: jasne, daj znać jak będziesz wiedziała
+MATCH: okej",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-081-FORK,FULL-081,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: mówiłaś że lubisz kawę przy Nowym Świecie
+MATCH: tak, to mój ulubiony rejon
+USER: może kawa w czwartek po pracy?
+MATCH: brzmi dobrze, ale nie wiem jeszcze o której kończę
+USER: mam na razie zostawić ten pomysł otwarty?
+MATCH: tak, jeszcze nie potwierdzam terminu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-082,FULL-082,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_confirmed,6,"USER: to może w sobotę zobaczymy tę wystawę?
+MATCH: chętnie, w jakich godzinach?
+USER: sobota 16:00, przed wejściem do galerii na Brackiej
+MATCH: 16:00 jest okej
+USER: czyli sobota 16 przed galerią na Brackiej, pasuje?
+MATCH: tak, do zobaczenia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-082-FORK,FULL-082,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: to może w sobotę zobaczymy tę wystawę?
+MATCH: chętnie, w jakich godzinach?
+USER: sobota 16:00, przed wejściem do galerii na Brackiej
+MATCH: 16:00 jest okej
+USER: super, na pewno termin zostaje bez zmian?
+MATCH: przepraszam, muszę jednak potwierdzić grafik",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-083,FULL-083,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_cancelled,6,"USER: niedziela 14 w kawiarni na Mokotowie aktualna?
+MATCH: tak, do zobaczenia
+USER: super, mam zapisane
+MATCH: hej, jednak muszę odwołać, wypadło mi coś rodzinnego
+USER: jasne, mam nadzieję że wszystko okej
+MATCH: dzięki, odezwę się jak się uspokoi",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-083-FORK,FULL-083,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: niedziela 14 w kawiarni na Mokotowie aktualna?
+MATCH: tak, do zobaczenia
+USER: super, mam zapisane
+MATCH: hej, jednak muszę odwołać, wypadło mi coś rodzinnego
+USER: okej, czyli nasze spotkanie już nie jest aktualne?
+MATCH: tak, na pewno odwołane, przepraszam",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-084,FULL-084,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_proposed,6,"USER: można kiedyś wyjść na spacer po parku
+MATCH: brzmi fajnie
+USER: jaka okolica ci pasuje?
+MATCH: zależy od dnia, mieszkam daleko od centrum
+USER: jasne, nie ustalajmy na siłę
+MATCH: pogadamy jak będę wiedziała z grafikiem",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-084-FORK,FULL-084,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: można kiedyś wyjść na spacer po parku
+MATCH: brzmi fajnie
+USER: jaka okolica ci pasuje?
+MATCH: zależy od dnia, mieszkam daleko od centrum
+USER: mam na razie zostawić ten pomysł otwarty?
+MATCH: tak, jeszcze nie potwierdzam terminu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-085,FULL-085,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,open,6,"USER: ty bardziej planujesz weekendy czy decydujesz rano?
+MATCH: decyduję rano, chyba że ktoś wcześniej coś ustali
+USER: czyli na spontana działa, ale terminarz też może wygrać
+MATCH: mniej więcej
+USER: to całkiem uczciwy system
+MATCH: działa do pierwszego deszczu",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-085-FORK,FULL-085,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: ty bardziej planujesz weekendy czy decydujesz rano?
+MATCH: decyduję rano, chyba że ktoś wcześniej coś ustali
+USER: czyli na spontana działa, ale terminarz też może wygrać
+MATCH: mniej więcej
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-086,FULL-086,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_confirmed,6,"USER: to co, spacer w niedzielę?
+MATCH: jasne, o której?
+USER: niedziela 15:30 przy wejściu do Łazienek od Belwederskiej
+MATCH: pasuje mi
+USER: super, do niedzieli 15:30
+MATCH: do zobaczenia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-086-FORK,FULL-086,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: to co, spacer w niedzielę?
+MATCH: jasne, o której?
+USER: niedziela 15:30 przy wejściu do Łazienek od Belwederskiej
+MATCH: pasuje mi
+USER: super, na pewno termin zostaje bez zmian?
+MATCH: przepraszam, muszę jednak potwierdzić grafik",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-087,FULL-087,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_uncertain,6,"USER: nadal myślisz o tej wystawie?
+MATCH: tak, może za tydzień
+USER: niedziela wtedy pasowałaby ci?
+MATCH: może, zobaczę co z pracą
+USER: okej, nie rezerwuję nic na razie
+MATCH: super",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-087-FORK,FULL-087,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: nadal myślisz o tej wystawie?
+MATCH: tak, może za tydzień
+USER: niedziela wtedy pasowałaby ci?
+MATCH: może, zobaczę co z pracą
+USER: czyli na razie nic nie ustalamy?
+MATCH: tak, nie mogę teraz nic obiecać",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-088,FULL-088,independently_authored,original_synthetic_not_real_private_messages,pl,logistics,date_cancelled,6,"USER: piątek 19:00 w tej herbaciarni jest dogadany?
+MATCH: tak, będzie fajnie
+USER: to widzimy się w piątek
+MATCH: słuchaj, przepraszam, ale jednak nie mogę przyjść
+USER: dzięki że mówisz, spokojnie
+MATCH: odezwę się jak będę znać inny termin",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-088-FORK,FULL-088,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,logistics,counterfactual_changed_context,6,"USER: piątek 19:00 w tej herbaciarni jest dogadany?
+MATCH: tak, będzie fajnie
+USER: to widzimy się w piątek
+MATCH: słuchaj, przepraszam, ale jednak nie mogę przyjść
+USER: okej, czyli nasze spotkanie już nie jest aktualne?
+MATCH: tak, na pewno odwołane, przepraszam",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-089,FULL-089,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: co powiesz na spotkanie jutro?
+MATCH: trochę za szybko dla mnie
+USER: okej, rozumiem
+MATCH: wolę najpierw trochę pogadać
+USER: jasne, nie ma pośpiechu
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-089-FORK,FULL-089,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: co powiesz na spotkanie jutro?
+MATCH: trochę za szybko dla mnie
+USER: okej, rozumiem
+MATCH: wolę najpierw trochę pogadać
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-090,FULL-090,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: czemu nie masz zdjęć z twarzą na profilu?
+MATCH: wolę na razie zachować prywatność
+USER: spoko, nie musisz tłumaczyć
+MATCH: dzięki za normalną reakcję
+USER: co lubisz robić poza pracą?
+MATCH: ostatnio dużo czytam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-090-FORK,FULL-090,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: czemu nie masz zdjęć z twarzą na profilu?
+MATCH: wolę na razie zachować prywatność
+USER: spoko, nie musisz tłumaczyć
+MATCH: dzięki za normalną reakcję
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-091,FULL-091,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: chcesz wymienić numery?
+MATCH: nie podaję numeru na początku
+USER: jasne, możemy pisać tutaj
+MATCH: dokładnie
+USER: słusznie, nic na siłę
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-091-FORK,FULL-091,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: chcesz wymienić numery?
+MATCH: nie podaję numeru na początku
+USER: jasne, możemy pisać tutaj
+MATCH: dokładnie
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-092,FULL-092,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: pytałem bo byłaś mało aktywna, wszystko okej?
+MATCH: tak, po prostu mam intensywny tydzień
+USER: rozumiem, nie musisz tłumaczyć
+MATCH: dzięki, nie lubię presji na szybkie odpisywanie
+USER: fair, każdy ma swoje życie
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-092-FORK,FULL-092,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: pytałem bo byłaś mało aktywna, wszystko okej?
+MATCH: tak, po prostu mam intensywny tydzień
+USER: rozumiem, nie musisz tłumaczyć
+MATCH: dzięki, nie lubię presji na szybkie odpisywanie
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-093,FULL-093,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: lubisz bardzo spontaniczne wyjścia?
+MATCH: wolę wiedzieć wcześniej, co i gdzie
+USER: jasne, też możemy planować konkretnie
+MATCH: wtedy czuję się spokojniej
+USER: to ma sens
+MATCH: miło że rozumiesz",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-093-FORK,FULL-093,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: lubisz bardzo spontaniczne wyjścia?
+MATCH: wolę wiedzieć wcześniej, co i gdzie
+USER: jasne, też możemy planować konkretnie
+MATCH: wtedy czuję się spokojniej
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-094,FULL-094,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: mogę zapytać czemu nie lubisz klubów?
+MATCH: wolałabym nie wchodzić w ten temat
+USER: oczywiście, zmieńmy temat
+MATCH: dzięki
+USER: widziałem że lubisz fotografię, jaki aparat masz?
+MATCH: małego fuji",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-094-FORK,FULL-094,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: mogę zapytać czemu nie lubisz klubów?
+MATCH: wolałabym nie wchodzić w ten temat
+USER: oczywiście, zmieńmy temat
+MATCH: dzięki
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-095,FULL-095,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: to może randka w sobotę?
+MATCH: dzięki, ale nie czuję tego romantycznie
+USER: jasne, dzięki za szczerość
+MATCH: powodzenia na aplikacji
+USER: wzajemnie, miłego weekendu
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-095-FORK,FULL-095,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: to może randka w sobotę?
+MATCH: dzięki, ale nie czuję tego romantycznie
+USER: jasne, dzięki za szczerość
+MATCH: powodzenia na aplikacji
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-096,FULL-096,independently_authored,original_synthetic_not_real_private_messages,pl,boundaries,boundary,6,"USER: wolisz o sobie opowiadać czy pytania?
+MATCH: chyba mieszankę, nie lubię przesłuchań
+USER: całkowicie fair
+MATCH: a niektóre rozmowy tutaj to formularze
+USER: to obiecuję bez rubryki numer pesel
+MATCH: hahaha dobrze",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-096-FORK,FULL-096,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,boundaries,counterfactual_changed_context,6,"USER: wolisz o sobie opowiadać czy pytania?
+MATCH: chyba mieszankę, nie lubię przesłuchań
+USER: całkowicie fair
+MATCH: a niektóre rozmowy tutaj to formularze
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-097,FULL-097,independently_authored,original_synthetic_not_real_private_messages,pl,short,open,6,"USER: jaka jest twoja najczęściej używana emotka?
+MATCH: xd
+USER: klasyka
+MATCH: no
+USER: prosto i skutecznie
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-097-FORK,FULL-097,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: jaka jest twoja najczęściej używana emotka?
+MATCH: xd
+USER: klasyka
+MATCH: no
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-098,FULL-098,independently_authored,original_synthetic_not_real_private_messages,pl,short,low_engagement,6,"USER: masz jakieś plany na weekend?
+MATCH: jeszcze nie
+USER: bardziej odpoczynek czy gdzieś wychodzisz?
+MATCH: zobaczę
+USER: spoko, udanego weekendu
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-098-FORK,FULL-098,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: masz jakieś plany na weekend?
+MATCH: jeszcze nie
+USER: bardziej odpoczynek czy gdzieś wychodzisz?
+MATCH: zobaczę
+USER: okej, nie będę cię zasypywać pytaniami
+MATCH: dzięki, ostatnio mam mało czasu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-099,FULL-099,independently_authored,original_synthetic_not_real_private_messages,pl,short,open,6,"USER: twój opis brzmi jak instrukcja obsługi
+MATCH: bo jest
+USER: gdzie jest punkt o awariach?
+MATCH: na końcu
+USER: muszę doczytać
+MATCH: powodzenia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-099-FORK,FULL-099,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: twój opis brzmi jak instrukcja obsługi
+MATCH: bo jest
+USER: gdzie jest punkt o awariach?
+MATCH: na końcu
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-100,FULL-100,independently_authored,original_synthetic_not_real_private_messages,pl,short,open,6,"USER: pies czy kot?
+MATCH: kot
+USER: bez wahania
+MATCH: zawsze
+USER: szybko ustalone
+MATCH: a u ciebie?",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-100-FORK,FULL-100,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: pies czy kot?
+MATCH: kot
+USER: bez wahania
+MATCH: zawsze
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-101,FULL-101,independently_authored,original_synthetic_not_real_private_messages,pl,short,open,6,"USER: najlepsza pora dnia?
+MATCH: wieczór
+USER: rano przegrywa?
+MATCH: totalnie
+USER: mamy wspólnego wroga
+MATCH: budzik",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-101-FORK,FULL-101,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: najlepsza pora dnia?
+MATCH: wieczór
+USER: rano przegrywa?
+MATCH: totalnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-102,FULL-102,independently_authored,original_synthetic_not_real_private_messages,pl,short,open,6,"USER: jaki typ weekendu lubisz?
+MATCH: spokojny
+USER: zero planów?
+MATCH: czasem spacer
+USER: spacer brzmi okej
+MATCH: a ty?",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-102-FORK,FULL-102,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: jaki typ weekendu lubisz?
+MATCH: spokojny
+USER: zero planów?
+MATCH: czasem spacer
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-103,FULL-103,independently_authored,original_synthetic_not_real_private_messages,pl,short,open,6,"USER: widzę że lubisz kawę
+MATCH: tak
+USER: czarna czy z mlekiem?
+MATCH: z mlekiem
+USER: bardzo konkretne odpowiedzi
+MATCH: hahah wiem",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-103-FORK,FULL-103,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: widzę że lubisz kawę
+MATCH: tak
+USER: czarna czy z mlekiem?
+MATCH: z mlekiem
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-104,FULL-104,independently_authored,original_synthetic_not_real_private_messages,pl,short,low_engagement,6,"USER: hej, skąd to zdjęcie z górami?
+MATCH: Tatry
+USER: ładnie tam było?
+MATCH: tak
+USER: super, dzięki za odpowiedź
+MATCH: spoko",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-104-FORK,FULL-104,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,short,counterfactual_changed_context,6,"USER: hej, skąd to zdjęcie z górami?
+MATCH: Tatry
+USER: ładnie tam było?
+MATCH: tak
+USER: okej, nie będę cię zasypywać pytaniami
+MATCH: dzięki, ostatnio mam mało czasu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-105,FULL-105,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: jak ci minął poniedziałek?
+MATCH: miał być spokojny, ale znowu chaos
+USER: klasyczny poniedziałek
+MATCH: dodatkowo rozlałam kawę na biurko
+USER: chociaż laptop przeżył?
+MATCH: na szczęście tak",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-105-FORK,FULL-105,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: jak ci minął poniedziałek?
+MATCH: miał być spokojny, ale znowu chaos
+USER: klasyczny poniedziałek
+MATCH: dodatkowo rozlałam kawę na biurko
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-106,FULL-106,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: dziś pogoda idealna na koc i nicnierobienie
+MATCH: ja właśnie wróciłam ze spaceru w deszczu
+USER: odważnie, brzmi jak test kurtki
+MATCH: kurtka przegrała
+USER: to chyba czas na herbatę
+MATCH: już się robi",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-106-FORK,FULL-106,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: dziś pogoda idealna na koc i nicnierobienie
+MATCH: ja właśnie wróciłam ze spaceru w deszczu
+USER: odważnie, brzmi jak test kurtki
+MATCH: kurtka przegrała
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-107,FULL-107,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: co robisz w piątkowy wieczór?
+MATCH: sprzątam mieszkanie, bardzo ekscytująco
+USER: mocne otwarcie weekendu
+MATCH: ktoś musi to zrobić
+USER: największy przeciwnik?
+MATCH: szuflada z kablami",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-107-FORK,FULL-107,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: co robisz w piątkowy wieczór?
+MATCH: sprzątam mieszkanie, bardzo ekscytująco
+USER: mocne otwarcie weekendu
+MATCH: ktoś musi to zrobić
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-108,FULL-108,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: jak przetrwałaś dzisiaj komunikację miejską?
+MATCH: cudem, tramwaj stanął na pół godziny
+USER: to już przygoda nie podróż
+MATCH: i jeszcze padało
+USER: naprawdę pełen pakiet
+MATCH: wszystko naraz",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-108-FORK,FULL-108,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: jak przetrwałaś dzisiaj komunikację miejską?
+MATCH: cudem, tramwaj stanął na pół godziny
+USER: to już przygoda nie podróż
+MATCH: i jeszcze padało
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-109,FULL-109,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: właśnie zgubiłem klucze i znalazłem je w kurtce
+MATCH: klasyk, ja dziś szukałam telefonu mając go w ręce
+USER: mamy podobny poziom organizacji
+MATCH: bardzo uspokajające
+USER: może założymy klub
+MATCH: tylko zapomnimy gdzie spotkanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-109-FORK,FULL-109,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: właśnie zgubiłem klucze i znalazłem je w kurtce
+MATCH: klasyk, ja dziś szukałam telefonu mając go w ręce
+USER: mamy podobny poziom organizacji
+MATCH: bardzo uspokajające
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-110,FULL-110,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: jesteś osobą od drzemek po pracy?
+MATCH: nie, bo wtedy budzę się w innym wymiarze
+USER: znam to, pół godziny zamienia się w trzy
+MATCH: dokładnie
+USER: więc co robisz żeby odpocząć?
+MATCH: idę się przejść",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-110-FORK,FULL-110,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: jesteś osobą od drzemek po pracy?
+MATCH: nie, bo wtedy budzę się w innym wymiarze
+USER: znam to, pół godziny zamienia się w trzy
+MATCH: dokładnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-111,FULL-111,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: co ostatnio dobrego ci się zdarzyło?
+MATCH: w końcu udało mi się naprawić rower
+USER: mała rzecz a cieszy
+MATCH: szczególnie po miesiącu odkładania
+USER: najlepsze są takie zwycięstwa
+MATCH: potwierdzam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-111-FORK,FULL-111,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: co ostatnio dobrego ci się zdarzyło?
+MATCH: w końcu udało mi się naprawić rower
+USER: mała rzecz a cieszy
+MATCH: szczególnie po miesiącu odkładania
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-112,FULL-112,independently_authored,original_synthetic_not_real_private_messages,pl,everyday,open,6,"USER: masz jakiś rytuał na niedzielę?
+MATCH: późne śniadanie i zero alarmów
+USER: brzmi jak luksus
+MATCH: absolutnie
+USER: jedyny dzień bez sprintu
+MATCH: tak i oby został",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-112-FORK,FULL-112,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,everyday,counterfactual_changed_context,6,"USER: masz jakiś rytuał na niedzielę?
+MATCH: późne śniadanie i zero alarmów
+USER: brzmi jak luksus
+MATCH: absolutnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-113,FULL-113,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: w bio napisałaś że uczysz się języków, ilu?
+MATCH: dwóch naraz i żaden nie idzie szybko
+USER: to ambitnie
+MATCH: albo chaotycznie
+USER: często to to samo
+MATCH: prawda",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-113-FORK,FULL-113,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: w bio napisałaś że uczysz się języków, ilu?
+MATCH: dwóch naraz i żaden nie idzie szybko
+USER: to ambitnie
+MATCH: albo chaotycznie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-114,FULL-114,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: masz w profilu zdjęcie przy wielkim muralu
+MATCH: zrobiłam je w Łodzi
+USER: bywasz tam często?
+MATCH: rodzina tam mieszka
+USER: lubisz wracać?
+MATCH: tak, szczególnie na weekend",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-114-FORK,FULL-114,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: masz w profilu zdjęcie przy wielkim muralu
+MATCH: zrobiłam je w Łodzi
+USER: bywasz tam często?
+MATCH: rodzina tam mieszka
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-115,FULL-115,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: zdjęcie z muzeum jest z Warszawy?
+MATCH: z Krakowa, ale podobne wystawy tu są
+USER: a jaki typ sztuki lubisz najbardziej?
+MATCH: fotografię dokumentalną
+USER: fajny wybór
+MATCH: dzięki, czasem godzinami oglądam zdjęcia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-115-FORK,FULL-115,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: zdjęcie z muzeum jest z Warszawy?
+MATCH: z Krakowa, ale podobne wystawy tu są
+USER: a jaki typ sztuki lubisz najbardziej?
+MATCH: fotografię dokumentalną
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-116,FULL-116,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: skąd ten kapelusz z ostatniego zdjęcia?
+MATCH: kupiłam go na targu staroci
+USER: niezły łup
+MATCH: kosztował mniej niż kawa
+USER: to zakup roku
+MATCH: bez dwóch zdań",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-116-FORK,FULL-116,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: skąd ten kapelusz z ostatniego zdjęcia?
+MATCH: kupiłam go na targu staroci
+USER: niezły łup
+MATCH: kosztował mniej niż kawa
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-117,FULL-117,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: w profilu wspominasz o planszówkach
+MATCH: tak, ale nie znoszę monopoly
+USER: to chyba rozsądne
+MATCH: każdy wieczór kończy się kłótnią
+USER: to może gry kooperacyjne?
+MATCH: właśnie takie wolę",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-117-FORK,FULL-117,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: w profilu wspominasz o planszówkach
+MATCH: tak, ale nie znoszę monopoly
+USER: to chyba rozsądne
+MATCH: każdy wieczór kończy się kłótnią
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-118,FULL-118,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: w opisie masz że jesteś fanką tramwajów
+MATCH: haha to żart, ale lubię stare wagony
+USER: myślałem że mam szansę na wycieczkę linią 9
+MATCH: bez przesady
+USER: szkoda, program już przygotowany
+MATCH: doceniam zaangażowanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-118-FORK,FULL-118,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: w opisie masz że jesteś fanką tramwajów
+MATCH: haha to żart, ale lubię stare wagony
+USER: myślałem że mam szansę na wycieczkę linią 9
+MATCH: bez przesady
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-119,FULL-119,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: to zdjęcie z wielkim psem jest twoje?
+MATCH: to pies mojego brata
+USER: czyli gościnny występ
+MATCH: tak, lepiej wychodzi na zdjęciach niż ja
+USER: trudno konkurować z takim futrem
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-119-FORK,FULL-119,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: to zdjęcie z wielkim psem jest twoje?
+MATCH: to pies mojego brata
+USER: czyli gościnny występ
+MATCH: tak, lepiej wychodzi na zdjęciach niż ja
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-120,FULL-120,independently_authored,original_synthetic_not_real_private_messages,pl,profile,open,6,"USER: masz bardzo krótki opis, celowo?
+MATCH: tak, wolę pogadać niż pisać bio
+USER: fair, nie każdy chce robić CV
+MATCH: właśnie
+USER: to na start: co ci ostatnio poprawiło humor?
+MATCH: bardzo głupi filmik z kotem",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-120-FORK,FULL-120,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,profile,counterfactual_changed_context,6,"USER: masz bardzo krótki opis, celowo?
+MATCH: tak, wolę pogadać niż pisać bio
+USER: fair, nie każdy chce robić CV
+MATCH: właśnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-121,FULL-121,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: pisałaś że jedziesz na Hel
+MATCH: nie, na urlop do Holandii xd
+USER: haha to trochę inny kierunek
+MATCH: zdecydowanie
+USER: dobra, mój mózg dopowiedział resztę
+MATCH: zdarza się",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-121-FORK,FULL-121,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: pisałaś że jedziesz na Hel
+MATCH: nie, na urlop do Holandii xd
+USER: haha to trochę inny kierunek
+MATCH: zdecydowanie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-122,FULL-122,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: masz na zdjęciu gitarę, grasz?
+MATCH: to ukulele
+USER: ups, od razu zaliczyłem wpadkę
+MATCH: przeżyjesz
+USER: to jak długo grasz na ukulele?
+MATCH: od zeszłych wakacji",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-122-FORK,FULL-122,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: masz na zdjęciu gitarę, grasz?
+MATCH: to ukulele
+USER: ups, od razu zaliczyłem wpadkę
+MATCH: przeżyjesz
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-123,FULL-123,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: myślałem że mieszkasz na Ursynowie
+MATCH: nie, na Żoliborzu
+USER: dobra, źle zapamiętałem
+MATCH: zdarza się
+USER: masz ulubione miejsce w okolicy?
+MATCH: małą piekarnię koło domu",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-123-FORK,FULL-123,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: myślałem że mieszkasz na Ursynowie
+MATCH: nie, na Żoliborzu
+USER: dobra, źle zapamiętałem
+MATCH: zdarza się
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-124,FULL-124,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: fajne zdjęcie z Berlina
+MATCH: to Wiedeń haha
+USER: no pięknie, geograf ze mnie
+MATCH: spokojnie
+USER: a jak ci się podobał Wiedeń?
+MATCH: bardzo, szczególnie muzea",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-124-FORK,FULL-124,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: fajne zdjęcie z Berlina
+MATCH: to Wiedeń haha
+USER: no pięknie, geograf ze mnie
+MATCH: spokojnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-125,FULL-125,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: mówiłaś że lubisz biegać rano
+MATCH: nie, wieczorem! rano mnie nie ma
+USER: masz rację, pomieszałem
+MATCH: hahaha
+USER: wieczorem jest chociaż spokojniej
+MATCH: właśnie dlatego",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-125-FORK,FULL-125,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: mówiłaś że lubisz biegać rano
+MATCH: nie, wieczorem! rano mnie nie ma
+USER: masz rację, pomieszałem
+MATCH: hahaha
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-126,FULL-126,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: słuchałaś nowego albumu tego zespołu?
+MATCH: mówiłam o innym zespole, podobna nazwa
+USER: okej, moja pomyłka
+MATCH: nic się nie stało
+USER: to który polecasz na początek?
+MATCH: ich drugi album",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-126-FORK,FULL-126,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: słuchałaś nowego albumu tego zespołu?
+MATCH: mówiłam o innym zespole, podobna nazwa
+USER: okej, moja pomyłka
+MATCH: nic się nie stało
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-127,FULL-127,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: jesteś już po egzaminie?
+MATCH: nie, dopiero w piątek
+USER: aj, trzymam kciuki więc na piątek
+MATCH: dzięki
+USER: nie będę rozpraszał nauki
+MATCH: trochę możesz haha",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-127-FORK,FULL-127,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: jesteś już po egzaminie?
+MATCH: nie, dopiero w piątek
+USER: aj, trzymam kciuki więc na piątek
+MATCH: dzięki
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-128,FULL-128,independently_authored,original_synthetic_not_real_private_messages,pl,misunderstanding,open,6,"USER: wspominałaś o wyjeździe nad morze
+MATCH: nie jadę, tylko myślałam o tym
+USER: okej, za wcześnie zrobiłem plan podróży
+MATCH: no trochę
+USER: to gdzie finalnie chcesz odpocząć?
+MATCH: chyba po prostu w domu",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-128-FORK,FULL-128,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,misunderstanding,counterfactual_changed_context,6,"USER: wspominałaś o wyjeździe nad morze
+MATCH: nie jadę, tylko myślałam o tym
+USER: okej, za wcześnie zrobiłem plan podróży
+MATCH: no trochę
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-129,FULL-129,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: is that a tiny jazz club in your photo?
+MATCH: yes, in Amsterdam. best evening of the trip
+USER: worth going back just for that place?
+MATCH: honestly yes, although I got lost finding it
+USER: that's usually how the good spots happen
+MATCH: exactly",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-129-FORK,FULL-129,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: is that a tiny jazz club in your photo?
+MATCH: yes, in Amsterdam. best evening of the trip
+USER: worth going back just for that place?
+MATCH: honestly yes, although I got lost finding it
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-130,FULL-130,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: your playlist looks chaotic in a good way
+MATCH: it's all over the place
+USER: what's the latest addition?
+MATCH: a song my taxi driver was playing
+USER: that's excellent music discovery
+MATCH: it really is",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-130-FORK,FULL-130,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: your playlist looks chaotic in a good way
+MATCH: it's all over the place
+USER: what's the latest addition?
+MATCH: a song my taxi driver was playing
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-131,FULL-131,independently_authored,original_synthetic_not_real_private_messages,en,music,proposed,6,"USER: you mentioned you like live music
+MATCH: I do, smaller gigs mostly
+USER: there's a tiny show next weekend, sounds like your thing
+MATCH: maybe! what kind of music?
+USER: indie, nothing too loud
+MATCH: send me the artist, I'll have a listen",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-131-FORK,FULL-131,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: you mentioned you like live music
+MATCH: I do, smaller gigs mostly
+USER: there's a tiny show next weekend, sounds like your thing
+MATCH: maybe! what kind of music?
+USER: would you prefer to chat here for a bit longer?
+MATCH: yes, I would like that",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-132,FULL-132,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: do you actually play drums or is it a one-time photo?
+MATCH: I play, badly but enthusiastically
+USER: that's the best category
+MATCH: my neighbours disagree
+USER: tough crowd
+MATCH: honestly very tough",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-132-FORK,FULL-132,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: do you actually play drums or is it a one-time photo?
+MATCH: I play, badly but enthusiastically
+USER: that's the best category
+MATCH: my neighbours disagree
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-133,FULL-133,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: any album you keep going back to?
+MATCH: the same one every winter
+USER: seasonal soundtrack, I respect that
+MATCH: it's practically a tradition now
+USER: does summer get its own album too?
+MATCH: summer gets about twenty",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-133-FORK,FULL-133,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: any album you keep going back to?
+MATCH: the same one every winter
+USER: seasonal soundtrack, I respect that
+MATCH: it's practically a tradition now
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-134,FULL-134,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: I saw a record player in your profile
+MATCH: yeah, inherited it from my dad
+USER: that's lovely
+MATCH: it still works perfectly somehow
+USER: what's the first record you play on it?
+MATCH: usually old soul records",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-134-FORK,FULL-134,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: I saw a record player in your profile
+MATCH: yeah, inherited it from my dad
+USER: that's lovely
+MATCH: it still works perfectly somehow
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-135,FULL-135,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: what was your last concert?
+MATCH: a local band I didn't know
+USER: good surprise or bad gamble?
+MATCH: really good surprise
+USER: that's the best kind
+MATCH: I bought their vinyl after",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-135-FORK,FULL-135,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: what was your last concert?
+MATCH: a local band I didn't know
+USER: good surprise or bad gamble?
+MATCH: really good surprise
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-136,FULL-136,independently_authored,original_synthetic_not_real_private_messages,en,music,open,6,"USER: you seem to know every venue in town
+MATCH: not even close, I just go out too much
+USER: research purposes
+MATCH: exactly, very serious work
+USER: somebody has to do it
+MATCH: thank you for understanding",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-136-FORK,FULL-136,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,music,counterfactual_changed_context,6,"USER: you seem to know every venue in town
+MATCH: not even close, I just go out too much
+USER: research purposes
+MATCH: exactly, very serious work
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-137,FULL-137,independently_authored,original_synthetic_not_real_private_messages,en,food,open,6,"USER: serious question: best breakfast food?
+MATCH: pancakes, no contest
+USER: sweet or savoury?
+MATCH: sweet, always
+USER: I respect the commitment
+MATCH: as you should",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-137-FORK,FULL-137,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: serious question: best breakfast food?
+MATCH: pancakes, no contest
+USER: sweet or savoury?
+MATCH: sweet, always
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-138,FULL-138,independently_authored,original_synthetic_not_real_private_messages,en,food,open,6,"USER: that cake in your photo looks unreal
+MATCH: I made it for my friend's birthday
+USER: that's a strong friendship move
+MATCH: took me most of Sunday
+USER: did it survive the journey?
+MATCH: barely",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-138-FORK,FULL-138,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: that cake in your photo looks unreal
+MATCH: I made it for my friend's birthday
+USER: that's a strong friendship move
+MATCH: took me most of Sunday
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-139,FULL-139,independently_authored,original_synthetic_not_real_private_messages,en,food,proposed,6,"USER: you've convinced me this coffee place is worth trying
+MATCH: it's genuinely good
+USER: maybe we could grab one there sometime
+MATCH: yeah, I'd be up for that
+USER: cool, no rush, we can work out a day
+MATCH: sounds good",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-139-FORK,FULL-139,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: you've convinced me this coffee place is worth trying
+MATCH: it's genuinely good
+USER: maybe we could grab one there sometime
+MATCH: yeah, I'd be up for that
+USER: would you prefer to chat here for a bit longer?
+MATCH: yes, I would like that",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-140,FULL-140,independently_authored,original_synthetic_not_real_private_messages,en,food,open,6,"USER: what's your comfort food after a long day?
+MATCH: noodles, every time
+USER: very solid answer
+MATCH: and minimal washing up
+USER: that's the real selling point
+MATCH: absolutely",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-140-FORK,FULL-140,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: what's your comfort food after a long day?
+MATCH: noodles, every time
+USER: very solid answer
+MATCH: and minimal washing up
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-141,FULL-141,independently_authored,original_synthetic_not_real_private_messages,en,food,boundary,6,"USER: do you like seafood?
+MATCH: I have an allergy, so definitely not
+USER: oh got it, thanks for saying
+MATCH: no problem
+USER: what's your go-to instead?
+MATCH: usually veggie pasta",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-141-FORK,FULL-141,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: do you like seafood?
+MATCH: I have an allergy, so definitely not
+USER: oh got it, thanks for saying
+MATCH: no problem
+USER: we can keep things at your pace
+MATCH: thank you, I appreciate that",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-142,FULL-142,independently_authored,original_synthetic_not_real_private_messages,en,food,open,6,"USER: is that a proper homemade pizza?
+MATCH: mostly homemade, I bought the dough
+USER: that still counts in my book
+MATCH: thank you, I needed validation
+USER: and the toppings?
+MATCH: mushrooms and too much cheese",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-142-FORK,FULL-142,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: is that a proper homemade pizza?
+MATCH: mostly homemade, I bought the dough
+USER: that still counts in my book
+MATCH: thank you, I needed validation
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-143,FULL-143,independently_authored,original_synthetic_not_real_private_messages,en,food,open,6,"USER: are you a coffee snob?
+MATCH: only a little
+USER: what does a little mean?
+MATCH: I travel with my own beans
+USER: that's a pretty committed little
+MATCH: okay maybe a lot",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-143-FORK,FULL-143,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: are you a coffee snob?
+MATCH: only a little
+USER: what does a little mean?
+MATCH: I travel with my own beans
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-144,FULL-144,independently_authored,original_synthetic_not_real_private_messages,en,food,date_confirmed,6,"USER: still up for trying that bakery on Sunday?
+MATCH: yes, definitely
+USER: Sunday at 11 outside the bakery on King Street?
+MATCH: 11 works for me
+USER: great, Sunday 11 at the entrance
+MATCH: see you there",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-144-FORK,FULL-144,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,food,counterfactual_changed_context,6,"USER: still up for trying that bakery on Sunday?
+MATCH: yes, definitely
+USER: Sunday at 11 outside the bakery on King Street?
+MATCH: 11 works for me
+USER: just confirming, are you definitely free then?
+MATCH: sorry, I need to check my schedule first",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-145,FULL-145,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,boundary,6,"USER: want to move this to Instagram?
+MATCH: I'd rather stay here for now
+USER: completely fine
+MATCH: thanks for understanding
+USER: you mentioned hiking, any favourite trail?
+MATCH: there's one near my hometown",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-145-FORK,FULL-145,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: want to move this to Instagram?
+MATCH: I'd rather stay here for now
+USER: completely fine
+MATCH: thanks for understanding
+USER: we can keep things at your pace
+MATCH: thank you, I appreciate that",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-146,FULL-146,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,boundary,6,"USER: fancy meeting tomorrow?
+MATCH: that's a bit quick for me
+USER: fair enough, no pressure
+MATCH: I like to chat a little first
+USER: what have you been watching lately?
+MATCH: an embarrassing amount of cooking shows",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-146-FORK,FULL-146,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: fancy meeting tomorrow?
+MATCH: that's a bit quick for me
+USER: fair enough, no pressure
+MATCH: I like to chat a little first
+USER: we can keep things at your pace
+MATCH: thank you, I appreciate that",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-147,FULL-147,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,date_cancelled,6,"USER: we're still good for Friday at seven?
+MATCH: yep, looking forward to it
+USER: great, see you at the café
+MATCH: sorry, something has come up and I can't make it
+USER: no worries, thanks for letting me know
+MATCH: I appreciate it",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-147-FORK,FULL-147,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: we're still good for Friday at seven?
+MATCH: yep, looking forward to it
+USER: great, see you at the café
+MATCH: sorry, something has come up and I can't make it
+USER: so that meeting is off, right?
+MATCH: yes, I cannot make it, sorry",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-148,FULL-148,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,open,6,"USER: I noticed you said you're new in town
+MATCH: yeah, only moved here a month ago
+USER: how's it treating you so far?
+MATCH: good, still learning the neighbourhoods
+USER: best discovery yet?
+MATCH: a tiny second-hand bookshop",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-148-FORK,FULL-148,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: I noticed you said you're new in town
+MATCH: yeah, only moved here a month ago
+USER: how's it treating you so far?
+MATCH: good, still learning the neighbourhoods
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-149,FULL-149,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,instagram_shared,6,"USER: you take film photos too?
+MATCH: yep, I upload them sometimes
+USER: anywhere I can see the results?
+MATCH: sure, my photo account is [IG_HANDLE]
+USER: nice, thanks for sharing
+MATCH: no problem",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-149-FORK,FULL-149,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: you take film photos too?
+MATCH: yep, I upload them sometimes
+USER: anywhere I can see the results?
+MATCH: sure, my photo account is [IG_HANDLE]
+USER: thanks, is it okay if I save that handle?
+MATCH: actually I would prefer we stay here for now",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-150,FULL-150,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,open,6,"USER: what's something you're looking forward to this week?
+MATCH: finally finishing a project
+USER: that sounds like a relief
+MATCH: you have no idea
+USER: will you celebrate somehow?
+MATCH: probably with a very long nap",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-150-FORK,FULL-150,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: what's something you're looking forward to this week?
+MATCH: finally finishing a project
+USER: that sounds like a relief
+MATCH: you have no idea
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-151,FULL-151,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,open,6,"USER: that looks like a coastal walking trail
+MATCH: it was, in Cornwall
+USER: windy?
+MATCH: ridiculously
+USER: the photos don't show that part
+MATCH: my hair definitely does",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-151-FORK,FULL-151,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: that looks like a coastal walking trail
+MATCH: it was, in Cornwall
+USER: windy?
+MATCH: ridiculously
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-152,FULL-152,independently_authored,original_synthetic_not_real_private_messages,en,boundaries,low_engagement,6,"USER: how was your weekend?
+MATCH: pretty quiet
+USER: honestly that sounds nice
+MATCH: yeah
+USER: glad you got some rest
+MATCH: thanks",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-152-FORK,FULL-152,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,boundaries,counterfactual_changed_context,6,"USER: how was your weekend?
+MATCH: pretty quiet
+USER: honestly that sounds nice
+MATCH: yeah
+USER: no worries, I will not bombard you with questions
+MATCH: thanks, been busy lately",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-153,FULL-153,independently_authored,original_synthetic_not_real_private_messages,pl,pace,open,6,"USER: widziałem twoją wiadomość dopiero teraz, sorry
+MATCH: luz, ja też potrafię zniknąć na dwa dni
+USER: czyli oboje mamy luźne podejście
+MATCH: zdecydowanie, nie pilnuję telefonu
+USER: w sumie wygodne
+MATCH: prawda",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-153-FORK,FULL-153,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: widziałem twoją wiadomość dopiero teraz, sorry
+MATCH: luz, ja też potrafię zniknąć na dwa dni
+USER: czyli oboje mamy luźne podejście
+MATCH: zdecydowanie, nie pilnuję telefonu
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-154,FULL-154,independently_authored,original_synthetic_not_real_private_messages,pl,pace,boundary,6,"USER: hej, odpisujesz raczej wieczorami?
+MATCH: tak, w pracy odkładam telefon
+USER: jasne, pytałem żeby wiedzieć
+MATCH: spoko, tylko nie lubię ponagleń
+USER: nie planuję ich
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-154-FORK,FULL-154,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: hej, odpisujesz raczej wieczorami?
+MATCH: tak, w pracy odkładam telefon
+USER: jasne, pytałem żeby wiedzieć
+MATCH: spoko, tylko nie lubię ponagleń
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-155,FULL-155,independently_authored,original_synthetic_not_real_private_messages,pl,pace,open,6,"USER: mam wrażenie że piszesz seriami po kilka wiadomości
+MATCH: bo zawsze zapominam dodać coś ważnego
+USER: to jak rozdziały serialu
+MATCH: dokładnie
+USER: czekam na kolejny odcinek
+MATCH: haha spokojnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-155-FORK,FULL-155,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: mam wrażenie że piszesz seriami po kilka wiadomości
+MATCH: bo zawsze zapominam dodać coś ważnego
+USER: to jak rozdziały serialu
+MATCH: dokładnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-156,FULL-156,independently_authored,original_synthetic_not_real_private_messages,pl,pace,low_engagement,6,"USER: co planujesz na jutro?
+MATCH: pracę
+USER: a po pracy coś przyjemniejszego?
+MATCH: zobaczę
+USER: oby dzień był spokojny
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-156-FORK,FULL-156,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: co planujesz na jutro?
+MATCH: pracę
+USER: a po pracy coś przyjemniejszego?
+MATCH: zobaczę
+USER: okej, nie będę cię zasypywać pytaniami
+MATCH: dzięki, ostatnio mam mało czasu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-157,FULL-157,independently_authored,original_synthetic_not_real_private_messages,pl,pace,open,6,"USER: zdarza ci się czytać wiadomość i odpisywać w głowie?
+MATCH: codziennie, a potem jestem pewna że odpisałam
+USER: to mam tak z mailami
+MATCH: mózg lubi robić wersję próbną
+USER: szkoda że nie wysyła sam
+MATCH: prawda",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-157-FORK,FULL-157,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: zdarza ci się czytać wiadomość i odpisywać w głowie?
+MATCH: codziennie, a potem jestem pewna że odpisałam
+USER: to mam tak z mailami
+MATCH: mózg lubi robić wersję próbną
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-158,FULL-158,independently_authored,original_synthetic_not_real_private_messages,pl,pace,boundary,6,"USER: mogę spytać, czy coś cię zniechęciło w naszej rozmowie?
+MATCH: nie, ale wolę rzadziej pisać
+USER: okej, dzięki za wyjaśnienie
+MATCH: mam dużo innych rzeczy w tygodniu
+USER: rozumiem
+MATCH: super",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-158-FORK,FULL-158,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: mogę spytać, czy coś cię zniechęciło w naszej rozmowie?
+MATCH: nie, ale wolę rzadziej pisać
+USER: okej, dzięki za wyjaśnienie
+MATCH: mam dużo innych rzeczy w tygodniu
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-159,FULL-159,independently_authored,original_synthetic_not_real_private_messages,pl,pace,open,6,"USER: rano czy wieczorem masz zwykle lepszy humor?
+MATCH: dopiero po pracy
+USER: czyli poranne pogawędki odpadają
+MATCH: wtedy odpowiadam samymi emotkami
+USER: uczciwe ostrzeżenie
+MATCH: haha właśnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-159-FORK,FULL-159,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: rano czy wieczorem masz zwykle lepszy humor?
+MATCH: dopiero po pracy
+USER: czyli poranne pogawędki odpadają
+MATCH: wtedy odpowiadam samymi emotkami
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-160,FULL-160,independently_authored,original_synthetic_not_real_private_messages,pl,pace,open,6,"USER: co oznacza ta seria trzech kropek na końcu?
+MATCH: nic, po prostu tak piszę
+USER: już myślałem że szykuje się dramat
+MATCH: nie tym razem
+USER: ulga
+MATCH: trzy kropki są niewinne",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-160-FORK,FULL-160,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,pace,counterfactual_changed_context,6,"USER: co oznacza ta seria trzech kropek na końcu?
+MATCH: nic, po prostu tak piszę
+USER: już myślałem że szykuje się dramat
+MATCH: nie tym razem
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-161,FULL-161,independently_authored,original_synthetic_not_real_private_messages,pl,trust,boundary,6,"USER: czy byłoby ci okej spotkać się u mnie na film?
+MATCH: nie, wolę pierwsze spotkania w miejscu publicznym
+USER: rozumiem, to dobry pomysł
+MATCH: dzięki
+USER: może kawa w centrum kiedyś
+MATCH: to brzmi lepiej",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-161-FORK,FULL-161,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: czy byłoby ci okej spotkać się u mnie na film?
+MATCH: nie, wolę pierwsze spotkania w miejscu publicznym
+USER: rozumiem, to dobry pomysł
+MATCH: dzięki
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-162,FULL-162,independently_authored,original_synthetic_not_real_private_messages,pl,trust,boundary,6,"USER: masz ochotę przesłać mi swój adres do wysłania książki?
+MATCH: nie podaję adresu osobom z aplikacji
+USER: słusznie, nie powinienem był pytać tak wcześnie
+MATCH: dzięki za zrozumienie
+USER: możemy po prostu pogadać o książkach
+MATCH: chętnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-162-FORK,FULL-162,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: masz ochotę przesłać mi swój adres do wysłania książki?
+MATCH: nie podaję adresu osobom z aplikacji
+USER: słusznie, nie powinienem był pytać tak wcześnie
+MATCH: dzięki za zrozumienie
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-163,FULL-163,independently_authored,original_synthetic_not_real_private_messages,pl,trust,open,6,"USER: co najbardziej lubisz w poznawaniu nowych ludzi?
+MATCH: to że każdy ma inną historię
+USER: brzmi prawdziwie
+MATCH: ale też czasem jest to męczące
+USER: jasne, zwłaszcza w aplikacjach
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-163-FORK,FULL-163,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: co najbardziej lubisz w poznawaniu nowych ludzi?
+MATCH: to że każdy ma inną historię
+USER: brzmi prawdziwie
+MATCH: ale też czasem jest to męczące
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-164,FULL-164,independently_authored,original_synthetic_not_real_private_messages,pl,trust,boundary,6,"USER: możemy zrobić krótki telefon przed spotkaniem?
+MATCH: wolę najpierw pogadać dłużej na czacie
+USER: jasne
+MATCH: po prostu lubię mieć trochę czasu
+USER: rozumiem
+MATCH: dzięki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-164-FORK,FULL-164,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: możemy zrobić krótki telefon przed spotkaniem?
+MATCH: wolę najpierw pogadać dłużej na czacie
+USER: jasne
+MATCH: po prostu lubię mieć trochę czasu
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-165,FULL-165,independently_authored,original_synthetic_not_real_private_messages,pl,trust,open,6,"USER: jaki masz sposób na rozładowanie stresu?
+MATCH: idę na długi spacer bez telefonu
+USER: to brzmi zdrowo
+MATCH: nie zawsze wychodzi, ale próbuję
+USER: sama cisza czy słuchawki?
+MATCH: zwykle bez muzyki",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-165-FORK,FULL-165,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: jaki masz sposób na rozładowanie stresu?
+MATCH: idę na długi spacer bez telefonu
+USER: to brzmi zdrowo
+MATCH: nie zawsze wychodzi, ale próbuję
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-166,FULL-166,independently_authored,original_synthetic_not_real_private_messages,pl,trust,boundary,6,"USER: dasz mi numer żeby łatwiej było się dogadać?
+MATCH: na razie nie, wolę ten czat
+USER: spoko, zostajemy tutaj
+MATCH: dzięki
+USER: jak tam minął ci dzień?
+MATCH: całkiem dobrze",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-166-FORK,FULL-166,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: dasz mi numer żeby łatwiej było się dogadać?
+MATCH: na razie nie, wolę ten czat
+USER: spoko, zostajemy tutaj
+MATCH: dzięki
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-167,FULL-167,independently_authored,original_synthetic_not_real_private_messages,pl,trust,open,6,"USER: co najbardziej doceniasz w nowych znajomościach?
+MATCH: kiedy nie trzeba udawać że wszystko jest super
+USER: rozsądne
+MATCH: i kiedy można mieć odmienne zdanie
+USER: to się przydaje
+MATCH: zdecydowanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-167-FORK,FULL-167,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: co najbardziej doceniasz w nowych znajomościach?
+MATCH: kiedy nie trzeba udawać że wszystko jest super
+USER: rozsądne
+MATCH: i kiedy można mieć odmienne zdanie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-168,FULL-168,independently_authored,original_synthetic_not_real_private_messages,pl,trust,boundary,6,"USER: lubisz żartować z ludzi czy raczej z sytuacji?
+MATCH: z sytuacji, nie przepadam za docinkami personalnymi
+USER: dobra zasada
+MATCH: dla mnie ważna
+USER: będę uważał żeby nie przekroczyć granicy
+MATCH: doceniam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-168-FORK,FULL-168,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,trust,counterfactual_changed_context,6,"USER: lubisz żartować z ludzi czy raczej z sytuacji?
+MATCH: z sytuacji, nie przepadam za docinkami personalnymi
+USER: dobra zasada
+MATCH: dla mnie ważna
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-169,FULL-169,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,date_uncertain,6,"USER: może w weekend wyskoczymy na kawę?
+MATCH: może, zależy jak będę się czuła
+USER: jasne, na razie bez ustalania
+MATCH: dzięki
+USER: daj znać jeśli będziesz miała ochotę
+MATCH: okej",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-169-FORK,FULL-169,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: może w weekend wyskoczymy na kawę?
+MATCH: może, zależy jak będę się czuła
+USER: jasne, na razie bez ustalania
+MATCH: dzięki
+USER: czyli na razie nic nie ustalamy?
+MATCH: tak, nie mogę teraz nic obiecać",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-170,FULL-170,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,date_proposed,6,"USER: jesteś w piątek w centrum?
+MATCH: możliwe, ale nie wiem jeszcze
+USER: myślałem o kawie po pracy
+MATCH: pomysł okej, ale muszę sprawdzić plan
+USER: nie ma problemu
+MATCH: odezwę się",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-170-FORK,FULL-170,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: jesteś w piątek w centrum?
+MATCH: możliwe, ale nie wiem jeszcze
+USER: myślałem o kawie po pracy
+MATCH: pomysł okej, ale muszę sprawdzić plan
+USER: mam na razie zostawić ten pomysł otwarty?
+MATCH: tak, jeszcze nie potwierdzam terminu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-171,FULL-171,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,date_cancelled,6,"USER: widzimy się jutro o 18 w kawiarni?
+MATCH: tak, miałam to zapisane
+USER: super
+MATCH: chwila, dostałam zmianę w pracy, jednak jutro nie mogę
+USER: rozumiem, dzięki za informację
+MATCH: przepraszam za zamieszanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-171-FORK,FULL-171,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: widzimy się jutro o 18 w kawiarni?
+MATCH: tak, miałam to zapisane
+USER: super
+MATCH: chwila, dostałam zmianę w pracy, jednak jutro nie mogę
+USER: okej, czyli nasze spotkanie już nie jest aktualne?
+MATCH: tak, na pewno odwołane, przepraszam",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-172,FULL-172,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,open,6,"USER: pisałaś że kochasz góry
+MATCH: lubię, ale bez ekstremalnych tras
+USER: czyli spokojne widoki
+MATCH: dokładnie
+USER: bardziej Tatry czy Beskidy?
+MATCH: Beskidy, mniej tłoczno",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-172-FORK,FULL-172,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: pisałaś że kochasz góry
+MATCH: lubię, ale bez ekstremalnych tras
+USER: czyli spokojne widoki
+MATCH: dokładnie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-173,FULL-173,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,date_proposed,6,"USER: wpadł mi do głowy pomysł na wspólne śniadanie
+MATCH: brzmi sympatycznie
+USER: w sobotę?
+MATCH: sobota raczej odpada
+USER: okej, może innym razem
+MATCH: zobaczymy",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-173-FORK,FULL-173,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: wpadł mi do głowy pomysł na wspólne śniadanie
+MATCH: brzmi sympatycznie
+USER: w sobotę?
+MATCH: sobota raczej odpada
+USER: mam na razie zostawić ten pomysł otwarty?
+MATCH: tak, jeszcze nie potwierdzam terminu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-174,FULL-174,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,boundary,6,"USER: może po prostu podam ci lokalizację i tam się spotkamy?
+MATCH: wolałabym wiedzieć dokładnie gdzie i o której
+USER: jasne, to rozsądne
+MATCH: nie lubię niespodzianek z logistyką
+USER: nic na siłę
+MATCH: super",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-174-FORK,FULL-174,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: może po prostu podam ci lokalizację i tam się spotkamy?
+MATCH: wolałabym wiedzieć dokładnie gdzie i o której
+USER: jasne, to rozsądne
+MATCH: nie lubię niespodzianek z logistyką
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-175,FULL-175,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,date_confirmed,6,"USER: to spróbujemy tej wystawy w środę?
+MATCH: tak, po pracy mogę
+USER: środa 18:30 przed wejściem do Zachęty?
+MATCH: środa 18:30 pasuje
+USER: świetnie, widzimy się przed wejściem
+MATCH: do zobaczenia",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-175-FORK,FULL-175,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: to spróbujemy tej wystawy w środę?
+MATCH: tak, po pracy mogę
+USER: środa 18:30 przed wejściem do Zachęty?
+MATCH: środa 18:30 pasuje
+USER: super, na pewno termin zostaje bez zmian?
+MATCH: przepraszam, muszę jednak potwierdzić grafik",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-176,FULL-176,independently_authored,original_synthetic_not_real_private_messages,pl,ambiguity,date_uncertain,6,"USER: czyli umawiamy się na przyszły tydzień?
+MATCH: nie powiedziałam że na pewno, tylko że może
+USER: masz rację, źle odczytałem
+MATCH: luz
+USER: to bez ustaleń na razie
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-176-FORK,FULL-176,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,ambiguity,counterfactual_changed_context,6,"USER: czyli umawiamy się na przyszły tydzień?
+MATCH: nie powiedziałam że na pewno, tylko że może
+USER: masz rację, źle odczytałem
+MATCH: luz
+USER: czyli na razie nic nie ustalamy?
+MATCH: tak, nie mogę teraz nic obiecać",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-177,FULL-177,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: masz zdjęcie z koncertu muzyki klasycznej
+MATCH: tak, chodzę czasem do filharmonii
+USER: bardziej fortepian czy orkiestra?
+MATCH: orkiestra, ale solo też lubię
+USER: fajna różnorodność
+MATCH: a ty czego słuchasz?",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-177-FORK,FULL-177,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: masz zdjęcie z koncertu muzyki klasycznej
+MATCH: tak, chodzę czasem do filharmonii
+USER: bardziej fortepian czy orkiestra?
+MATCH: orkiestra, ale solo też lubię
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-178,FULL-178,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: odwiedzasz muzea z własnej woli czy ktoś cię ciągnie?
+MATCH: sama chodzę, serio
+USER: to szanuję
+MATCH: tylko z przerwą na kawę
+USER: brzmi jak dobry balans
+MATCH: obowiązkowy",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-178-FORK,FULL-178,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: odwiedzasz muzea z własnej woli czy ktoś cię ciągnie?
+MATCH: sama chodzę, serio
+USER: to szanuję
+MATCH: tylko z przerwą na kawę
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-179,FULL-179,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: w profilu masz komiksy, jakie lubisz?
+MATCH: raczej krótkie opowieści niż superbohaterów
+USER: to od czego byś poleciła zacząć?
+MATCH: od jednego polskiego autora
+USER: brzmi ciekawie
+MATCH: podeślę tytuł",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-179-FORK,FULL-179,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: w profilu masz komiksy, jakie lubisz?
+MATCH: raczej krótkie opowieści niż superbohaterów
+USER: to od czego byś poleciła zacząć?
+MATCH: od jednego polskiego autora
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-180,FULL-180,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: byłaś kiedyś na nocnym zwiedzaniu miasta?
+MATCH: raz, w Gdańsku
+USER: co było najlepsze?
+MATCH: historie których w dzień nikt nie opowiada
+USER: brzmi świetnie
+MATCH: naprawdę polecam",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-180-FORK,FULL-180,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: byłaś kiedyś na nocnym zwiedzaniu miasta?
+MATCH: raz, w Gdańsku
+USER: co było najlepsze?
+MATCH: historie których w dzień nikt nie opowiada
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-181,FULL-181,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: co ostatnio zobaczyłaś w teatrze?
+MATCH: kameralną sztukę, bardzo zabawną
+USER: lepsza niż duże spektakle?
+MATCH: inaczej, bliżej aktorów
+USER: to robi różnicę
+MATCH: zdecydowanie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-181-FORK,FULL-181,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: co ostatnio zobaczyłaś w teatrze?
+MATCH: kameralną sztukę, bardzo zabawną
+USER: lepsza niż duże spektakle?
+MATCH: inaczej, bliżej aktorów
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-182,FULL-182,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: uczysz się tańczyć czy to zdjęcie z wesela?
+MATCH: z zajęć, chodzę na swing
+USER: brzmi jak dużo energii
+MATCH: tak i dużo pomyłek
+USER: od czego zaczyna się naukę?
+MATCH: od niepatrzenia cały czas pod nogi",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-182-FORK,FULL-182,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: uczysz się tańczyć czy to zdjęcie z wesela?
+MATCH: z zajęć, chodzę na swing
+USER: brzmi jak dużo energii
+MATCH: tak i dużo pomyłek
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-183,FULL-183,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: ten plakat filmowy w twoim pokoju jest świetny
+MATCH: znalazłam go na targu
+USER: często tam polujesz na rzeczy?
+MATCH: od czasu do czasu
+USER: jaki najlepszy zakup do tej pory?
+MATCH: stara lampka",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-183-FORK,FULL-183,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: ten plakat filmowy w twoim pokoju jest świetny
+MATCH: znalazłam go na targu
+USER: często tam polujesz na rzeczy?
+MATCH: od czasu do czasu
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-184,FULL-184,independently_authored,original_synthetic_not_real_private_messages,pl,culture,open,6,"USER: widzę że oglądasz dokumenty
+MATCH: tak, ostatnio dużo przyrodniczych
+USER: masz jakiś ulubiony?
+MATCH: o oceanach
+USER: brzmi jak relaks
+MATCH: dopóki nie pokazują głębin",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-184-FORK,FULL-184,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,culture,counterfactual_changed_context,6,"USER: widzę że oglądasz dokumenty
+MATCH: tak, ostatnio dużo przyrodniczych
+USER: masz jakiś ulubiony?
+MATCH: o oceanach
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-185,FULL-185,independently_authored,original_synthetic_not_real_private_messages,en,logistics,date_proposed,6,"USER: still interested in that bookshop café?
+MATCH: yes, it looks lovely
+USER: how about Thursday evening?
+MATCH: possibly, I need to check work
+USER: no worries, let me know
+MATCH: will do",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-185-FORK,FULL-185,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: still interested in that bookshop café?
+MATCH: yes, it looks lovely
+USER: how about Thursday evening?
+MATCH: possibly, I need to check work
+USER: shall I leave the plan open for now?
+MATCH: yes, I have not confirmed the day",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-186,FULL-186,independently_authored,original_synthetic_not_real_private_messages,en,logistics,date_confirmed,6,"USER: should we try the small gallery on Saturday?
+MATCH: yes, I'm free in the afternoon
+USER: Saturday at 3 outside the entrance on Queen Street?
+MATCH: that works for me
+USER: great, see you there at three
+MATCH: see you Saturday",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-186-FORK,FULL-186,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: should we try the small gallery on Saturday?
+MATCH: yes, I'm free in the afternoon
+USER: Saturday at 3 outside the entrance on Queen Street?
+MATCH: that works for me
+USER: just confirming, are you definitely free then?
+MATCH: sorry, I need to check my schedule first",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-187,FULL-187,independently_authored,original_synthetic_not_real_private_messages,en,logistics,date_cancelled,6,"USER: are we still on for coffee tomorrow?
+MATCH: yes, seven at the café
+USER: perfect
+MATCH: sorry, I've come down with something and won't make it
+USER: no worries, hope you feel better
+MATCH: thank you",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-187-FORK,FULL-187,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: are we still on for coffee tomorrow?
+MATCH: yes, seven at the café
+USER: perfect
+MATCH: sorry, I've come down with something and won't make it
+USER: so that meeting is off, right?
+MATCH: yes, I cannot make it, sorry",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-188,FULL-188,independently_authored,original_synthetic_not_real_private_messages,en,logistics,boundary,6,"USER: want to switch to WhatsApp?
+MATCH: not yet, I'd rather stay here
+USER: absolutely fine
+MATCH: thanks
+USER: you mentioned a new job, how's it going?
+MATCH: busy but exciting",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-188-FORK,FULL-188,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: want to switch to WhatsApp?
+MATCH: not yet, I'd rather stay here
+USER: absolutely fine
+MATCH: thanks
+USER: we can keep things at your pace
+MATCH: thank you, I appreciate that",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-189,FULL-189,independently_authored,original_synthetic_not_real_private_messages,en,logistics,open,6,"USER: what's one underrated thing about your city?
+MATCH: the tiny parks hidden between buildings
+USER: that sounds nice
+MATCH: they make busy weeks easier
+USER: do you have a favourite?
+MATCH: a small one near the river",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-189-FORK,FULL-189,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: what's one underrated thing about your city?
+MATCH: the tiny parks hidden between buildings
+USER: that sounds nice
+MATCH: they make busy weeks easier
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-190,FULL-190,independently_authored,original_synthetic_not_real_private_messages,en,logistics,open,6,"USER: you seem like someone who plans weekends well
+MATCH: I try, but plans rarely survive Friday
+USER: what changes them?
+MATCH: usually a friend with a better idea
+USER: fair, I respect adaptability
+MATCH: it's a survival skill",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-190-FORK,FULL-190,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: you seem like someone who plans weekends well
+MATCH: I try, but plans rarely survive Friday
+USER: what changes them?
+MATCH: usually a friend with a better idea
+USER: what made you smile today?
+MATCH: a very silly photo from my friend",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-191,FULL-191,independently_authored,original_synthetic_not_real_private_messages,en,logistics,instagram_shared,6,"USER: are those your illustrations in the profile?
+MATCH: yeah, I draw in my free time
+USER: they're really nice, do you post more anywhere?
+MATCH: thanks, my art account is [IG_HANDLE]
+USER: nice, I'll check them out
+MATCH: hope you like them",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-191-FORK,FULL-191,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: are those your illustrations in the profile?
+MATCH: yeah, I draw in my free time
+USER: they're really nice, do you post more anywhere?
+MATCH: thanks, my art account is [IG_HANDLE]
+USER: thanks, is it okay if I save that handle?
+MATCH: actually I would prefer we stay here for now",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-192,FULL-192,independently_authored,original_synthetic_not_real_private_messages,en,logistics,date_uncertain,6,"USER: so next Tuesday should work?
+MATCH: I said maybe, my shifts aren't confirmed yet
+USER: you're right, I got ahead of myself
+MATCH: all good
+USER: I'll leave it open for now
+MATCH: sounds good",R02; R03; R17; R21,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-192-FORK,FULL-192,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,en,logistics,counterfactual_changed_context,6,"USER: so next Tuesday should work?
+MATCH: I said maybe, my shifts aren't confirmed yet
+USER: you're right, I got ahead of myself
+MATCH: all good
+USER: shall we leave it undecided then?
+MATCH: yes, I am not sure yet",R02; R17; R21; R22,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-193,FULL-193,independently_authored,original_synthetic_not_real_private_messages,pl,other,open,6,"USER: jakie miejsce w Warszawie poleciłabyś komuś kto zna tylko centrum?
+MATCH: Fort Bema, mało ludzi w tygodniu
+USER: nigdy nie byłem
+MATCH: warto na spacer
+USER: brzmi dobrze, dzięki
+MATCH: nie ma za co",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-193-FORK,FULL-193,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: jakie miejsce w Warszawie poleciłabyś komuś kto zna tylko centrum?
+MATCH: Fort Bema, mało ludzi w tygodniu
+USER: nigdy nie byłem
+MATCH: warto na spacer
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-194,FULL-194,independently_authored,original_synthetic_not_real_private_messages,pl,other,open,6,"USER: miałaś ostatnio jakiś naprawdę dobry dzień?
+MATCH: tak, w końcu zobaczyłam się z przyjaciółką po roku
+USER: to musiało być miłe
+MATCH: przegadałyśmy sześć godzin
+USER: czyli nadrabiania nie było końca
+MATCH: i nadal nie wszystko opowiedziałyśmy",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-194-FORK,FULL-194,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: miałaś ostatnio jakiś naprawdę dobry dzień?
+MATCH: tak, w końcu zobaczyłam się z przyjaciółką po roku
+USER: to musiało być miłe
+MATCH: przegadałyśmy sześć godzin
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-195,FULL-195,independently_authored,original_synthetic_not_real_private_messages,pl,other,boundary,6,"USER: wolisz spotkania spontaniczne czy po dłuższej rozmowie?
+MATCH: raczej po dłuższej, lubię mieć czas
+USER: okej, jasne
+MATCH: dzięki, nie wszyscy to rozumieją
+USER: każdy ma swoje tempo
+MATCH: dokładnie",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-195-FORK,FULL-195,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: wolisz spotkania spontaniczne czy po dłuższej rozmowie?
+MATCH: raczej po dłuższej, lubię mieć czas
+USER: okej, jasne
+MATCH: dzięki, nie wszyscy to rozumieją
+USER: to zostajemy przy twoim tempie rozmowy
+MATCH: dokładnie, dzięki",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-196,FULL-196,independently_authored,original_synthetic_not_real_private_messages,pl,other,date_proposed,6,"USER: pisałaś że lubisz targi książek
+MATCH: tak, często tam znikam na pół dnia
+USER: w niedzielę jest jeden niedaleko centrum
+MATCH: o, nie wiedziałam
+USER: może wpadniemy na chwilę?
+MATCH: możliwe, muszę sprawdzić plany",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-196-FORK,FULL-196,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: pisałaś że lubisz targi książek
+MATCH: tak, często tam znikam na pół dnia
+USER: w niedzielę jest jeden niedaleko centrum
+MATCH: o, nie wiedziałam
+USER: mam na razie zostawić ten pomysł otwarty?
+MATCH: tak, jeszcze nie potwierdzam terminu",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-197,FULL-197,independently_authored,original_synthetic_not_real_private_messages,pl,other,date_cancelled,6,"USER: jesteśmy umówieni w środę na 18:00?
+MATCH: tak, pod wejściem do muzeum
+USER: super, mam to zapisane
+MATCH: hej, jednak wypadł mi dyżur, nie dam rady
+USER: jasne, dzięki że mówisz
+MATCH: przepraszam, odezwę się później",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-197-FORK,FULL-197,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: jesteśmy umówieni w środę na 18:00?
+MATCH: tak, pod wejściem do muzeum
+USER: super, mam to zapisane
+MATCH: hej, jednak wypadł mi dyżur, nie dam rady
+USER: okej, czyli nasze spotkanie już nie jest aktualne?
+MATCH: tak, na pewno odwołane, przepraszam",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-198,FULL-198,independently_authored,original_synthetic_not_real_private_messages,pl,other,open,6,"USER: co jest gorsze, poniedziałek czy niedzielny wieczór?
+MATCH: niedzielny, bo już myślisz o poniedziałku
+USER: mocny argument
+MATCH: i nie da się z tym dyskutować
+USER: chyba że poniedziałek jest wolny
+MATCH: wtedy wygrywa wszystko",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-198-FORK,FULL-198,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: co jest gorsze, poniedziałek czy niedzielny wieczór?
+MATCH: niedzielny, bo już myślisz o poniedziałku
+USER: mocny argument
+MATCH: i nie da się z tym dyskutować
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-199,FULL-199,independently_authored,original_synthetic_not_real_private_messages,pl,other,instagram_shared,6,"USER: masz gdzieś więcej zdjęć z tych podróży?
+MATCH: czasem wrzucam na insta
+USER: jeśli to publiczne, chętnie zobaczę
+MATCH: możesz zajrzeć na [IG_HANDLE]
+USER: dzięki, sprawdzę
+MATCH: spoko",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-199-FORK,FULL-199,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: masz gdzieś więcej zdjęć z tych podróży?
+MATCH: czasem wrzucam na insta
+USER: jeśli to publiczne, chętnie zobaczę
+MATCH: możesz zajrzeć na [IG_HANDLE]
+USER: dzięki, mogę zapisać ten kontakt?
+MATCH: jednak wolę, żebyśmy na razie zostali tutaj",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
+FULL-200,FULL-200,independently_authored,original_synthetic_not_real_private_messages,pl,other,open,6,"USER: twoja ulubiona rzecz do zrobienia po pracy?
+MATCH: przejść się po mieście bez celu
+USER: to brzmi lepiej niż przewijanie telefonu
+MATCH: zdecydowanie
+USER: masz jakąś zwykłą trasę?
+MATCH: zawsze zaczynam od parku",R02; R03; R10; R11,Evaluate the final message in context; do not infer consent or a confirmed date without evidence.
+FULL-200-FORK,FULL-200,counterfactual_fork_shared_prefix,original_synthetic_not_real_private_messages,pl,other,counterfactual_changed_context,6,"USER: twoja ulubiona rzecz do zrobienia po pracy?
+MATCH: przejść się po mieście bez celu
+USER: to brzmi lepiej niż przewijanie telefonu
+MATCH: zdecydowanie
+USER: a co ci ostatnio poprawiło humor?
+MATCH: mały spacer bez telefonu, serio pomógł",R02; R10; R14; R19,Do not re-use an outdated reply; recompute using current latest message and user facts.
