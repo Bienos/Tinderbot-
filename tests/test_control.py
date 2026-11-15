@@ -465,13 +465,16 @@ def _fly_env(monkeypatch):
                 'FLY_IMAGE':'registry.fly.io/iskra-img:latest','PUBLIC_ORIGIN':'http://testserver'}.items():monkeypatch.setenv(k,v)
 
 
-def _fly_mock(calls,fail_machine=False,machine_state='started',checks=('passing',)):
+def _fly_mock(calls,fail_machine=False,machine_state='started',checks=('passing',),cert_status='Ready',fail_cert=False):
     import httpx,json
     def handler(req):
         body=json.loads(req.content or b'{}')
         calls.append((req.method,req.url.path,body,req.headers.get('authorization')))
         p=req.url.path
         if req.method=='POST' and p=='/v1/apps':return httpx.Response(201,json={'id':body['name']})
+        if p.endswith('/certificates/acme'):return httpx.Response(500,json={'error':'nope'}) if fail_cert else httpx.Response(200,json={'hostname':body['hostname']})
+        if '/certificates/' in p and req.method=='GET':return httpx.Response(200,json={'status':cert_status})
+        if '/certificates/' in p and req.method=='DELETE':return httpx.Response(200,json={})
         if p.endswith('/ip_assignments'):return httpx.Response(200,json={'ip':'1.2.3.4','shared':True})
         if p.endswith('/secrets'):return httpx.Response(200,json={'version':3,'secrets':[]})
         if p.endswith('/volumes'):return httpx.Response(200,json={'id':'vol_123','name':'data','region':'fra','state':'created'})
@@ -588,6 +591,8 @@ def test_fly_with_own_domain_gives_a_private_bot_behind_the_front_door(client,mo
     assert row['instance_url']==f'https://{bot}.app.winq.site'                 # what the router maps back to winq-b-<id>
     assert f"u{acc['id']}-" not in row['render_service_id']                   # no customer number in the name or address
     assert not any(p.endswith('ip_assignments') for _,p,_,_ in fcalls)         # no public address for the bot
+    cert=[c for c in fcalls if c[1].endswith('/certificates/acme')]
+    assert [(c[1],c[2]) for c in cert]==[('/v1/apps/winq-router/certificates/acme',{'hostname':f'{bot}.app.winq.site'})]  # one certificate per customer
     cfg=next(c[2] for c in fcalls if c[0]=='POST' and c[1].endswith('/machines'))['config']
     assert cfg['env']['PUBLIC_ORIGIN']==f'https://{bot}.app.winq.site'
     assert cfg['checks']['health']['headers']==[{'name':'Host','values':[f'{bot}.app.winq.site']}]
@@ -596,3 +601,25 @@ def test_fly_with_own_domain_gives_a_private_bot_behind_the_front_door(client,mo
     monkeypatch.setenv('PUBLIC_DOMAIN','app.winq.site');import importlib,router;importlib.reload(router)
     assert router.BOT_ID.match(bot) and router.PREFIX=='winq-b-'                # router and provisioning agree
     sys.path.pop(0)
+
+
+def test_fly_certificate_failure_removes_the_bot_and_its_certificate(client,monkeypatch):
+    from control import provision,fly
+    import control.app as capp
+    _fly_env(monkeypatch);monkeypatch.setenv('FLY_PUBLIC_DOMAIN','app.winq.site')
+    fcalls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock([]));monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(fcalls,fail_cert=True))
+    client.post('/api/register',json=REG,headers={'Origin':'http://testserver'});acc=capp.q('SELECT id FROM accounts',fetch=True)[0]
+    assert capp.run_provision(acc['id'])=='failed'
+    deletes=[p for m,p,_,_ in fcalls if m=='DELETE']
+    assert any(p.startswith('/v1/apps/winq-b-') for p in deletes) and any('/certificates/' in p for p in deletes)
+
+
+def test_fly_bot_is_live_only_when_its_certificate_is_ready(monkeypatch):
+    from control import fly
+    monkeypatch.setenv('FLY_API_TOKEN','fm2_plain');monkeypatch.setenv('FLY_PUBLIC_DOMAIN','app.winq.site')
+    for cert,expected in (('Awaiting certificates','update_in_progress'),('Awaiting configuration','update_in_progress'),('Ready','live')):
+        monkeypatch.setattr(fly,'TRANSPORT',_fly_mock([],cert_status=cert))
+        assert fly.deploy_status('winq-b-c611469f')==expected,cert
+    monkeypatch.setattr(fly,'TRANSPORT',_fly_mock([],cert_status='Awaiting certificates'))
+    assert fly.deploy_status('winq-u7-abc123')=='live'          # a bot with its own fly.dev address needs no certificate
+    assert fly.bot_host('winq-b-c611469f')=='c611469f.app.winq.site' and fly.bot_host('winq-u7-abc123') is None

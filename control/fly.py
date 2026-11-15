@@ -10,8 +10,10 @@ Settings on the control service:
   FLY_REGION      default "fra" (Frankfurt)
   FLY_MEMORY_MB   default 256 (multiples of 256)
   FLY_SWAP_MB     default 512: swap for short memory spikes (e.g. the first full import)
+  FLY_ROUTER_APP  front-door app that holds the customers' certificates, default winq-router
   FLY_PUBLIC_DOMAIN  e.g. app.winq.site: panels at https://<id>.app.winq.site via deploy/router (no public IPs
-                     on bots). Unset: each bot gets its own <app>.fly.dev address.
+                     on bots; one certificate per customer is requested on the router, so the DNS needs only the
+                     wildcard A/AAAA records). Unset: each bot gets its own <app>.fly.dev address.
 Model settings are copied server-side from the template bot on Render (INSTANCE_TEMPLATE_SERVICE_ID), so the model
 key never sits in this service's own settings.
 """
@@ -42,6 +44,17 @@ def enabled() -> bool:
     from control import provision
     return (api_ready() and bool(os.getenv('FLY_ORG', '').strip()) and bool(os.getenv('FLY_IMAGE', '').strip())
             and provision.api_ready() and bool(os.getenv('INSTANCE_TEMPLATE_SERVICE_ID')))
+
+
+def router_app() -> str:
+    return os.getenv('FLY_ROUTER_APP', 'winq-router').strip() or 'winq-router'
+
+
+def bot_host(app: str) -> str | None:
+    """Public hostname of a bot behind the front door, from its app name (<brand>-b-<id>); None without a domain."""
+    domain = os.getenv('FLY_PUBLIC_DOMAIN', '').strip().lower().strip('.')
+    found = re.fullmatch(r'[a-z0-9]+-b-([0-9a-f]+)', app)
+    return f'{found.group(1)}.{domain}' if domain and found else None
 
 
 def _auth() -> str:
@@ -121,6 +134,8 @@ def create_instance(account_id: int) -> dict:
             if version is not None:
                 body['min_secrets_version'] = version
             machine = _check(c.post(f'/apps/{name}/machines', json=body), 'create machine').json()
+            if domain:  # the front door needs a certificate for this customer's address (issued in about half a minute)
+                _check(c.post(f'/apps/{router_app()}/certificates/acme', json={'hostname': host}), 'request certificate')
             try:  # best effort: the account page follows the progress anyway
                 c.get(f"/apps/{name}/machines/{machine['id']}/wait", params={'state': 'started', 'timeout': 60}, timeout=75)
             except httpx.HTTPError:
@@ -128,6 +143,8 @@ def create_instance(account_id: int) -> dict:
         except Exception:
             try:
                 c.delete(f'/apps/{name}', params={'force': 'true'})
+                if domain:
+                    c.delete(f'/apps/{router_app()}/certificates/{host}')
             except httpx.HTTPError:
                 pass
             raise
@@ -175,7 +192,15 @@ def deploy_status(app: str) -> str:
         return 'update_failed'
     if state == 'started':
         checks = m.get('checks') or []
-        return 'live' if all(ch.get('status') == 'passing' for ch in checks) else 'update_in_progress'
+        if not all(ch.get('status') == 'passing' for ch in checks):
+            return 'update_in_progress'
+        host = bot_host(app)
+        if host:  # healthy, but the customer's address only works once its certificate is issued
+            with _client() as c:
+                cert = c.get(f'/apps/{router_app()}/certificates/{host}')
+            if cert.status_code >= 400 or cert.json().get('status') != 'Ready':
+                return 'update_in_progress'
+        return 'live'
     return 'live' if state in ('stopped', 'suspended') else 'unknown'
 
 

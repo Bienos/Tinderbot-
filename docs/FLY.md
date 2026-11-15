@@ -50,9 +50,12 @@ curl -X POST https://iskra-landing.onrender.com/admin/fly/update-image -H "Autho
 - Zwrotnica `winq-router` (deploy/router) przyjmuje `*.app.winq.site` i przekazuje każde zapytanie do bota
   `winq-b-<id>` przez sieć Fly (`fly-replay`). Boty nie mają wtedy publicznych adresów.
 - Identyfikator w adresie jest losowy i nic nie mówi o kliencie.
-- Włączenie: rekordy DNS (niżej) + certyfikat `*.app.winq.site` na `winq-router`, potem w Renderze
+- Włączenie: rekordy DNS (niżej), potem w Renderze
   `FLY_PUBLIC_DOMAIN=app.winq.site`. Bez tej zmiennej boty dostają adresy `<aplikacja>.fly.dev`.
-- DNS w home.pl: `A *.app -> 66.241.125.201`, `AAAA *.app -> 2a09:8280:1::207:e346:0`,
-  `CNAME _acme-challenge.app -> app.winq.site.x2r5p5r.flydns.net.`
-- Koszt stały: 2 maszyny zwrotnicy (ok. 4,4 USD) + certyfikat wildcard 1 USD miesięcznie.
+- DNS w home.pl (tylko dwa rekordy, bez `_acme-challenge`, bo formularz home.pl nie przyjmuje podkreślnika w nazwie):
+  `A *.app -> 66.241.125.201` i `AAAA *.app -> 2a09:8280:1::207:e346:0`.
+- Certyfikat: nie wildcard, tylko osobny dla każdego klienta. Provisioning prosi o niego `winq-router`
+  (`FLY_ROUTER_APP`) zaraz po utworzeniu bota; wystawienie trwa ok. pół minuty, a bot jest uznany za gotowy
+  dopiero, gdy certyfikat ma status Ready.
+- Koszt: 2 maszyny zwrotnicy (ok. 4,4 USD) stałe; certyfikaty: pierwsze 10 gratis, potem 0,10 USD miesięcznie za klienta.
 - Zwrotnica jest bezstanowa i niczego nie loguje; nazwa marki w `APP_PREFIX` musi zgadzać się z `BRAND_NAME`.
