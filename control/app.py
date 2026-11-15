@@ -184,11 +184,11 @@ SHARE = ('<meta property="og:type" content="website"><meta property="og:site_nam
          '<meta property="og:locale" content="pl_PL"><meta name="twitter:card" content="summary_large_image">'
          '<meta name="twitter:title" content="{{BRAND}}: zamień dopasowania w spotkania">'
          '<meta name="twitter:description" content="Asystent randkowy AI, który pisze Twoim stylem i wie, kiedy zaprosić.">'
-         '<meta name="twitter:image" content="{{ORIGIN}}/assets/og.png"><link rel="icon" type="image/svg+xml" href="/assets/icon.svg">')
+         '<meta name="twitter:image" content="{{ORIGIN}}/assets/og.png"><link rel="icon" type="image/svg+xml" href="/assets/icon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png">')
 
 
 ASSET_VERSIONS = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()[:10]
-                  for path in STATIC.iterdir() if path.suffix in {'.css', '.js'}}
+                  for path in STATIC.iterdir() if path.suffix in {'.css', '.js'} or path.name == 'icon.svg'}
 
 
 def versioned_assets(html: str) -> str:
@@ -236,6 +236,12 @@ def asset(name: str):
     if name not in types:
         raise HTTPException(404)
     return FileResponse(STATIC / name, media_type=types[name], headers={'Cache-Control': 'public, max-age=86400'})
+
+
+@app.get('/apple-touch-icon.png')
+@app.get('/apple-touch-icon-precomposed.png')
+def touch_icon():
+    return FileResponse(STATIC / 'apple-touch-icon.png', media_type='image/png', headers={'Cache-Control': 'public, max-age=86400'})
 
 
 @app.get('/zaloguj')
