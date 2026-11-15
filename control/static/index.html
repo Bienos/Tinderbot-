@@ -3,92 +3,141 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{BRAND}} · asystent randkowy AI</title>
-<meta name="description" content="{{BRAND}} pisze Twoim stylem, wie, kiedy zaproponować spotkanie, i pokazuje, co działa. Ty decydujesz, co wychodzi.">
+<title>{{BRAND}} · zamień dopasowania w spotkania</title>
+<meta name="description" content="{{BRAND}} odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadne dopasowanie nie zgasło w ciszy. Ty decydujesz, co wychodzi.">
+<meta name="theme-color" content="#fff6f8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/landing.css">
 </head>
 <body>
+<svg width="0" height="0" class="defs" aria-hidden="true">
+  <defs>
+    <linearGradient id="fire" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#ff6036" stop-opacity=".9"/><stop offset=".45" stop-color="#fd267a" stop-opacity=".35"/><stop offset="1" stop-color="#fd267a" stop-opacity="0"/></radialGradient>
+  </defs>
+</svg>
+
 <header class="nav">
-  <a class="brand" href="/"><svg class="flame" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient></defs><path fill="url(#g)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg><span>{{BRAND}}</span></a>
-  <nav><a href="#jak">Jak to działa</a><a href="#bezpieczenstwo">Bezpieczeństwo</a><a href="#faq">FAQ</a><a class="btn small" href="#beta">Dołącz do bety</a></nav>
+  <a class="brand" href="/" aria-label="{{BRAND}}, strona główna">
+    <svg viewBox="0 0 24 24" class="mark" aria-hidden="true"><path fill="url(#fire)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg>
+    {{BRAND}}
+  </a>
+  <nav aria-label="Sekcje"><a href="#efekty">Co zyskujesz</a><a href="#kontrola">Kontrola</a><a href="#pytania">Pytania</a><a class="btn small" href="#beta">Zapisz się do bety</a></nav>
 </header>
 
 <main>
 <section class="hero">
   <div class="hero-copy">
-    <p class="eyebrow">Asystent randkowy AI · beta</p>
-    <h1>Mniej pisania.<br><span class="grad">Więcej spotkań.</span></h1>
-    <p class="lead">{{BRAND}} łączy się z Twoim kontem, pisze Twoim stylem i prowadzi rozmowę w stronę spotkania. Widzisz plan każdej rozmowy, a co wychodzi, decydujesz Ty.</p>
-    <div class="cta"><a class="btn" href="#beta">Dołącz do bety</a><a class="btn ghost" href="#jak">Jak to działa</a></div>
-    <ul class="ticks"><li>Twój styl, nie szablony</li><li>Wie, kiedy zaprosić, a kiedy odpuścić</li><li>Token szyfrowany, osobny serwer</li></ul>
+    <h1>Zamień dopasowania w&nbsp;spotkania.</h1>
+    <p class="lead">{{BRAND}} odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła w ciszy. Ty tylko decydujesz, co wychodzi.</p>
+    <div class="cta"><a class="btn" href="#beta">Zapisz się do bety</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
+    <p class="note">Beta dla niewielkiej grupy: każda osoba dostaje własny, osobny serwer.</p>
   </div>
-  <div class="hero-visual" aria-hidden="true">
-    <div class="phone">
-      <div class="ph-head"><span class="av">O</span><div><b>Ola, 25</b><small>Góry, kawa i koncerty</small></div></div>
-      <div class="ph-body">
-        <div class="b them">dzięki! byłam tam w sierpniu</div>
-        <div class="b them">a ty co robisz w weekend?</div>
-        <div class="plan"><span class="chip">Okno na zaproszenie</span><div class="meter"><i style="width:84%"></i></div><small>zadaje pytania · szybko odpisuje · żartuje</small></div>
-        <div class="b you draft">raczej góry, jeśli pogoda dopisze. a może kawa w czwartek wieczorem, zanim gdzieś uciekniesz?</div>
-        <div class="approve"><span>Szkic gotowy</span><b>Wyślij</b></div>
-      </div>
-    </div>
-  </div>
+
+  <figure class="spark" aria-label="Abstrakcja: dwie osoby połączone świecącą wstęgą rozmowy, która rozpala iskrę">
+    <svg viewBox="0 0 600 600" class="spark-svg" aria-hidden="true">
+      <defs>
+        <radialGradient id="orbPink" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ff8db4"/><stop offset=".7" stop-color="#fd267a"/><stop offset="1" stop-color="#d4105f"/></radialGradient>
+        <radialGradient id="orbOrange" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ffb08f"/><stop offset=".7" stop-color="#ff6036"/><stop offset="1" stop-color="#e2401a"/></radialGradient>
+        <radialGradient id="blobA"><stop offset="0" stop-color="#ff5a95" stop-opacity=".55"/><stop offset="1" stop-color="#ff5a95" stop-opacity="0"/></radialGradient>
+        <radialGradient id="blobB"><stop offset="0" stop-color="#ff9b6b" stop-opacity=".55"/><stop offset="1" stop-color="#ff9b6b" stop-opacity="0"/></radialGradient>
+        <radialGradient id="flare"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#ffd0bd"/><stop offset=".6" stop-color="#ff6036" stop-opacity=".45"/><stop offset="1" stop-color="#fd267a" stop-opacity="0"/></radialGradient>
+        <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+      </defs>
+      <circle class="blob ba" cx="170" cy="400" r="210" fill="url(#blobA)"/>
+      <circle class="blob bb" cx="440" cy="190" r="200" fill="url(#blobB)"/>
+      <g class="rings" fill="none" stroke="url(#fire)">
+        <circle cx="300" cy="300" r="250" stroke-opacity=".12" stroke-width="1"/>
+        <circle cx="300" cy="300" r="190" stroke-opacity=".16" stroke-width="1" stroke-dasharray="2 10"/>
+      </g>
+      <path class="ribbon-glow" d="M120 440 C 170 250, 290 480, 300 300 S 430 140, 486 160" fill="none" stroke="url(#fire)" stroke-width="22" stroke-linecap="round" filter="url(#soft)" opacity=".55"/>
+      <path class="ribbon" d="M120 440 C 170 250, 290 480, 300 300 S 430 140, 486 160" fill="none" stroke="url(#fire)" stroke-width="5" stroke-linecap="round"/>
+      <path class="ribbon-flow" d="M120 440 C 170 250, 290 480, 300 300 S 430 140, 486 160" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 22"/>
+      <g class="orb you"><circle class="orb-ring" cx="120" cy="440" r="56" fill="none" stroke="#fd267a" stroke-opacity=".35" stroke-width="1.5"/><circle cx="120" cy="440" r="36" fill="url(#orbPink)"/></g>
+      <g class="orb her"><circle class="orb-ring" cx="486" cy="160" r="56" fill="none" stroke="#ff6036" stroke-opacity=".35" stroke-width="1.5"/><circle cx="486" cy="160" r="36" fill="url(#orbOrange)"/></g>
+      <circle class="ember e1" r="6" fill="#fd267a"/><circle class="ember e2" r="4" fill="#ff6036"/><circle class="ember e3" r="5" fill="#ff8db4"/><circle class="ember e4" r="3.5" fill="#ffb08f"/>
+      <g class="flare"><circle cx="300" cy="300" r="78" fill="url(#flare)"/><path class="star" fill="#fff" d="M300 246 C 304 286, 314 296, 354 300 C 314 304, 304 314, 300 354 C 296 314, 286 304, 246 300 C 286 296, 296 286, 300 246 Z"/></g>
+      <g class="rise" fill="url(#fire)"><circle class="r1" cx="282" cy="260" r="3"/><circle class="r2" cx="318" cy="270" r="2.4"/><circle class="r3" cx="300" cy="250" r="2"/><circle class="r4" cx="270" cy="285" r="2.2"/><circle class="r5" cx="332" cy="292" r="2.8"/></g>
+    </svg>
+    <span class="bubble b1"><i></i>haha serio? też tam byłam</span>
+    <span class="bubble b2"><i></i>a ty co robisz w weekend?</span>
+    <span class="bubble b3">kawa w czwartek, 19:00?</span>
+  </figure>
 </section>
 
-<section id="jak" class="section">
-  <h2>Jak to działa</h2>
-  <div class="steps">
-    <article><span class="num">1</span><h3>Połącz konto</h3><p>Dostajesz własny, prywatny panel. Wklejasz w nim token sesji, a my sprawdzamy go i szyfrujemy. Zajmuje to około 2 minut.</p></article>
-    <article><span class="num">2</span><h3>Ustaw styl i cel</h3><p>Opis stylu, kilka faktów o sobie, kiedy masz czas i pomysły na pierwsze spotkanie. Domyślne ustawienia działają od razu.</p></article>
-    <article><span class="num">3</span><h3>Zatwierdzaj albo włącz autopilota</h3><p>Szkice czekają na jedno kliknięcie. Autopilot działa tylko w rozmowach, w których ustawisz zgodę i ujawnienie AI.</p></article>
+<section class="loss">
+  <div class="loss-art" aria-hidden="true">
+    <svg viewBox="0 0 320 120"><g class="fade-dots"><circle cx="20" cy="60" r="9"/><circle cx="62" cy="60" r="8"/><circle cx="102" cy="60" r="7"/><circle cx="140" cy="60" r="6"/><circle cx="176" cy="60" r="5"/><circle cx="210" cy="60" r="4"/><circle cx="242" cy="60" r="3"/><circle cx="272" cy="60" r="2"/><circle cx="300" cy="60" r="1.2"/></g></svg>
   </div>
-</section>
-
-<section class="section">
-  <h2>Co dostajesz</h2>
-  <div class="features">
-    <article><h3>Pisze jak Ty</h3><p>Uczy się z Twoich wiadomości: długość, ton, humor. Nie dopisuje faktów o Tobie, których nie podałeś.</p></article>
-    <article><h3>Wie, kiedy zaprosić</h3><p>Ocenia zainteresowanie i etap rozmowy. Proponuje spotkanie, gdy jest na to moment, a po odmowie nie naciska.</p></article>
-    <article><h3>Plan każdej rozmowy</h3><p>Przy każdym dopasowaniu widzisz etap, poziom zainteresowania i następny ruch z krótkim uzasadnieniem.</p></article>
-    <article><h3>Nowe dopasowania na górze</h3><p>Kafelki ze zdjęciami jak w aplikacji: kto jest nowy, kto czeka na odpowiedź. Rozmowy od najnowszej.</p></article>
-    <article><h3>Statystyki, które coś mówią</h3><p>Lejek od dopasowania do spotkania, odsetek odpowiedzi i wyniki: podany Instagram, umówione spotkania.</p></article>
-    <article><h3>Pełna kontrola</h3><p>Pauza jednym przyciskiem, pauza pojedynczej rozmowy, usunięcie danych rozmowy i odłączenie konta w każdej chwili.</p></article>
-  </div>
-</section>
-
-<section id="bezpieczenstwo" class="section security">
-  <h2>Bezpieczeństwo bez kompromisów</h2>
-  <div class="sec-grid">
-    <div><h3>Osobny serwer dla każdego</h3><p>Twoje rozmowy i token nie leżą w jednej bazie z danymi innych użytkowników.</p></div>
-    <div><h3>Szyfrowanie AES-256</h3><p>Token jest szyfrowany kluczem Twojej instancji. Nie wraca do przeglądarki i nie trafia do logów.</p></div>
-    <div><h3>Usuwasz jednym kliknięciem</h3><p>„Usuń token i rozłącz" kasuje go natychmiast. Wylogowanie z aplikacji randkowej unieważnia go też po jej stronie.</p></div>
-    <div><h3>Dane w UE</h3><p>Serwery we Frankfurcie. Rozmowy przechowujemy tylko tak długo, jak ustawisz.</p></div>
-    <div><h3>Ostrożne tempo</h3><p>Limity zapytań i automatyczne wstrzymanie, gdy platforma prosi o przerwę albo weryfikację.</p></div>
-    <div><h3>Uczciwie wobec drugiej strony</h3><p>Autopilot wymaga ujawnienia, że w rozmowie pomaga AI, zgodnie z unijnym AI Act.</p></div>
+  <div class="loss-copy">
+    <h2>Większość dopasowań nie kończy się odmową. Kończy się ciszą.</h2>
+    <p>Odpisujesz wieczorem, ona rano, potem nikt. Czat ciągnie się tydzień i nikt nie proponuje spotkania. Albo pytasz za wcześnie i temat umiera. To nie brak chemii, tylko tempo i moment.</p>
+    <p class="proof">Według danych Hinge dopasowania, w których na pierwszą wiadomość padła odpowiedź w ciągu doby, o&nbsp;72% częściej kończyły się randką.<a class="cite" href="https://hinge.co/newsroom/your-turn-limits-test" rel="noopener" target="_blank">źródło</a></p>
   </div>
 </section>
 
-<section id="faq" class="section faq">
-  <h2>Najczęstsze pytania</h2>
-  <details><summary>Czy to oficjalna integracja z aplikacją randkową?</summary><p>Nie. {{BRAND}} nie jest powiązany z Tinderem ani Match Group. Integracja jest nieoficjalna i łamie regulamin platformy, więc platforma może ograniczyć albo zablokować konto. Stosujemy ostrożne limity, ale tego ryzyka nie da się wyeliminować. Decyzję podejmujesz świadomie przy podłączeniu konta.</p></details>
-  <details><summary>Czy osoba po drugiej stronie wie, że pomaga AI?</summary><p>W trybie szkiców Ty czytasz i wysyłasz każdą wiadomość. Autopilot włączysz tylko w rozmowie, w której ta osoba wie o pomocy AI i się na nią zgodziła.</p></details>
-  <details><summary>Czy AI wymyśli coś o mnie?</summary><p>Nie. Fakty o Tobie bierze wyłącznie z tego, co sam wpiszesz. Jeśli czegoś nie wie, zostawia decyzję Tobie.</p></details>
-  <details><summary>Czy {{BRAND}} wyśle coś bez mojej wiedzy?</summary><p>Domyślnie nie: każdy szkic czeka na zatwierdzenie. Autopilot włączasz osobno dla wybranych rozmów i możesz go zatrzymać jednym przyciskiem.</p></details>
-  <details><summary>Ile to kosztuje?</summary><p>Beta jest ograniczona. Cenę podamy przed startem, bez zobowiązań i bez automatycznych opłat.</p></details>
-  <details><summary>Czy mogę usunąć swoje dane?</summary><p>Tak. Usuwasz token, pojedyncze rozmowy albo całe konto. Szczegóły w polityce prywatności.</p></details>
+<section id="efekty" class="outcomes">
+  <h2>Co się zmienia, gdy {{BRAND}} jest po Twojej stronie</h2>
+  <div class="outcome">
+    <svg viewBox="0 0 160 160" aria-hidden="true" class="o-art"><circle cx="80" cy="80" r="62" fill="none" stroke="url(#fire)" stroke-opacity=".18" stroke-width="10"/><circle class="sweep" cx="80" cy="80" r="62" fill="none" stroke="url(#fire)" stroke-width="10" stroke-linecap="round" stroke-dasharray="70 400" transform="rotate(-90 80 80)"/><circle cx="80" cy="80" r="6" fill="#2a0f22"/></svg>
+    <div><h3>Odpisujesz w minutę, nie w dzień</h3><p>Szkic odpowiedzi czeka, zanim otworzysz aplikację. Jedno kliknięcie i rozmowa żyje dalej, nawet w najbardziej zajęty tydzień.</p></div>
+  </div>
+  <div class="outcome">
+    <svg viewBox="0 0 160 160" aria-hidden="true" class="o-art"><g fill="url(#fire)"><rect x="22" y="104" width="18" height="34" rx="9" opacity=".35"/><rect x="52" y="84" width="18" height="54" rx="9" opacity=".5"/><rect x="82" y="60" width="18" height="78" rx="9" opacity=".7"/><rect class="peak" x="112" y="30" width="18" height="108" rx="9"/></g></svg>
+    <div><h3>Zapraszasz, kiedy ona jest na „tak"</h3><p>{{BRAND}} czyta sygnały: czy dopytuje, czy żartuje, jak szybko odpisuje. Gdy jest moment, proponuje lekkie, konkretne spotkanie. Gdy go nie ma, nie naciska.</p></div>
+  </div>
+  <div class="outcome">
+    <svg viewBox="0 0 160 160" aria-hidden="true" class="o-art"><path d="M10 80 C 30 30, 50 130, 70 80 S 110 30, 150 80" fill="none" stroke="#2a0f22" stroke-opacity=".1" stroke-width="4" stroke-linecap="round"/><path class="wave" d="M10 80 C 30 30, 50 130, 70 80 S 110 30, 150 80" fill="none" stroke="url(#fire)" stroke-width="4" stroke-linecap="round"/></svg>
+    <div><h3>Brzmisz jak Ty w najlepszej formie</h3><p>Uczy się Twojego tonu: długości, humoru, sposobu pisania. Żadnych sztucznych tekstów na podryw i żadnych faktów o Tobie, których sam nie podałeś.</p></div>
+  </div>
+  <div class="outcome">
+    <svg viewBox="0 0 160 160" aria-hidden="true" class="o-art"><g fill="none" stroke="url(#fire)" stroke-width="8" stroke-linecap="round"><path d="M30 40 H130" opacity=".3"/><path d="M45 70 H115" opacity=".5"/><path d="M60 100 H100" opacity=".75"/><path d="M75 130 H85"/></g></svg>
+    <div><h3>Widzisz, co naprawdę działa</h3><p>Od dopasowania, przez rozmowę, do spotkania: wiesz, ile rozmów idzie dalej, gdzie gasną i ile zaproszeń kończy się „tak".</p></div>
+  </div>
 </section>
 
-<section id="beta" class="section beta">
-  <div class="beta-card">
-    <h2>Dołącz do bety</h2>
-    <p>Liczba miejsc jest ograniczona, bo każdy dostaje własny serwer. Odezwiemy się mailowo.</p>
+<section id="jak" class="how">
+  <h2>Trzy kroki do pierwszego szkicu</h2>
+  <ol class="steps">
+    <li><h3>Połącz konto</h3><p>Dostajesz prywatny panel. Wklejasz token sesji, a my sprawdzamy go i szyfrujemy. Około 2 minut.</p></li>
+    <li><h3>Powiedz, jak piszesz i czego chcesz</h3><p>Styl, kilka faktów o sobie, kiedy masz czas i pomysły na pierwsze spotkanie. Domyślne ustawienia działają od razu.</p></li>
+    <li><h3>Zatwierdzaj albo włącz autopilota</h3><p>Szkice czekają na jedno kliknięcie. Autopilot tylko w rozmowach, w których druga osoba wie o pomocy AI.</p></li>
+  </ol>
+</section>
+
+<section id="kontrola" class="control">
+  <h2>Twoje konto, Twoje zasady</h2>
+  <ul class="control-list">
+    <li><b>Osobny serwer</b> Twoje rozmowy nie leżą obok cudzych.</li>
+    <li><b>Token szyfrowany AES-256</b> Nigdy nie wraca do przeglądarki ani do logów.</li>
+    <li><b>Odłączasz jednym kliknięciem</b> Token znika od razu.</li>
+    <li><b>Dane w UE</b> Serwery we Frankfurcie, przechowywanie tak długo, jak ustawisz.</li>
+    <li><b>Spokojne tempo</b> Limity zapytań i automatyczna pauza, gdy platforma prosi o przerwę.</li>
+    <li><b>Bez udawania</b> Autopilot wymaga ujawnienia AI, zgodnie z unijnym AI Act.</li>
+  </ul>
+</section>
+
+<section id="pytania" class="faq">
+  <h2>Pytania, które warto zadać</h2>
+  <details><summary>Czy to oficjalna integracja z aplikacją randkową?</summary><p>Nie. {{BRAND}} nie jest powiązany z Tinderem ani Match Group. Integracja jest nieoficjalna i łamie regulamin platformy, więc platforma może ograniczyć albo zablokować konto. Stosujemy ostrożne limity, ale tego ryzyka nie da się wyeliminować. Decydujesz świadomie przy podłączeniu.</p></details>
+  <details><summary>Czy osoba po drugiej stronie wie, że pomaga AI?</summary><p>W trybie szkiców to Ty czytasz i wysyłasz każdą wiadomość. Autopilota włączysz tylko w rozmowie, w której ta osoba wie o pomocy AI i się na nią zgodziła.</p></details>
+  <details><summary>Czy {{BRAND}} wymyśli coś o mnie?</summary><p>Nie. Fakty o Tobie bierze wyłącznie z tego, co sam wpiszesz. Jeśli czegoś nie wie, zostawia decyzję Tobie.</p></details>
+  <details><summary>Czy wyśle coś bez mojej wiedzy?</summary><p>Domyślnie nie: każdy szkic czeka na zatwierdzenie. Autopilota włączasz osobno dla wybranych rozmów i zatrzymujesz jednym przyciskiem.</p></details>
+  <details><summary>Ile to kosztuje?</summary><p>Zapis do bety nic nie kosztuje i do niczego nie zobowiązuje. Cenę pełnej wersji podamy przed startem, a płacić zaczniesz dopiero, gdy sam się zdecydujesz.</p></details>
+  <details><summary>Czy mogę usunąć swoje dane?</summary><p>Tak: token, pojedyncze rozmowy albo całe konto. Szczegóły w polityce prywatności.</p></details>
+</section>
+
+<section id="beta" class="beta">
+  <div class="beta-art" aria-hidden="true"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="92" fill="url(#glow)"/><path fill="url(#fire)" transform="translate(-60 -62) scale(.62)" d="M262 196c4 22-6 37-19 51-12 13-25 26-25 47 0 11 5 20 11 27-1-16 6-26 17-33 10-8 18-18 19-33 23 17 37 40 37 66 0 33-26 59-61 59s-60-26-60-59c0-35 20-59 41-78 20-18 37-31 40-47z"/></svg></div>
+  <div class="beta-copy">
+    <h2>Następne dobre dopasowanie nie musi zgasnąć.</h2>
+    <p>Zapisz się, a odezwiemy się, gdy zwolni się miejsce w becie. Zapis nic nie kosztuje i niczego nie wymaga.</p>
     <form id="waitlist" novalidate>
       <div class="row2">
         <label>E-mail<input type="email" name="email" autocomplete="email" required></label>
-        <label>Imię (opcjonalnie)<input type="text" name="name" autocomplete="given-name" maxlength="60"></label>
+        <label><span>Imię <span class="opt">(opcjonalnie)</span></span><input type="text" name="name" autocomplete="given-name" maxlength="60"></label>
       </div>
       <label>Jak chcesz korzystać?
         <select name="mode"><option value="drafts">Szkice: zatwierdzam każdą wiadomość</option><option value="autopilot">Autopilot w wybranych rozmowach</option><option value="unsure">Jeszcze nie wiem</option></select>
@@ -97,7 +146,7 @@
       <label class="check"><input type="checkbox" name="adult" required> Mam ukończone 18 lat.</label>
       <label class="check"><input type="checkbox" name="terms" required> Akceptuję <a href="/regulamin" target="_blank">regulamin</a> i <a href="/prywatnosc" target="_blank">politykę prywatności</a>.</label>
       <label class="check"><input type="checkbox" name="marketing"> Chcę dostawać informacje o nowościach (opcjonalnie).</label>
-      <button class="btn" type="submit">Zapisz mnie</button>
+      <button class="btn" type="submit">Zapisz się do bety</button>
       <p id="form-result" role="status"></p>
     </form>
   </div>
@@ -105,9 +154,8 @@
 </main>
 
 <footer>
-  <div><b>{{BRAND}}</b> · tylko dla osób pełnoletnich</div>
-  <div><a href="/prywatnosc">Prywatność</a><a href="/regulamin">Regulamin</a></div>
-  <small>{{BRAND}} nie jest powiązany z Tinder, Match Group ani żadną aplikacją randkową. Nazwy aplikacji należą do ich właścicieli.</small>
+  <p><b>{{BRAND}}</b> jest tylko dla osób pełnoletnich. Nie jesteśmy powiązani z Tinder, Match Group ani żadną aplikacją randkową; ich nazwy należą do właścicieli.</p>
+  <nav aria-label="Dokumenty"><a href="/prywatnosc">Prywatność</a><a href="/regulamin">Regulamin</a></nav>
 </footer>
 <script src="/assets/landing.js" defer></script>
 </body>
