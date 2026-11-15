@@ -141,8 +141,9 @@ class TinderClient:
                 await asyncio.sleep(2 ** attempt); continue
             if response.status_code in (403,423,451):self.restriction('account_restriction_requires_review')
             if response.status_code==401:
-                self.pause_account('session_expired_or_access_denied')
-                raise TinderAuthError('session_expired_or_access_denied')
+                reason='inbox_access_denied' if path.startswith('/v2/matches') else 'session_expired_or_access_denied'
+                self.pause_account(reason)
+                raise TinderAuthError(reason)
             if response.status_code == 429:
                 try:delay=traffic.retry_after(response.headers.get('Retry-After'))
                 except OverflowError:self.restriction('cooldown_requires_manual_review')
@@ -207,6 +208,13 @@ class TinderClient:
         return Page(list(collected.values()), False)
 
     async def matches(self) -> Page: return await self.pages('/v2/matches', 'matches', 60)
+
+    async def check_inbox_access(self):
+        # Verify one page without importing chats or enabling any operation.
+        data=await self.request('GET','/v2/matches',params={'count':60})
+        block=data.get('data')
+        if not isinstance(block,dict) or not isinstance(block.get('matches'),list):
+            raise TinderProtocolError('invalid_paginated_response')
 
     async def messages(self, match_id: str, owner_id: str, person_id: str, thread_id: str) -> Page:
         page = await self.pages(f'/v2/matches/{ident(match_id)}/messages', 'messages', 100)
@@ -278,11 +286,12 @@ def status_update(connection_id: str, *, error=None, delay=0, disable=False, pol
 
 async def connect() -> str:
     if not configured(): raise TinderAuthError('set_tinder_enabled_and_token_locally')
+    expected = os.getenv('TINDER_OWNER_ID', '').strip()
     async with client() as api:
         api.reconnect=True
         owner = await api.profile()
-    expected = os.getenv('TINDER_OWNER_ID', '').strip()
-    if expected and owner != expected: raise TinderAuthError('account_identity_mismatch')
+        if expected and owner != expected: raise TinderAuthError('account_identity_mismatch')
+        await api.check_inbox_access()
     cid = f'tinder:{owner}'
     value = {'platform': 'tinder', 'unofficial': True, 'credential_fingerprint': fingerprint(),
              'error': None, 'last_sync': None, 'next_poll': 0, 'blocked_until': 0,
@@ -384,7 +393,7 @@ async def poll():
         except TinderRateLimited as exc:
             if not exc.existing:status_update(row['id'],error=exc.reason,delay=exc.delay)
         except TinderRestriction:status_update(row['id'],error='restriction_requires_manual_review',disable=True)
-        except TinderAuthError: status_update(row['id'], error='session_expired_or_account_changed', disable=True)
+        except TinderAuthError as exc: status_update(row['id'], error='inbox_access_denied' if str(exc)=='inbox_access_denied' else 'session_expired_or_account_changed', disable=True)
         except TinderError: status_update(row['id'], error='source_sync_failed', delay=poll_interval())
         except Exception: status_update(row['id'], error='unexpected_sync_failure', delay=poll_interval())
 
@@ -400,8 +409,8 @@ class TinderAdapter:
         except TinderRestriction:
             status_update(thread['connection_id'],error='restriction_requires_manual_review',disable=True)
             raise
-        except TinderAuthError:
-            status_update(thread['connection_id'],error='session_expired_or_account_changed',disable=True)
+        except TinderAuthError as exc:
+            status_update(thread['connection_id'],error='inbox_access_denied' if str(exc)=='inbox_access_denied' else 'session_expired_or_account_changed',disable=True)
             raise
         except TinderRateLimited as exc:
             if not exc.existing:status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)

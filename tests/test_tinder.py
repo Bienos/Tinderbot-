@@ -54,13 +54,53 @@ def test_api_connect_accepts_compressed_profile_without_internal_failure(store,m
     from fastapi.testclient import TestClient
     from app import app
     monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN',TOKEN)
-    body=gzip.compress(json.dumps({'data':{'_id':OWNER}}).encode())
+    def handle(req):
+        value={'data':{'_id':OWNER}} if req.url.path=='/profile' else {'data':{'matches':[]}}
+        body=gzip.compress(json.dumps(value).encode())
+        return httpx.Response(200,headers={'Content-Type':'application/json','Content-Encoding':'gzip'},content=body)
     monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(
-        lambda req:httpx.Response(200,headers={'Content-Type':'application/json','Content-Encoding':'gzip'},content=body))))
+        handle)))
     with TestClient(app,headers={'Authorization':'Bearer test-dashboard-token-at-least-32-chars'}) as client:
         result=client.post('/api/tinder/connect',json={'account_owned':True,'acknowledge_unofficial':True})
         assert result.status_code==200 and result.json()['connection_id']==CID
         assert not s.rows('SELECT * FROM actions') and not s.rows('SELECT * FROM grants')
+
+def test_connect_rejects_profile_only_access_without_creating_enabled_account(store,monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import app
+    requests=[]
+    def handle(req):
+        requests.append(req)
+        return httpx.Response(200,json={'data':{'_id':OWNER}}) if req.url.path=='/profile' else httpx.Response(401)
+    monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN',TOKEN)
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)))
+    with TestClient(app,headers={'Authorization':'Bearer test-dashboard-token-at-least-32-chars'}) as client:
+        result=client.post('/api/tinder/connect',json={'account_owned':True,'acknowledge_unofficial':True})
+        assert result.status_code==403 and 'inbox access (HTTP 401)' in result.json()['detail']
+    assert [r.url.path for r in requests]==['/profile','/v2/matches']
+    assert requests[1].url.params['count']=='60'
+    assert not s.rows('SELECT * FROM connections') and not s.rows('SELECT * FROM actions')
+
+async def test_inbox_401_preserves_precise_pause_reason_and_blocks_future_polls(store,monkeypatch):
+    requests=[];denied=False
+    def handle(req):
+        requests.append(req)
+        if req.url.path=='/profile':return httpx.Response(200,json={'data':{'_id':OWNER}})
+        return httpx.Response(401) if denied else httpx.Response(200,json={'data':{'matches':[]}})
+    monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN',TOKEN)
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)))
+    await tinder.connect();denied=True;await tinder.poll()
+    status=tinder.public_status()['connections'][0]
+    assert not status['enabled'] and status['error']=='inbox_access_denied'
+    before=len(requests);await tinder.poll();assert len(requests)==before
+
+async def test_inbox_access_check_rejects_invalid_shape_before_connecting(store,monkeypatch):
+    def handle(req):
+        return httpx.Response(200,json={'data':{'_id':OWNER}} if req.url.path=='/profile' else {'data':{'matches':{}}})
+    monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN',TOKEN)
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)))
+    with pytest.raises(tinder.TinderProtocolError):await tinder.connect()
+    assert not s.rows('SELECT * FROM connections')
 
 def raw_message(mid='in-1',text='hey',sender=PERSON):
     return {'_id':mid,'message':text,'from':sender,'to':PERSON if sender==OWNER else OWNER,

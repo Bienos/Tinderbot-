@@ -16,14 +16,18 @@
     "errors": "0",
     "failures": "0",
     "skipped": "0",
-    "tests": "151",
-    "time": "22.590",
-    "timestamp": "2026-11-15T09:35:54.118968+00:00",
+    "tests": "154",
+    "time": "23.408",
+    "timestamp": "2026-11-15T09:49:36.641698+00:00",
     "hostname": "5c23637562a0"
   },
   "compression_regressions": 10,
   "safe_diagnostic_regressions": 6,
   "live_message_sends": false,
   "startup_profile_probe": "Optional, disabled by default; deployment outcome tracked separately",
-  "secret_handling": "No credential reads by the assistant; no response bodies, exception text or frame locals in diagnostic logs"
+  "secret_handling": "No credential reads by the assistant; no response bodies, exception text or frame locals in diagnostic logs",
+  "inbox_authorization_regressions": 3,
+  "live_read_only_profile_check": "Succeeded at 2026-11-15T09:39:32Z; no messages sent",
+  "subsequent_sync": "Owner-provided Activity reported HTTP 401/access denial and a paused connection; endpoint authorization unresolved",
+  "connection_validation": "Profile identity and one bounded inbox page required before enabling; failed access remains paused"
 }

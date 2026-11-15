@@ -246,7 +246,9 @@ async def tinder_connect(body:TinderConnect):
         raise HTTPException(422,'Account ownership and unofficial integration acknowledgement required')
     async with service.LOCK:
         try:cid=await connect()
-        except TinderAuthError as exc:raise HTTPException(403,str(exc))
+        except TinderAuthError as exc:
+            detail='Tinder denied inbox access (HTTP 401). Reconnect with the current token from your own working Tinder inbox. Profile access alone is insufficient.' if str(exc)=='inbox_access_denied' else str(exc)
+            raise HTTPException(403,detail)
         except TinderError as exc:raise HTTPException(503,str(exc))
     return {'connection_id':cid,'unofficial':True,'automatic_sending':True,
             'scope':'Consented and disclosed threads; no per-message approval'}

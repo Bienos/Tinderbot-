@@ -115,7 +115,7 @@ async def test_connecting_tinder_does_not_escalate_telegram_autonomy(store,monke
         db.execute('INSERT INTO grants VALUES(?,?,?,?)',(tid,1,1,1))
     assert not rt.auto_allowed(service.thread_by_id(tid))
     monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN','fake')
-    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient('fake',transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'data':{'_id':'owner'}}))))
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient('fake',transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'data':{'_id':'owner'} if r.url.path=='/profile' else {'matches':[]}}))))
     await tinder.connect()
     assert not rt.auto_allowed(service.thread_by_id(tid))
 
@@ -182,7 +182,7 @@ async def test_tinder_automatic_sending_remains_on_and_is_independently_revocabl
     from agent import tinder
     from app import app
     monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.setenv('TINDER_AUTH_TOKEN','fake')
-    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient('fake',transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'data':{'_id':'owner'}}))))
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient('fake',transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'data':{'_id':'owner'} if r.url.path=='/profile' else {'matches':[]}}))))
     cid=await tinder.connect();tid=cid+':match'
     with s.connect() as db:
         db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1)',(tid,'Test','tinder',cid,'match'))
