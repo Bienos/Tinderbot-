@@ -1,5 +1,5 @@
 """Single-owner authorized conversation agent. Run one ASGI worker per database."""
-import asyncio,contextlib,json,os,secrets,time
+import asyncio,contextlib,html,json,os,secrets,time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from dotenv import load_dotenv
@@ -16,7 +16,48 @@ from agent.diagnostics import report_failure,tinder_startup_check
 from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
-LOGIN='''<!doctype html><title>Conversation Agent · Sign in</title><style>body{font:17px system-ui;background:#f4f5f7;max-width:420px;margin:15vh auto}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}small{color:#666}</style><h1>Conversation Agent</h1><p>Sign in with your dashboard access token.</p><form><input type=password autocomplete=current-password required aria-label="Access token"><button>Sign in</button></form><small>The local token is stored in runtime/dashboard-token. Set DASHBOARD_TOKEN for deployment.</small><p id=error></p><script src="/static/login.js" defer></script>'''
+# Public, pre-login pages share the landing page's look (control/static/landing.css): palette, type and the iskra wordmark.
+WORDMARK=(BASE/'static/wordmark.svg').read_text(encoding='utf-8').strip().replace('<svg ','<svg class="wordmark" aria-hidden="true" focusable="false" ',1)
+PAGE_CSS=(':root{--pink:#fd267a;--ink:#2a0f22;--text:#57404f;--muted:#8a7482;--line:#f0e3e9;--grad:linear-gradient(120deg,#fd267a 0%,#ff6036 100%);'
+ 'font-family:"Onest",ui-sans-serif,system-ui,sans-serif;color-scheme:light}*{box-sizing:border-box}'
+ 'body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;color:var(--text);font-size:16px;line-height:1.55;'
+ 'background:radial-gradient(1200px 700px at 85% -10%,#ffe1ea 0%,transparent 60%),radial-gradient(900px 600px at -10% 30%,#fff0e6 0%,transparent 55%),#fff6f8}'
+ 'main{width:min(440px,100%);background:#fff;border-radius:28px;padding:36px 32px;box-shadow:0 24px 60px -28px rgba(42,15,34,.35)}'
+ '.brand{line-height:0;margin-bottom:28px}.brand .wordmark{height:28px;width:auto;display:block}'
+ 'h1{font-family:"Unbounded","Onest",sans-serif;font-weight:650;font-size:24px;line-height:1.15;letter-spacing:-.03em;color:var(--ink);margin:0 0 10px}p{margin:0 0 22px}'
+ '.btn{display:block;width:100%;text-align:center;border:0;cursor:pointer;background:var(--grad);color:#fff;text-decoration:none;font:inherit;font-weight:700;padding:14px 22px;border-radius:999px;box-shadow:0 10px 30px -10px rgba(253,38,122,.65)}'
+ 'input{display:block;width:100%;font:inherit;padding:12px 16px;border:2px solid var(--line);border-radius:14px;background:#fff6f8;color:var(--ink);margin:0 0 12px}input:focus{outline:0;border-color:var(--pink)}'
+ ':focus-visible{outline:3px solid #ff6036;outline-offset:3px}details{margin-top:24px;border-top:1px solid var(--line);padding-top:16px}'
+ 'summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600}details[open] summary{margin-bottom:14px}'
+ 'small{display:block;color:var(--muted);font-size:13px;margin-top:14px}#error{color:#c8104f;font-size:14px;margin:10px 0 0}#error:empty{display:none}'
+ '@media(max-width:420px){main{padding:28px 22px}}')
+
+def control_origin():
+    """The Iskra account site this instance belongs to (CONTROL_ORIGIN), or '' when it runs on its own."""
+    value=os.getenv('CONTROL_ORIGIN','').strip().rstrip('/')
+    return value if value.startswith(('https://','http://')) else ''
+
+def brand_page(title,body,status=200,head=''):
+    return HTMLResponse('<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        f'<meta name="theme-color" content="#fff6f8"><link rel="icon" type="image/svg+xml" href="/static/icon.svg"><link rel="stylesheet" href="/static/fonts/fonts.css">{head}'
+        f'<title>{html.escape(title)} · Iskra</title><style>{PAGE_CSS}</style></head><body><main><div class="brand" role="img" aria-label="Iskra">{WORDMARK}</div>{body}</main></body></html>',status)
+
+def login_page():
+    form=('<form><input type="password" autocomplete="current-password" required aria-label="Token dostępu" placeholder="Token dostępu">'
+          '<button class="btn" type="submit">Zaloguj się</button><p id="error" role="alert"></p></form><script src="/static/login.js" defer></script>')
+    account=control_origin()
+    if account:
+        body=(f'<h1>Zaloguj się do panelu</h1><p>Panel otwierasz ze swojego konta Iskra. Zalogujemy Cię automatycznie.</p>'
+              f'<a class="btn" href="{html.escape(account)}/konto/panel">Zaloguj się przez konto Iskra</a>'
+              f'<details><summary>Mam token dostępu</summary>{form}</details>')
+    else:
+        body=(f'<h1>Zaloguj się do panelu</h1><p>Wpisz token dostępu do panelu.</p>{form}'
+              '<small>Lokalny token jest w pliku runtime/dashboard-token. Na serwerze ustaw DASHBOARD_TOKEN.</small>')
+    return brand_page('Logowanie',body,401)
+# Only these files are served from static/. The sign-in page needs its script, icon and fonts before login.
+STATIC_FILES={'dashboard.js':'text/javascript','mock.js':'text/javascript','login.js':'text/javascript','icon.svg':'image/svg+xml','fonts/fonts.css':'text/css',
+    **{f'fonts/{face}-{subset}-wght-normal.woff2':'font/woff2' for face in ('onest','unbounded') for subset in ('latin','latin-ext')}}
+PUBLIC_STATIC=frozenset('/static/'+name for name in STATIC_FILES if name in ('login.js','icon.svg') or name.startswith('fonts/'))
 LEASE_WAIT_SECONDS=75   # longer than LEASE_TTL, so a stale lease can never crash-loop the start
 LEASE_TTL=60
 LEASE_HEARTBEAT=15
@@ -96,11 +137,11 @@ async def auth(request,call_next):
     allowed=public_origin()
     if request.method not in ('GET','HEAD','OPTIONS') and origin and origin!=allowed and not (origin=='http://127.0.0.1:8765' and internal_request(request.scope)):return JSONResponse({'detail':'Cross-origin request blocked'},403)
     path=request.url.path
-    if path not in ('/health','/auth/login','/auth/sso','/webhooks/telegram','/static/login.js'):
+    if path not in ('/health','/auth/login','/auth/sso','/webhooks/telegram') and path not in PUBLIC_STATIC:
         auth=request.headers.get('authorization','')
         authenticated=same_secret(auth[7:],token()) if auth.startswith('Bearer ') else session_valid(request.cookies.get('agent_session',''))
         if not authenticated:
-            return HTMLResponse(LOGIN,401) if path=='/' else JSONResponse({'detail':'Authentication required'},401)
+            return login_page() if path=='/' else JSONResponse({'detail':'Authentication required'},401)
         # Cookie-authenticated mutations require an origin or non-simple custom header.
         if request.method not in ('GET','HEAD') and not auth and not origin and request.headers.get('x-agent-request')!='dashboard':
             return JSONResponse({'detail':'CSRF protection'},403)
@@ -134,9 +175,11 @@ def sso(t:str='',request:Request=None):
     """Single sign-on from the Iskra account page: a 60-second, single-use token HMAC-signed with SSO_SECRET."""
     from agent.auth import verify_sso
     if not verify_sso(t,public_origin()):
-        return HTMLResponse('<!doctype html><meta charset="utf-8"><title>Link wygasł</title><p>Link logowania wygasł albo był już użyty. Wróć do konta i kliknij „Otwórz mój panel" jeszcze raz.</p>',401)
+        account=control_origin()
+        again=f'<a class="btn" href="{html.escape(account)}/konto/panel">Otwórz panel jeszcze raz</a>' if account else ''
+        return brand_page('Link wygasł','<h1>Link logowania wygasł</h1><p>Ten link działa raz i tylko przez minutę. Wróć do konta i otwórz panel jeszcze raz.</p>'+again,401)
     # A same-site meta refresh (not a 30x) so the SameSite=Strict session cookie is sent on the next request.
-    r=HTMLResponse('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/"><title>Logowanie…</title><p>Logowanie…</p>')
+    r=brand_page('Logowanie','<h1>Logowanie…</h1><p>Otwieramy Twój panel.</p>',head='<meta http-equiv="refresh" content="0;url=/">')
     r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=public_origin().startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
     return r
 
@@ -461,10 +504,10 @@ async def tinder_sync():
     service.WAKE.set()
     return {'ok':True}
 
-@app.get('/static/{name}')
-def static_script(name:str):
-    if name not in ('dashboard.js','mock.js','login.js'):raise HTTPException(404,'Static resource not found')
-    return FileResponse(BASE/'static'/name,media_type='text/javascript')
+@app.get('/static/{name:path}')
+def static_file(name:str):
+    if name not in STATIC_FILES:raise HTTPException(404,'Static resource not found')
+    return FileResponse(BASE/'static'/name,media_type=STATIC_FILES[name])
 
 class TinderAutomation(BaseModel):
     model_config=ConfigDict(extra='forbid')

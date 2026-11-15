@@ -26,3 +26,7 @@ are in `licenses/`.
 - Unbounded, Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded): `licenses/Unbounded-OFL.txt`
 
 The files are subsets (basic Latin and Polish letters) of the upstream variable fonts.
+
+The agent panel (`static/fonts/`) ships the full Latin and Latin Extended variable fonts
+(Fontsource `@fontsource-variable/onest` 5.3.1 and `@fontsource-variable/unbounded` 5.3.0),
+because it shows arbitrary conversation text. Same licences and notices as above.

@@ -178,6 +178,30 @@ def test_public_static_script_and_protected_dashboard_assets(store):
         assert c.get('/static/private.js').status_code==404
         assert c.post('/api/settings',headers={'Origin':'https://evil.example'},json={}).status_code==403
 
+def test_sign_in_page_assets_are_public_and_only_fonts_are_cacheable(store):
+    from app import app
+    with TestClient(app) as c:
+        for path in ('/static/icon.svg','/static/fonts/fonts.css','/static/fonts/onest-latin-ext-wght-normal.woff2','/static/fonts/unbounded-latin-wght-normal.woff2'):
+            assert c.get(path).status_code==200,path
+        font=c.get('/static/fonts/onest-latin-wght-normal.woff2')
+        assert font.headers['content-type']=='font/woff2' and font.headers['cache-control']=='public, max-age=604800'
+        assert c.get('/static/icon.svg').headers['cache-control']=='no-store'
+        assert c.get('/static/fonts/missing.woff2').headers['cache-control']=='no-store'
+        assert c.get('/static/fonts/../dashboard.js').status_code in (401,404)
+
+def test_sign_in_page_offers_account_sign_in_when_linked_to_iskra_account(store,monkeypatch):
+    from app import app
+    with TestClient(app) as c:
+        page=c.get('/')
+        assert page.status_code==401 and 'Zaloguj się do panelu' in page.text and 'konto/panel' not in page.text
+        monkeypatch.setenv('CONTROL_ORIGIN','https://iskra.example/')
+        page=c.get('/')
+        assert 'href="https://iskra.example/konto/panel"' in page.text and 'Mam token dostępu' in page.text
+        expired=c.get('/auth/sso?t=bogus')
+        assert expired.status_code==401 and 'href="https://iskra.example/konto/panel"' in expired.text
+        monkeypatch.setenv('CONTROL_ORIGIN','javascript:alert(1)')
+        assert 'javascript:' not in c.get('/').text
+
 async def test_tinder_automatic_sending_remains_on_and_is_independently_revocable(store,monkeypatch):
     from agent import tinder
     from app import app
