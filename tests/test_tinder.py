@@ -311,3 +311,13 @@ async def test_read_rate_limit_defers_network_without_retry_storm(source):
         await tinder.poll();assert len(source.requests)==count
         assert tinder.public_status()['connections'][0]['error']=='rate_limited'
     finally:monkeypatch.undo()
+
+
+def test_profile_summary_keeps_only_tinder_https_images_and_safe_fields():
+    from agent.tinder import profile_summary
+    out=profile_summary({'bio':'  hi there ','birth_date':'1995-06-01T00:00:00.000Z','photos':[
+        {'url':'https://images-ssl.gotinder.com/u/a.jpg'},{'url':'http://images-ssl.gotinder.com/b.jpg'},
+        {'url':'https://evil.example/c.jpg'},{'processedFiles':[{'url':'https://images-ssl.gotinder.com/d.jpg'}]},'junk']})
+    assert out['photos']==['https://images-ssl.gotinder.com/u/a.jpg','https://images-ssl.gotinder.com/d.jpg']
+    assert out['bio']=='hi there' and 25<=out['age']<=40
+    assert profile_summary({'birth_date':'2015-01-01T00:00:00Z'})['age'] is None and profile_summary({})=={'photos':[],'bio':'','age':None}

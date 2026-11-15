@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 import httpx
+from urllib.parse import urlsplit
 from agent import storage as s, runtime as rt
 from agent import tinder_traffic as traffic
 
@@ -61,6 +62,28 @@ def timestamp(value: Any) -> str:
     except ValueError:
         raise TinderProtocolError('invalid_message_timestamp') from None
 
+
+
+def profile_summary(person: dict) -> dict:
+    """Display-only profile data for the owner's dashboard: image links (Tinder hosts only), bio and age."""
+    photos = []
+    for ph in (person.get('photos') or [])[:9]:
+        if not isinstance(ph, dict): continue
+        url = ph.get('url')
+        if not url:
+            files = ph.get('processedFiles')
+            url = files[0].get('url') if isinstance(files, list) and files and isinstance(files[0], dict) else None
+        if isinstance(url, str) and len(url) <= 500:
+            parts = urlsplit(url)
+            host = (parts.hostname or '').lower()
+            if parts.scheme == 'https' and (host == 'gotinder.com' or host.endswith('.gotinder.com')): photos.append(url)
+    bio = person.get('bio'); age = None
+    try:
+        born = datetime.fromisoformat(str(person.get('birth_date')).replace('Z', '+00:00'))
+        today = datetime.now(timezone.utc); age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        if not 18 <= age <= 120: age = None
+    except ValueError: age = None
+    return {'photos': photos, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age}
 
 def token() -> str:
     value = os.getenv('TINDER_AUTH_TOKEN', '').strip()
@@ -358,6 +381,7 @@ async def sync_connection(connection_id: str):
             if s.rows('SELECT 1 FROM tombstones WHERE thread_id=?', (tid,)): continue
             saved=s.rows('SELECT value FROM tinder_threads WHERE thread_id=?',(tid,))
             cached=json.loads(saved[0]['value']) if saved else {}
+            cached={**cached,'profile':profile_summary(person)}
             activity_key=traffic.metadata_key(match)
             with s.connect() as db:
                 db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1) '

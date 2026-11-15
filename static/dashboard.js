@@ -3,6 +3,16 @@ let data=null, selected=null, filter='all';
 const statuses={not_synced:'Jeszcze nie sprawdzono',new_match:'Nowy match',needs_reply:'Odpowiedź oczekuje',waiting:'Czekasz na odpowiedź',paused:'Wstrzymana',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia'};
 function el(tag,cls,text){let x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=String(text);return x}
 async function api(path,method='GET',payload){let res=await fetch(path,{method,headers:{'Content-Type':'application/json','X-Agent-Request':'dashboard'},body:payload?JSON.stringify(payload):undefined});let body=await res.json();if(!res.ok)throw Error(body.detail||res.status);return body}
+
+function safeImg(u){try{let x=new URL(u);return x.protocol==='https:'&&(x.hostname==='gotinder.com'||x.hostname.endsWith('.gotinder.com'))?x.href:null}catch(e){return null}}
+function avatarFor(t){let u=safeImg(t.profile?.photos?.[0]);if(u){let i=el('img','avatar');i.src=u;i.alt=t.display_name;i.loading='lazy';i.referrerPolicy='no-referrer';i.style.objectFit='cover';return i}return el('span','avatar',(t.display_name||'?').slice(0,1).toUpperCase())}
+function renderProfile(t){let box=document.getElementById('profile');box.replaceChildren();let p=t?.profile;
+if(!t){box.textContent='Wybierz rozmowę.';return}
+if(!p||(!p.photos.length&&!p.bio&&!p.age)){box.textContent='Brak danych profilu. Kliknij Synchronizuj po połączeniu z Tinder.';return}
+let photos=p.photos.map(safeImg).filter(Boolean);
+if(photos.length){let main=el('img','pmain');main.src=photos[0];main.alt=t.display_name;main.referrerPolicy='no-referrer';box.append(main);
+if(photos.length>1){let strip=el('div','pstrip');photos.forEach(u=>{let th=el('img','pthumb');th.src=u;th.alt='';th.loading='lazy';th.referrerPolicy='no-referrer';th.onclick=()=>{main.src=u};strip.append(th)});box.append(strip)}}
+box.append(el('div','pname',t.display_name+(p.age?', '+p.age:'')));if(p.bio)box.append(el('div','pbio',p.bio))}
 function choose(id){selected=id;render()}
 function threadById(){return data?.threads.find(t=>t.id===selected)}
 function filtered(t){if(filter==='all')return t.state!=='archived';if(filter==='needs')return t.state==='needs_reply';if(filter==='waiting')return t.state==='waiting';if(filter==='new')return t.state==='new_match';if(filter==='other')return ['archived','paused','unavailable_unknown','needs_review'].includes(t.state);return true}
@@ -13,9 +23,9 @@ let alerts=data.tinder.connections.filter(c=>c.error);let alert=document.getElem
 const filters=[['all','Wszystkie'],['needs','Do odpowiedzi'],['waiting','Czekają'],['new','Nowe'],['other','Pozostałe']];let fs=document.getElementById('filters');fs.replaceChildren();for(let [value,label] of filters){let b=el('button',value===filter?'active':'',label);b.onclick=()=>{filter=value;render()};fs.append(b)}
 let items=data.threads.filter(filtered).sort((a,b)=>{let priority={needs_reply:0,new_match:1,waiting:2,paused:3,unavailable_unknown:4,archived:5};return (priority[a.state]??9)-(priority[b.state]??9)||a.display_name.localeCompare(b.display_name)});
 let list=document.getElementById('threads');list.replaceChildren();if(!items.length)list.append(el('div','empty','Brak rozmów w tej kategorii.'));
-for(let t of items){let b=el('button','thread'+(selected===t.id?' selected':''));let top=el('div','row');let nm=el('span','tname');nm.append(el('span','avatar',(t.display_name||'?').slice(0,1).toUpperCase()));if(t.state==='needs_reply')nm.append(el('span','dot',''));nm.append(document.createTextNode(t.display_name));top.append(nm,el('span','status',statuses[t.state]||t.state));b.append(top,el('div','preview',t.latest_message||'Brak wiadomości'),el('div','mutedline',t.message_count+' wiadomości'+(t.outcomes.length?' • '+t.outcomes.join(', '):'')));b.onclick=()=>choose(t.id);list.append(b)}
+for(let t of items){let b=el('button','thread'+(selected===t.id?' selected':''));let top=el('div','row');let nm=el('span','tname');nm.append(avatarFor(t));if(t.state==='needs_reply')nm.append(el('span','dot',''));nm.append(document.createTextNode(t.display_name));top.append(nm,el('span','status',statuses[t.state]||t.state));b.append(top,el('div','preview',t.latest_message||'Brak wiadomości'),el('div','mutedline',t.message_count+' wiadomości'+(t.outcomes.length?' • '+t.outcomes.join(', '):'')));b.onclick=()=>choose(t.id);list.append(b)}
 document.getElementById('totals').textContent=data.threads.length+' dopasowań • '+data.threads.filter(t=>t.state==='needs_reply').length+' do odpowiedzi';
-let t=threadById();if(!t){document.getElementById('title').textContent='Wybierz rozmowę';return}
+let t=threadById();renderProfile(t);if(!t){document.getElementById('title').textContent='Wybierz rozmowę';return}
 document.getElementById('title').textContent=t.display_name;document.getElementById('chatmeta').textContent=t.state_reason;document.getElementById('chatstatus').textContent=statuses[t.state]||t.state;
 let messages=document.getElementById('messages');messages.replaceChildren();let history=data.messages[t.id]||[];if(!history.length)messages.append(el('div','empty','Nowy match. Brak historii wiadomości.'));
 for(let m of history){let b=el('div','bubble'+(m.sender==='you'?' you':''));b.append(el('div','speaker',m.sender==='you'?'TY':t.display_name),el('div','',m.body));messages.append(b)}messages.scrollTop=messages.scrollHeight;

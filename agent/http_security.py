@@ -33,7 +33,7 @@ class SecurityBoundary:
                 existing={k.lower():v for k,v in message.get('headers',[])}
                 existing.update({b'cache-control':b'no-store',b'x-content-type-options':b'nosniff',
                     b'referrer-policy':b'no-referrer',b'x-frame-options':b'DENY',
-                    b'content-security-policy':b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"})
+                    b'content-security-policy':b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.gotinder.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"})
                 if origin.startswith('https://'):existing[b'strict-transport-security']=b'max-age=31536000'
                 message={**message,'headers':list(existing.items())}
             await send(message)

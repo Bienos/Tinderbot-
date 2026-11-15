@@ -121,10 +121,14 @@ async def sync():
 def state():
     drafts=s.all_drafts();notes=s.notifications();hist={t['id']:s.messages(t['id']) for t in s.threads()}
     outcomes={r['thread_id']:json.loads(r['value']) for r in s.rows('SELECT * FROM outcome_state')}
+    profiles={}
+    for r in s.rows('SELECT thread_id,value FROM tinder_threads'):
+        try:profiles[r['thread_id']]=json.loads(r['value']).get('profile')
+        except ValueError:pass
     threads=[]
     for t in s.threads():
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
-        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);threads.append(p)
+        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);threads.append(p)
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:rt.memory(t['id']) for t in s.threads()},'outcome_details':outcomes,
