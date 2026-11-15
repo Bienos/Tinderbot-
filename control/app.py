@@ -837,6 +837,20 @@ async def admin_status(request: Request):
     return {'ok': True}
 
 
+@app.post('/admin/fly/update-image')
+async def admin_fly_update_image(request: Request, tasks: BackgroundTasks):
+    """Roll every customer bot on Fly to a new image (default FLY_IMAGE), one at a time, in the background."""
+    _admin(request)
+    from control import fly
+    body = await _json(request)
+    image = str(body.get('image') or os.getenv('FLY_IMAGE', '')).strip()
+    if not image.startswith('registry.fly.io/') or not fly.api_ready():
+        raise HTTPException(422, 'Fly is not configured or the image is not in registry.fly.io')
+    apps = [r['render_service_id'][4:] for r in q("SELECT render_service_id FROM accounts WHERE render_service_id LIKE 'fly:%'", fetch=True)]
+    tasks.add_task(fly.update_all, apps, image)
+    return {'updating': len(apps), 'image': image}
+
+
 @app.get('/admin/waitlist')
 def admin_waitlist(request: Request):
     _admin(request)

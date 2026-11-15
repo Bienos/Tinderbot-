@@ -1,0 +1,49 @@
+# Boty klientów na Fly.io
+
+Nowi klienci mogą dostawać bota na Fly.io zamiast na Renderze. Izolacja zostaje taka sama: każdy klient ma
+własną aplikację, maszynę, bazę na własnym dysku i własne klucze. Zmienia się koszt: najmniejsza maszyna
+(256 MB, zawsze włączona) plus dysk 1 GB to ok. 2,3–2,6 USD miesięcznie zamiast ok. 7,25 USD na Renderze.
+
+## Jak to działa
+- Aplikacja `iskra-u<numer>-<losowe>` z adresem `https://<nazwa>.fly.dev` (HTTPS daje Fly).
+- Dysk 1 GB w regionie `fra` (Frankfurt), szyfrowany, z codzienną kopią trzymaną 7 dni.
+- Maszyna 256 MB, zawsze włączona (bot pracuje także wtedy, gdy panel jest zamknięty).
+- Hasła i klucze (token panelu, klucz szyfrowania, klucz SSO, klucz modelu) trafiają do sekretów aplikacji Fly,
+  nigdy do zwykłej konfiguracji maszyny.
+- Ustawienia modelu są kopiowane z Twojego bota na Renderze (`INSTANCE_TEMPLATE_SERVICE_ID`), więc klucz modelu
+  nie leży w ustawieniach strony.
+- Gdy subskrypcja wygaśnie, maszyna jest zatrzymana i nie uruchomi się sama. Po wznowieniu startuje znowu.
+- Obecni klienci zostają na Renderze. Każdy bot pamięta, gdzie działa (`fly:<nazwa>` albo identyfikator Rendera).
+
+## Ustawienie (raz)
+1. Konto na fly.io i karta w Billing.
+2. Token organizacji: panel Fly, wybierz organizację, **Tokens**, utwórz token organizacji. Skopiuj cały ciąg
+   zaczynający się od `FlyV1`. Nie wklejaj go do czatu ani do plików w repozytorium.
+3. Aplikacja na obrazy (np. `iskra-obraz-<coś>`; nazwa musi być unikalna na całym Fly). Nie uruchamia żadnej
+   maszyny, tylko przechowuje obraz bota.
+4. GitHub, repozytorium, **Settings → Secrets and variables → Actions**:
+   - sekret `FLY_API_TOKEN`: token z kroku 2,
+   - zmienna `FLY_IMAGE_APP`: nazwa z kroku 3.
+   Potem **Actions → Fly bot image → Run workflow**. Obraz buduje się sam po każdej zmianie bota na `main`.
+5. Render, `iskra-landing`, **Environment**:
+   - `FLY_API_TOKEN`: ten sam token,
+   - `FLY_ORG`: nazwa organizacji (dla konta osobistego zwykle `personal`),
+   - `FLY_IMAGE`: `registry.fly.io/<nazwa z kroku 3>:latest`,
+   - opcjonalnie `FLY_REGION` (domyślnie `fra`) i `FLY_MEMORY_MB` (domyślnie `256`),
+   - na końcu `PROVISION_BACKEND=fly`: od tej chwili nowi klienci trafiają na Fly.
+   Wymaga ustawionego już `INSTANCE_TEMPLATE_SERVICE_ID` oraz kluczy Rendera (`RENDER_API_KEY`, `RENDER_OWNER_ID`).
+
+Powrót: `PROVISION_BACKEND=render` (albo usunięcie tej zmiennej). Boty już stworzone na Fly działają dalej.
+
+## Aktualizacja botów klientów
+Po każdym przebiegu „Fly bot image” podsumowanie pokazuje nazwę obrazu (`registry.fly.io/...:git-<sha>`).
+Aby przenieść na niego wszystkich klientów z Fly (po kolei, każdy bot restartuje się na kilka sekund, dane zostają):
+
+```bash
+curl -X POST https://iskra-landing.onrender.com/admin/fly/update-image -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d '{"image": "registry.fly.io/<aplikacja>:git-<sha>"}'
+```
+
+## Co jeszcze trzeba sprawdzić na prawdziwym koncie
+- Czy 256 MB wystarcza podczas pełnego importu historii (lokalnie bot zajmował 41 MB w spoczynku, na Renderze
+  do 180 MB przy imporcie). Jeśli nie, `FLY_MEMORY_MB=512` (ok. 3,7 USD miesięcznie).
+- Pierwsze utworzenie bota przez API, adres `.fly.dev`, logowanie z konta (SSO) i restart.

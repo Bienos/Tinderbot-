@@ -1,0 +1,3 @@
+# Only used to build and push the customer-bot image to registry.fly.io. This app never runs Machines;
+# customers' bots are separate apps created by control/fly.py. The app name comes from --app.
+app = "set-by-the-workflow"

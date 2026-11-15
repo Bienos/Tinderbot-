@@ -442,3 +442,115 @@ def test_fonts_are_served_from_here_with_long_cache_and_unknown_names_404(client
     assert client.get('/assets/fonts/../app.py').status_code in (404,422) and client.get('/assets/fonts/evil.woff2').status_code==404
     css=client.get('/assets/landing.css').text
     assert css.count('@font-face')==4 and 'gstatic' not in css and 'font-display:swap' in css
+
+
+def _fly_env(monkeypatch):
+    _provision_env(monkeypatch)
+    monkeypatch.delenv('RENDER_ENV_GROUP_ID',raising=False);monkeypatch.setenv('INSTANCE_TEMPLATE_SERVICE_ID','srv-tpl')
+    for k,v in {'PROVISION_BACKEND':'fly','FLY_API_TOKEN':'FlyV1 fm2_test','FLY_ORG':'personal',
+                'FLY_IMAGE':'registry.fly.io/iskra-img:latest','PUBLIC_ORIGIN':'http://testserver'}.items():monkeypatch.setenv(k,v)
+
+
+def _fly_mock(calls,fail_machine=False,machine_state='started',checks=('passing',)):
+    import httpx,json
+    def handler(req):
+        body=json.loads(req.content or b'{}')
+        calls.append((req.method,req.url.path,body,req.headers.get('authorization')))
+        p=req.url.path
+        if req.method=='POST' and p=='/v1/apps':return httpx.Response(201,json={'id':body['name']})
+        if p.endswith('/ip_assignments'):return httpx.Response(200,json={'ip':'1.2.3.4','shared':True})
+        if p.endswith('/secrets'):return httpx.Response(200,json={'version':3,'secrets':[]})
+        if p.endswith('/volumes'):return httpx.Response(200,json={'id':'vol_123','name':'data','region':'fra','state':'created'})
+        if req.method=='POST' and p.endswith('/machines'):
+            return httpx.Response(500,json={'error':'capacity'}) if fail_machine else httpx.Response(200,json={'id':'m_1','state':'created'})
+        if p.endswith('/wait'):return httpx.Response(200,json={'ok':True})
+        if req.method=='GET' and p.endswith('/machines'):
+            return httpx.Response(200,json=[{'id':'m_1','state':machine_state,'version':'v1','checks':[{'status':s} for s in checks],
+                'config':{'image':'registry.fly.io/iskra-img:old','services':[{'autostart':True}],'mounts':[{'volume':'vol_123','path':'/var/data'}]}}])
+        return httpx.Response(200,json={'ok':True})
+    return httpx.MockTransport(handler)
+
+
+def test_fly_provisioning_builds_an_isolated_always_on_bot_with_secrets_outside_the_config(client,monkeypatch):
+    from control import provision,fly
+    import control.app as capp
+    _fly_env(monkeypatch)
+    rcalls=[];fcalls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock(rcalls));monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(fcalls))
+    assert provision.enabled()
+    client.post('/api/register',json=REG,headers={'Origin':'http://testserver'});acc=capp.q('SELECT id FROM accounts',fetch=True)[0]
+    assert capp.run_provision(acc['id'])=='done'
+    row=capp.q('SELECT * FROM accounts WHERE id=?',(acc['id'],),fetch=True)[0]
+    app=row['render_service_id'][4:]
+    assert row['render_service_id'].startswith('fly:iskra-u') and row['instance_url']==f'https://{app}.fly.dev'
+    steps=[(m,p.replace(app,'APP')) for m,p,_,_ in fcalls]
+    assert steps[:7]==[('POST','/v1/apps'),('POST','/v1/apps/APP/ip_assignments'),('POST','/v1/apps/APP/ip_assignments'),
+                       ('POST','/v1/apps/APP/secrets'),('POST','/v1/apps/APP/volumes'),('POST','/v1/apps/APP/machines'),
+                       ('GET','/v1/apps/APP/machines/m_1/wait')]
+    assert all(c[3]=='FlyV1 fm2_test' for c in fcalls)
+    assert [c[2]['type'] for c in fcalls if c[1].endswith('ip_assignments')]==['shared_v4','v6']
+    hidden=next(c[2]['values'] for c in fcalls if c[1].endswith('/secrets'))
+    assert set(hidden)=={'DASHBOARD_TOKEN','TOKEN_ENCRYPTION_KEY','SSO_SECRET','ANTHROPIC_API_KEY'} and hidden['ANTHROPIC_API_KEY']=='sk-ant-x'
+    assert hidden['SSO_SECRET']==row['sso_secret']
+    machine=next(c[2] for c in fcalls if c[0]=='POST' and c[1].endswith('/machines'))
+    cfg=machine['config'];env=cfg['env']
+    assert machine['min_secrets_version']==3 and machine['region']=='fra'
+    assert not set(env)&set(fly.SECRET_KEYS)                                  # secrets never in the machine config
+    assert env['PUBLIC_ORIGIN']==f'https://{app}.fly.dev' and env['CONTROL_ORIGIN']=='http://testserver' and env['AGENT_DB_PATH']=='/var/data/agent.db'
+    assert cfg['mounts']==[{'volume':'vol_123','path':'/var/data'}] and cfg['guest']['memory_mb']==256
+    assert cfg['services'][0]['autostop']=='off' and cfg['restart']['policy']=='always' and cfg['image']=='registry.fly.io/iskra-img:latest'
+    assert 'DASHBOARD_TOKEN' not in str(rcalls)                               # nothing written back to Render
+
+
+def test_fly_failure_cleans_up_and_is_retryable(client,monkeypatch):
+    from control import provision,fly
+    import control.app as capp
+    _fly_env(monkeypatch)
+    fcalls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock([]));monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(fcalls,fail_machine=True))
+    client.post('/api/register',json=REG,headers={'Origin':'http://testserver'});acc=capp.q('SELECT id FROM accounts',fetch=True)[0]
+    assert capp.run_provision(acc['id'])=='failed'
+    assert any(m=='DELETE' and p.startswith('/v1/apps/iskra-u') for m,p,_,_ in fcalls)    # no half-made app left behind
+    row=capp.q('SELECT provision_state,provision_error,render_service_id FROM accounts',fetch=True)[0]
+    assert row['provision_state']=='failed' and 'create machine' in row['provision_error'] and not row['render_service_id']
+
+
+def test_fly_suspend_keeps_the_bot_stopped_and_resume_starts_it(monkeypatch):
+    from control import fly
+    monkeypatch.setenv('FLY_API_TOKEN','fm2_plain')
+    calls=[];monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(calls))
+    from control import provision
+    provision.set_suspended('fly:iskra-u7-abc',True)
+    update=next(c for c in calls if c[0]=='POST' and c[1]=='/v1/apps/iskra-u7-abc/machines/m_1')
+    assert update[2]['skip_launch'] is True and update[2]['config']['services'][0]['autostart'] is False
+    assert update[2]['config']['mounts']==[{'volume':'vol_123','path':'/var/data'}] and update[2]['current_version']=='v1'
+    assert ('POST','/v1/apps/iskra-u7-abc/machines/m_1/stop') in [(c[0],c[1]) for c in calls] and calls[0][3]=='Bearer fm2_plain'
+    calls.clear();provision.set_suspended('fly:iskra-u7-abc',False)
+    update=next(c for c in calls if c[0]=='POST' and c[1]=='/v1/apps/iskra-u7-abc/machines/m_1')
+    assert update[2]['skip_launch'] is False and update[2]['config']['services'][0]['autostart'] is True
+    assert not any(c[1].endswith('/stop') for c in calls)
+
+
+def test_fly_machine_state_drives_the_setup_progress(client,monkeypatch):
+    from control import fly
+    monkeypatch.setenv('FLY_API_TOKEN','fm2_plain')
+    for state,checks,expected in (('created',(),'created'),('starting',(),'update_in_progress'),('started',('critical',),'update_in_progress'),
+                                  ('started',('passing',),'live'),('failed',(),'update_failed')):
+        monkeypatch.setattr(fly,'TRANSPORT',_fly_mock([],machine_state=state,checks=checks))
+        assert fly.deploy_status('iskra-u1-abc')==expected,(state,checks)
+
+
+def test_admin_rolls_only_fly_bots_to_a_new_image(client,monkeypatch):
+    from control import fly
+    import control.app as capp
+    monkeypatch.setenv('FLY_API_TOKEN','fm2_plain');monkeypatch.setenv('FLY_IMAGE','registry.fly.io/iskra-img:latest')
+    calls=[];monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(calls))
+    for i,sid in enumerate(('fly:iskra-u1-aaa','srv-render-1',None,'fly:iskra-u4-ddd')):
+        client.post('/api/register',json={**REG,'email':f'u{i}@example.com'})
+        capp.q('UPDATE accounts SET render_service_id=? WHERE email=?',(sid,f'u{i}@example.com'))
+    real=fly.update_all;monkeypatch.setattr(fly,'update_all',lambda apps,image:real(apps,image,pause=0))
+    assert client.post('/admin/fly/update-image',json={}).status_code==401
+    r=client.post('/admin/fly/update-image',json={'image':'registry.fly.io/iskra-img:git-abc'},headers=ADMIN)
+    assert r.json()=={'updating':2,'image':'registry.fly.io/iskra-img:git-abc'}
+    updates=[c for c in calls if c[0]=='POST' and c[1].endswith('/machines/m_1')]
+    assert {c[1].split('/')[3] for c in updates}=={'iskra-u1-aaa','iskra-u4-ddd'} and all(c[2]['config']['image']=='registry.fly.io/iskra-img:git-abc' for c in updates)
+    assert all(c[2]['config']['mounts'] for c in updates)                        # data volume stays attached
+    assert client.post('/admin/fly/update-image',json={'image':'docker.io/evil/img'},headers=ADMIN).status_code==422
