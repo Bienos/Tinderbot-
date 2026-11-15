@@ -123,10 +123,10 @@ def share_image_html():
 *{{box-sizing:border-box}}body{{margin:0;width:1200px;height:630px;overflow:hidden;font-family:Onest,sans-serif;color:{INK};
 background:radial-gradient(900px 600px at 95% 0%,#ffd6e3 0%,transparent 60%),radial-gradient(700px 500px at 0% 100%,#fff0e6 0%,transparent 60%),#fff6f8}}
 .l{{position:absolute;left:72px;top:58px;width:600px}}h1{{font-family:Unbounded,sans-serif;font-weight:700;font-size:72px;line-height:1.02;
-letter-spacing:-.045em;margin:46px 0 24px}}p{{font-size:25px;line-height:1.4;color:#57404f;margin:0;max-width:540px}}
+letter-spacing:-.045em;margin:34px 0 22px;font-size:64px}}.hl{{background:linear-gradient(120deg,{PINK},{ORANGE});-webkit-background-clip:text;background-clip:text;color:transparent}}p{{font-size:25px;line-height:1.4;color:#57404f;margin:0;max-width:540px}}
 .cta{{position:absolute;left:72px;bottom:48px;font-size:22px;font-weight:600;color:#6f5866}}.cta b{{color:{PINK}}}</style></head><body>
 <div class="l"><svg viewBox="{vb}" height="58">{inner}</svg>
-<h1>Zamień<br>dopasowania<br>w spotkania.</h1><p>Asystent randkowy AI, który pisze Twoim stylem i wie, kiedy zaprosić.</p></div>
+<h1>Zamień nowe<br>matche w<br><span class="hl">umówione<br>randki.</span></h1><p>Pisze Twoim stylem i umawia randki. Ty czekasz na powiadomienie.</p></div>
 <div class="cta"><b>Załóż konto</b> i zacznij dziś</div>
 <div style="{card};left:700px;top:72px;width:288px;padding:18px 20px"><div style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px">
 <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,{PINK},{ORANGE});color:#fff;display:grid;place-items:center;font-size:14px">O</span>Ola, 25</div>

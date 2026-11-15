@@ -177,14 +177,14 @@ async def security_headers(request: Request, call_next):
 
 
 SHARE = ('<meta property="og:type" content="website"><meta property="og:site_name" content="{{BRAND}}">'
-         '<meta property="og:title" content="{{BRAND}}. Zamień dopasowania w spotkania">'
-         '<meta property="og:description" content="Asystent randkowy AI, który pisze Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła.">'
+         '<meta property="og:title" content="{{BRAND}}. Zamień nowe matche w umówione randki">'
+         '<meta property="og:description" content="Asystent randkowy AI, który odpisuje Twoim stylem i w dobrym momencie proponuje spotkanie. Ty czekasz na powiadomienie o umówionej randce.">'
          '<meta property="og:url" content="{{ORIGIN}}{{PATH}}"><meta property="og:image" content="{{ORIGIN}}/assets/og.png">'
          '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
-         '<meta property="og:image:alt" content="{{BRAND}} w akcji, wiadomość, sygnały, szkic odpowiedzi i umówiona kawa">'
+         '<meta property="og:image:alt" content="{{BRAND}} w akcji: wiadomość, sygnały, odpowiedź i umówiona kawa">'
          '<meta property="og:locale" content="pl_PL"><meta name="twitter:card" content="summary_large_image">'
-         '<meta name="twitter:title" content="{{BRAND}}. Zamień dopasowania w spotkania">'
-         '<meta name="twitter:description" content="Asystent randkowy AI, który pisze Twoim stylem i wie, kiedy zaprosić.">'
+         '<meta name="twitter:title" content="{{BRAND}}. Zamień nowe matche w umówione randki">'
+         '<meta name="twitter:description" content="Asystent randkowy AI, który pisze Twoim stylem i umawia randki, a Ty czekasz na powiadomienie.">'
          '<meta name="twitter:image" content="{{ORIGIN}}/assets/og.png"><link rel="icon" type="image/svg+xml" href="/assets/icon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png">')
 
 
@@ -224,7 +224,7 @@ def structured_data(html: str, origin: str, price: str) -> str:
              {'@type': 'WebSite', '@id': origin + '/#website', 'url': origin + '/', 'name': BRAND, 'inLanguage': 'pl-PL',
               'publisher': {'@id': origin + '/#org'}},
              {'@type': 'WebApplication', '@id': origin + '/#app', 'name': BRAND, 'url': origin + '/', 'inLanguage': 'pl-PL',
-              'description': 'Asystent randkowy AI, który pisze odpowiedzi w Twoim stylu i podpowiada moment na zaproszenie na randkę. Ty zatwierdzasz każdą wiadomość.',
+              'description': 'Asystent randkowy AI, który odpisuje na Tinderze w Twoim stylu, w dobrym momencie proponuje spotkanie i powiadamia, gdy randka jest umówiona. Autopilot albo szkice do zatwierdzenia.',
               'applicationCategory': 'LifestyleApplication', 'operatingSystem': 'Web', 'publisher': {'@id': origin + '/#org'}}]
     cost = re.search(r'(\d+(?:[.,]\d+)?)\s*zł', price)
     if cost:
@@ -318,7 +318,8 @@ def llms(request: Request):
     price = os.getenv('PLAN_PRICE', '').strip() or 'cena widoczna przy płatności'
     text = (f'# {BRAND}\n\n'
             f'> {BRAND} to płatny asystent randkowy AI dla dorosłych (18+). Pisze szkice odpowiedzi na Tinderze w stylu użytkownika '
-            f'i podpowiada, kiedy zaprosić na randkę. Użytkownik zatwierdza każdą wiadomość. Cena: {price}, anulowanie w każdej chwili. '
+            f'i podpowiada, kiedy zaprosić na randkę. Domyślnie użytkownik zatwierdza każdą wiadomość; w wybranych rozmowach może włączyć autopilota '
+            f'i dostawać powiadomienia o umówionych randkach, Instagramie lub numerze. Cena: {price}, anulowanie w każdej chwili. '
             f'{BRAND} nie jest powiązany z Tinder ani Match Group.\n\n'
             f'## Strony\n\n'
             f'- [Strona główna]({origin}/): co robi {BRAND}, jak działa, cennik i najczęstsze pytania\n'
