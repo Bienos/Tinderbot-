@@ -286,6 +286,16 @@ async def tinder_connect(body:TinderConnect):
     return {'connection_id':cid,'unofficial':True,'automatic_sending':True,
             'scope':'Consented and disclosed threads; no per-message approval'}
 
+@app.post('/api/tinder/restore-deleted')
+async def tinder_restore_deleted():
+    """Allow the next sync to re-import Tinder conversations removed by retention or manual delete."""
+    async with service.LOCK:
+        with s.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            n=db.execute("DELETE FROM tombstones WHERE thread_id LIKE 'tinder:%'").rowcount
+    rt.audit(None,'tinder_reimport_allowed','Owner allowed re-import of deleted Tinder conversations: %d'%n)
+    return {'restored':n}
+
 @app.post('/api/tinder/sync')
 async def tinder_sync():
     from agent.tinder import poll

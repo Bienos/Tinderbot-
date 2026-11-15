@@ -321,3 +321,15 @@ def test_profile_summary_keeps_only_tinder_https_images_and_safe_fields():
     assert out['photos']==['https://images-ssl.gotinder.com/u/a.jpg','https://images-ssl.gotinder.com/d.jpg']
     assert out['bio']=='hi there' and 25<=out['age']<=40
     assert profile_summary({'birth_date':'2015-01-01T00:00:00Z'})['age'] is None and profile_summary({})=={'photos':[],'bio':'','age':None}
+
+
+def test_restore_deleted_clears_only_tinder_tombstones(store):
+    import app as application
+    s=store
+    with s.connect() as db:
+        db.execute("INSERT OR IGNORE INTO tombstones VALUES('tinder:o:m1')");db.execute("INSERT OR IGNORE INTO tombstones VALUES('t-sim')")
+    import asyncio
+    result=asyncio.run(application.tinder_restore_deleted())
+    assert result['restored']>=1
+    left={r['thread_id'] for r in s.rows('SELECT thread_id FROM tombstones')}
+    assert 't-sim' in left and 'tinder:o:m1' not in left
