@@ -209,14 +209,14 @@ function tinderConn(){return (data.tinder.connections||[])[0]}
 function apLive(c){return !!(c&&c.auto_send&&c.bio_mode&&c.bio_disclosure)}
 function updateAutopilotButton(){let b=document.getElementById('autopilot-btn');if(!b||!data)return;let c=tinderConn(),live=apLive(c),wait=!live&&!!(c&&c.auto_send);b.replaceChildren(el('span','apdot'+(live?' on':wait?' wait':'')),document.createTextNode(live?'Autopilot: włączony':wait?'Autopilot: czeka na bio':'Autopilot: wyłączony'))}
 function closePanel(){const d=document.getElementById('panel');if(d.open)d.close()}
+let bioSeen=null,guideNote=null;
 function startGuide(after){const t=data.tinder||{},c=tinderConn(),cfg=data.settings,live=apLive(c);
- const box=el('div','guide'),msg=el('div','mresult');
+ const box=el('div','guide'),msg=el('div','mresult'+(guideNote?' '+guideNote[0]:''),guideNote?guideNote[1]:'');
  const step=(n,state,title,desc,...controls)=>{const s=el('div','gstep '+state);s.append(el('span','gnum',state==='done'?'✓':String(n)));const tx=el('div','gtxt');tx.append(el('b','',title));if(desc)tx.append(el('div','gdesc',desc));if(controls.length){const r=el('div','gctl');r.append(...controls);tx.append(r)}s.append(tx);box.append(s)};
- const fail=e=>{msg.className='mresult err';msg.textContent=ERR_PL[e.message]||e.message};
- const setAuto=async(patch,wait)=>{msg.className='mresult';msg.textContent=wait;
-  try{await api('/api/tinder/connections/'+encodeURIComponent(c.id)+'/automation','PUT',patch);if(patch.bio_mode)await checkBio(true);await refresh();after()}catch(e){fail(e)}};
- const checkBio=async quiet=>{if(!quiet){msg.className='mresult';msg.textContent='Sprawdzam Twoje bio na Tinderze…'}
-  try{await api('/api/tinder/sync','POST')}catch(e){if(e.status!==409&&!quiet)return fail(e)}if(!quiet){await refresh();after()}};
+ const fail=e=>{guideNote=['err',ERR_PL[e.message]||e.message];msg.className='mresult err';msg.textContent=guideNote[1]};
+ const setAuto=async(patch,wait)=>{guideNote=null;msg.className='mresult';msg.textContent=wait;
+  try{await api('/api/tinder/connections/'+encodeURIComponent(c.id)+'/automation','PUT',patch);if(patch.bio_mode)await checkBio(true);await refresh();after()}catch(e){fail(e);await refresh().catch(()=>{});after()}};
+ const checkBio=async quiet=>{guideNote=null;msg.className='mresult';msg.textContent='Sprawdzam Twoje bio na Tinderze…';try{const r=await api('/api/tinder/connections/'+encodeURIComponent(c.id)+'/check-bio','POST');bioSeen=r;if(!quiet){await refresh();after()}}catch(e){fail(e);if(quiet)throw e}};
  if(!data.llm_enabled)box.append(el('div','callout warn','Na serwerze brakuje klucza modelu AI, więc Winq nie napisze odpowiedzi. Daj znać obsłudze.'));
  if(t.enabled===false)box.append(el('div','callout warn','Połączenie z Tinderem jest wyłączone na tym serwerze. Daj znać obsłudze.'));
  // 1. Tinder
@@ -236,7 +236,7 @@ function startGuide(after){const t=data.tinder||{},c=tinderConn(),cfg=data.setti
   ex.onclick=()=>{navigator.clipboard?.writeText(ex.textContent).then(()=>{msg.className='mresult ok';msg.textContent='Skopiowane. Wklej w aplikacji Tinder: Profil → Edytuj → O mnie.'}).catch(()=>{})};
   const done=el('button','primary',c.bio_mode?'Sprawdź ponownie':'Dodałem, sprawdź');
   done.onclick=()=>c.bio_mode?checkBio(false):setAuto({bio_mode:true},'Sprawdzam Twoje bio na Tinderze…');
-  step(3,'now','Dopisz „AI” do bio na Tinderze',c.bio_mode?'Nie widzimy jeszcze słowa „AI” w Twoim bio. Zapisz bio w aplikacji i sprawdź ponownie (Tinder potrzebuje czasem minuty).':'Osoby, z którymi piszesz, mają wiedzieć, że pomaga Ci asystent. Dodaj w aplikacji Tinder (Profil → Edytuj → O mnie) zdanie ze słowem „AI”, np.:',ex,done)}
+  step(3,'now','Dopisz „AI” do bio na Tinderze',c.bio_mode?(bioSeen&&!bioSeen.found?(bioSeen.bio?'Sprawdziliśmy przed chwilą. Twoje bio na Tinderze to teraz: „'+bioSeen.bio.slice(0,200)+(bioSeen.bio.length>200?'…':'')+'”. Brakuje w nim słowa „AI”. Dopisz np. zdanie poniżej, zapisz profil w aplikacji i kliknij „Sprawdź ponownie”.':'Sprawdziliśmy przed chwilą: Twoje bio na Tinderze jest puste. Dopisz zdanie poniżej, zapisz profil w aplikacji i kliknij „Sprawdź ponownie”.'):'Nie widzimy jeszcze słowa „AI” w Twoim bio. Zapisz bio w aplikacji i kliknij „Sprawdź ponownie”.'):'Osoby, z którymi piszesz, mają wiedzieć, że pomaga Ci asystent. Dodaj w aplikacji Tinder (Profil → Edytuj → O mnie) zdanie ze słowem „AI”, np.:',ex,done)}
  // 4. Switch on
  if(!c)step(4,'todo','Włącz autopilota','Najpierw połącz konto.');
  else if(live){const b=el('button','secondary','Wyłącz autopilota');b.onclick=()=>setAuto({enabled:false},'Wyłączam…');step(4,'done','Autopilot działa','Winq sam odpisuje, gdy ktoś Ci napisze. Pierwszą wiadomość do nowej pary piszesz Ty.',b)}

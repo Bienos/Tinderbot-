@@ -248,8 +248,18 @@ class TinderClient:
         if not isinstance(root, dict): raise TinderProtocolError('invalid_profile')
         user = root.get('user', root)
         if not isinstance(user, dict): raise TinderProtocolError('invalid_profile')
-        self.owner_bio = user.get('bio') if isinstance(user.get('bio'), str) else ''
+        # None when this response has no bio field at all (not the same as an empty bio): then the last known
+        # answer is kept instead of switching the autopilot off. owner_bio_now() asks the profile endpoint that has it.
+        self.owner_bio = user.get('bio') if isinstance(user.get('bio'), str) else ('' if 'bio' in user else None)
         return ident(user.get('_id') or user.get('id'))
+
+    async def owner_bio_now(self) -> str:
+        """The owner's current bio, right now. Falls back to /v2/profile when /profile leaves the field out."""
+        if self.owner_bio is None:
+            data = await self.request('GET', '/v2/profile', params={'include': 'user'})
+            user = (data.get('data') or {}).get('user') if isinstance(data.get('data'), dict) else None
+            self.owner_bio = user.get('bio') if isinstance(user, dict) and isinstance(user.get('bio'), str) else ''
+        return self.owner_bio
 
     async def pages(self, path: str, key: str, count: int, extra: dict | None = None) -> Page:
         collected = {}; cursor = None; seen = set()
@@ -494,8 +504,9 @@ async def sync_connection(connection_id: str):
     delay=min(poll_interval()*(2**min(idle_rounds,5)),max(poll_interval(),traffic.integer('TINDER_IDLE_POLL_INTERVAL',900,60,86400)))
     with s.connect() as db:
         row=db.execute('SELECT value FROM connections WHERE id=?',(connection_id,)).fetchone();value=json.loads(row['value'])
-        value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature,
-                      'bio_disclosure':bio_discloses_ai(getattr(api,'owner_bio','')),'bio_checked':time.time()})
+        value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature})
+        if getattr(api,'owner_bio',None) is not None:
+            value.update({'bio_disclosure':bio_discloses_ai(api.owner_bio),'bio_checked':time.time()})
         if page.complete and not value.get('initial_import_done'):
             value['initial_import_done']=True  # from now on the everyday (lower) request budget applies
             rt.audit(None,'tinder_initial_import_done','First full import finished; switching to everyday request limits')
@@ -512,6 +523,22 @@ def clear_local_budget_block():
             value['next_poll'] = 0
         value['initial_import_done'] = False  # owner asked for a full re-import: allow the import budget once more
         with s.connect() as db: db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), row['id']))
+
+async def check_bio(connection_id: str) -> dict:
+    """The owner's "I added it, check" button: read the bio now, outside the sync schedule, and store the answer."""
+    con, _ = connection(connection_id)
+    async with client() as api:
+        owner = await api.profile()
+        if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
+        bio = await api.owner_bio_now()
+    found = bio_discloses_ai(bio)
+    with s.connect() as db:
+        row = db.execute('SELECT value FROM connections WHERE id=?', (connection_id,)).fetchone(); value = json.loads(row['value'])
+        value.update({'bio_disclosure': found, 'bio_checked': time.time()})
+        db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), connection_id))
+    rt.audit(None, 'tinder_bio_checked', 'AI disclosure found in bio' if found else 'No AI disclosure in bio')
+    return {'found': found, 'bio': bio[:500]}
+
 
 async def poll():
     if not configured() or rt.settings()['paused']: return
