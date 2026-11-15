@@ -48,3 +48,16 @@ with TestClient(app, headers={'Authorization':'Bearer '+os.environ['DASHBOARD_TO
         env['TINDER_ENABLED']='false';env.pop('TINDER_AUTH_TOKEN',None)
         result=subprocess.run([sys.executable,'-c',script],capture_output=True,text=True,env=env,timeout=30)
         assert result.returncode==0, result.stdout+'\n'+result.stderr
+
+
+def test_state_survives_threads_added_during_request(store,monkeypatch):
+    """A running Tinder sync adds threads between queries; /api/state must use one consistent snapshot."""
+    import app as application
+    from agent import storage as s
+    real=s.threads;calls={'n':0}
+    def racing():
+        calls['n']+=1;rows=real()
+        if calls['n']>1:rows=rows+[{**rows[0],'id':'late-thread','display_name':'Late'}]
+        return rows
+    monkeypatch.setattr(s,'threads',racing)
+    assert application.state()['threads']

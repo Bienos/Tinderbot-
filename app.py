@@ -148,19 +148,19 @@ def build_stats(threads,hist,outcomes):
             'per_day':[{'day':d,**per_day[d]} for d in days],'tinder_requests':req}
 @app.get('/api/state')
 def state():
-    drafts=s.all_drafts();notes=s.notifications();hist={t['id']:s.messages(t['id']) for t in s.threads()}
+    drafts=s.all_drafts();notes=s.notifications();rows=s.threads();hist={t['id']:s.messages(t['id']) for t in rows}
     outcomes={r['thread_id']:json.loads(r['value']) for r in s.rows('SELECT * FROM outcome_state')}
     profiles={}
     for r in s.rows('SELECT thread_id,value FROM tinder_threads'):
         try:profiles[r['thread_id']]=json.loads(r['value']).get('profile')
         except ValueError:pass
     threads=[]
-    for t in s.threads():
+    for t in rows:
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
         p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');threads.append(p)
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
-            'memory':{t['id']:rt.memory(t['id']) for t in s.threads()},'outcome_details':outcomes,
+            'memory':{t['id']:rt.memory(t['id']) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
             'actions':s.rows('SELECT * FROM actions ORDER BY updated DESC LIMIT 100'),
             'connections':s.rows('SELECT id,enabled,can_reply FROM connections'),
