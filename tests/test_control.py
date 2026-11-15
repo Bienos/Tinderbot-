@@ -161,3 +161,19 @@ def test_comped_account_skips_billing(client,monkeypatch):
     client.post('/api/register',json=REG)
     client.post('/admin/accounts/activate',headers=ADMIN,json={'email':'ola@example.com','instance_url':'https://x.onrender.com','comped':True})
     assert client.get('/api/me').json()['panel_ready'] is True
+
+
+def test_payment_link_mode_needs_no_secret_key(client,monkeypatch):
+    import json
+    from urllib.parse import urlparse,parse_qs
+    monkeypatch.delenv('STRIPE_SECRET_KEY',raising=False);monkeypatch.delenv('STRIPE_PRICE_ID',raising=False)
+    monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/test_abc');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_link')
+    monkeypatch.setenv('STRIPE_PORTAL_URL','https://billing.stripe.com/p/login/test_x')
+    client.post('/api/register',json=REG)
+    assert client.get('/api/me').json()['billing_enabled'] is True
+    url=client.post('/api/billing/checkout').json()['url'];qs=parse_qs(urlparse(url).query)
+    assert url.startswith('https://buy.stripe.com/test_abc?') and qs['prefilled_email']==['ola@example.com'] and qs['client_reference_id'][0].isdigit()
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':qs['client_reference_id'][0],'customer':'cus_9'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_link'))
+    me=client.get('/api/me').json();assert me['has_access'] and me['can_manage_billing']
+    assert client.post('/api/billing/portal').json()['url'].startswith('https://billing.stripe.com/p/login/test_x?prefilled_email=')

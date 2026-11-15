@@ -360,8 +360,13 @@ async def delete_account(request: Request):
 
 
 # ---- billing (Stripe Checkout + webhook + customer portal)
+def link_mode() -> bool:
+    """Payment Link mode: no Stripe secret key on this server at all; payments are confirmed only by the signed webhook."""
+    return bool(os.getenv('STRIPE_PAYMENT_LINK', '').startswith('https://')) and bool(os.getenv('STRIPE_WEBHOOK_SECRET'))
+
+
 def billing_enabled() -> bool:
-    return all(os.getenv(k) for k in ('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET'))
+    return link_mode() or all(os.getenv(k) for k in ('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET'))
 
 
 def has_access(acc: dict) -> bool:
@@ -382,6 +387,9 @@ async def billing_checkout(request: Request):
         raise HTTPException(503, 'Płatności nie są jeszcze włączone.')
     if acc.get('plan_status') in ('active', 'trialing'):
         raise HTTPException(409, 'Masz już aktywną subskrypcję.')
+    if link_mode():
+        from urllib.parse import urlencode
+        return {'url': os.environ['STRIPE_PAYMENT_LINK'] + '?' + urlencode({'client_reference_id': str(acc['id']), 'prefilled_email': acc['email'], 'locale': 'pl'})}
     import stripe
     params = dict(mode='subscription', line_items=[{'price': os.environ['STRIPE_PRICE_ID'], 'quantity': 1}],
                   client_reference_id=str(acc['id']), success_url=_origin(request) + '/konto?platnosc=ok',
@@ -404,6 +412,12 @@ async def billing_portal(request: Request):
         raise HTTPException(401, 'Nie jesteś zalogowany.')
     if not billing_enabled() or not acc.get('stripe_customer'):
         raise HTTPException(409, 'Brak subskrypcji do zarządzania.')
+    if link_mode():
+        portal = os.getenv('STRIPE_PORTAL_URL', '')
+        if not portal.startswith('https://'):
+            raise HTTPException(503, 'Portal płatności nie jest jeszcze skonfigurowany.')
+        from urllib.parse import urlencode
+        return {'url': portal + '?' + urlencode({'prefilled_email': acc['email']})}
     import stripe
     session = stripe.billing_portal.Session.create(api_key=os.environ['STRIPE_SECRET_KEY'], customer=acc['stripe_customer'],
                                                    return_url=_origin(request) + '/konto')
