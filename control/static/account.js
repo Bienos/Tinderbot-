@@ -4,7 +4,7 @@ f.addEventListener('submit',async e=>{e.preventDefault();const btn=f.querySelect
 try{await post(url,build(new FormData(f)));done()}catch(err){out.className='err';out.textContent=err.message;btn.disabled=false}})}
 bind('login-form','/api/login',f=>({email:f.get('email'),password:f.get('password')}),()=>location.href='/konto');
 bind('register-form','/api/register',f=>({email:f.get('email'),name:f.get('name'),password:f.get('password'),mode:f.get('mode'),website:f.get('website'),adult:f.get('adult')==='on',terms:f.get('terms')==='on',marketing:f.get('marketing')==='on'}),()=>location.href='/konto');
-bind('forgot-form','/api/password/forgot',f=>({email:f.get('email')}),()=>{const out=document.querySelector('#forgot-form [role=status]');out.className='ok';out.textContent='Jeśli to konto istnieje, link jest już w drodze. Sprawdź też spam.';document.querySelector('#forgot-form button[type=submit]').disabled=true});
+bind('forgot-form','/api/password/forgot',f=>({email:f.get('email')}),()=>{const out=document.querySelector('#forgot-form [role=status]');out.className='ok';out.textContent='Link jest już w drodze. Sprawdź skrzynkę, także spam.';document.querySelector('#forgot-form button[type=submit]').disabled=true});
 bind('reset-form','/api/password/reset',f=>({password:f.get('password'),token:new URLSearchParams(location.search).get('t')||''}),()=>location.href='/konto');
 bind('delete-form','/api/account/delete',f=>({password:f.get('password')}),()=>location.href='/');
 const logout=document.getElementById('logout');if(logout)logout.addEventListener('click',async()=>{await post('/api/logout').catch(()=>{});location.href='/'});

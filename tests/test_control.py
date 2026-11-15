@@ -268,7 +268,8 @@ def test_comped_emails_are_free_on_signup(client,monkeypatch):
 def test_password_reset_flow(client):
     from control import mailer
     mailer.SENT.clear();client.post('/api/register',json=REG);client.cookies.clear()
-    assert client.post('/api/password/forgot',json={'email':'nobody@example.com'}).json()=={'ok':True}
+    r=client.post('/api/password/forgot',json={'email':'nobody@example.com'})
+    assert r.status_code==404 and 'Nie ma konta' in r.json()['detail'] and not [m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło']
     assert client.post('/api/password/forgot',json={'email':'ola@example.com'}).json()=={'ok':True}
     link=[m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło'][-1]['text'].split('\n')[1]
     token=link.split('t=',1)[1]
