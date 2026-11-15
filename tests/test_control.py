@@ -497,6 +497,7 @@ def test_fly_provisioning_builds_an_isolated_always_on_bot_with_secrets_outside_
     assert not set(env)&set(fly.SECRET_KEYS)                                  # secrets never in the machine config
     assert env['PUBLIC_ORIGIN']==f'https://{app}.fly.dev' and env['CONTROL_ORIGIN']=='http://testserver' and env['AGENT_DB_PATH']=='/var/data/agent.db'
     assert cfg['mounts']==[{'volume':'vol_123','path':'/var/data'}] and cfg['guest']['memory_mb']==256
+    assert cfg['init']=={'swap_size_mb':512}
     assert cfg['services'][0]['autostop']=='off' and cfg['restart']['policy']=='always' and cfg['image']=='registry.fly.io/iskra-img:latest'
     assert cfg['checks']['health']['headers']==[{'name':'Host','values':[f'{app}.fly.dev']}]   # the bot rejects other Host headers
     assert 'DASHBOARD_TOKEN' not in str(rcalls)                               # nothing written back to Render
@@ -521,12 +522,14 @@ def test_fly_suspend_keeps_the_bot_stopped_and_resume_starts_it(monkeypatch):
     from control import provision
     provision.set_suspended('fly:iskra-u7-abc',True)
     update=next(c for c in calls if c[0]=='POST' and c[1]=='/v1/apps/iskra-u7-abc/machines/m_1')
-    assert update[2]['skip_launch'] is True and update[2]['config']['services'][0]['autostart'] is False
+    assert update[2]['skip_launch'] is True and update[2]['config']['services']==[]   # nothing for the proxy to wake
+    assert update[2]['config']['restart']=={'policy':'no'}                    # 'always' would undo the stop
     assert update[2]['config']['mounts']==[{'volume':'vol_123','path':'/var/data'}] and update[2]['current_version']=='v1'
     assert ('POST','/v1/apps/iskra-u7-abc/machines/m_1/stop') in [(c[0],c[1]) for c in calls] and calls[0][3]=='Bearer fm2_plain'
     calls.clear();provision.set_suspended('fly:iskra-u7-abc',False)
     update=next(c for c in calls if c[0]=='POST' and c[1]=='/v1/apps/iskra-u7-abc/machines/m_1')
-    assert update[2]['skip_launch'] is False and update[2]['config']['services'][0]['autostart'] is True
+    assert update[2]['skip_launch'] is False and update[2]['config']['services']==fly.public_services()
+    assert update[2]['config']['restart']=={'policy':'always'}
     assert not any(c[1].endswith('/stop') for c in calls)
 
 
