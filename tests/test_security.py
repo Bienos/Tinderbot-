@@ -191,6 +191,7 @@ def test_sign_in_page_assets_are_public_and_only_fonts_are_cacheable(store):
 
 def test_sign_in_page_offers_account_sign_in_when_linked_to_iskra_account(store,monkeypatch):
     from app import app
+    monkeypatch.delenv('CONTROL_ORIGIN',raising=False)  # the Render build sees the service's real CONTROL_ORIGIN
     with TestClient(app) as c:
         page=c.get('/')
         assert page.status_code==401 and 'Zaloguj się do panelu' in page.text and 'konto/panel' not in page.text
