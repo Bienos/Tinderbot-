@@ -172,24 +172,27 @@ footer{max-width:1240px;margin:0 auto;padding:36px clamp(16px,5vw,64px) 60px;bor
 
 /* story hero */
 .story{container-type:inline-size;font-size:clamp(11px,2.7cqw,16px)}
-.story .card{position:absolute;background:#fff;border-radius:1.3em;padding:.9em 1.1em;box-shadow:0 1.4em 3em -1.4em rgba(253,38,122,.45),0 0 0 1px rgba(42,15,34,.05);opacity:0;animation:step 10s ease-in-out infinite;color:var(--ink)}
-.story .c1{left:2%;top:6%;width:52%;animation-delay:0s}
-.story .c2{right:0;top:27%;width:46%;animation-delay:1.6s}
-.story .c3{left:0;top:52%;width:58%;animation-delay:3.2s;background:var(--fire);color:#fff}
-.story .c4{right:2%;bottom:4%;width:50%;animation-delay:4.8s;display:flex;align-items:center;gap:.9em}
+.story .card{position:absolute;background:#fff;border-radius:1.3em;padding:.9em 1.1em;box-shadow:0 1.4em 3em -1.4em rgba(253,38,122,.45),0 0 0 1px rgba(42,15,34,.05);opacity:0;animation:st1 11s ease-in-out infinite;color:var(--ink)}
+.story .c1{left:2%;top:6%;width:52%;animation-name:st1}
+.story .c2{right:0;top:27%;width:46%;animation-name:st2}
+.story .c3{left:0;top:52%;width:58%;animation-name:st3;background:var(--fire);color:#fff}
+.story .c4{right:2%;bottom:4%;width:50%;animation-name:st4;display:flex;align-items:center;gap:.9em}
 .story .who{display:flex;align-items:center;gap:.5em;font-size:.86em}.story .who small{margin-left:auto;color:var(--muted)}
 .story .av{width:1.9em;height:1.9em;border-radius:50%;background:var(--fire);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.9em}
 .story .msg{margin:.55em 0 0;background:var(--bg);border-radius:1em 1em 1em .3em;padding:.55em .85em;font-size:1em}
 .story .tag{display:inline-block;background:var(--fire);color:#fff;font-weight:600;font-size:.78em;padding:.3em .8em;border-radius:99px}
-.story .meter{height:.5em;border-radius:99px;background:#f3e3ea;margin:.75em 0 .6em;overflow:hidden}.story .meter i{display:block;height:100%;width:84%;background:var(--fire);transform-origin:left;animation:fill 10s ease-out infinite;animation-delay:1.6s}
+.story .meter{height:.5em;border-radius:99px;background:#f3e3ea;margin:.75em 0 .6em;overflow:hidden}.story .meter i{display:block;height:100%;width:84%;background:var(--fire);transform-origin:left;animation:fill 11s ease-out infinite}
 .story .sig{display:flex;flex-wrap:wrap;gap:.35em}.story .sig span{font-size:.72em;color:var(--text);background:var(--bg);border-radius:99px;padding:.2em .65em}
 .story .draft{margin:0;font-size:.98em;line-height:1.4}.story .act{display:flex;align-items:center;justify-content:space-between;margin-top:.7em;font-size:.82em}.story .act small{opacity:.85}.story .act b{background:#fff;color:var(--ember);border-radius:99px;padding:.35em 1em}
 .story .date{display:flex;flex-direction:column;align-items:center;justify-content:center;width:3.6em;height:3.6em;border-radius:.9em;background:var(--bg);flex:none}.story .day{font-size:.66em;font-weight:700;color:var(--ember);letter-spacing:.05em}.story .num{font-weight:700;font-size:.92em}
 .story .c4 b{font-size:.95em}.story .c4 p{margin:.1em 0 0;font-size:.85em;color:var(--muted)}.story .ok{margin-left:auto;width:1.8em;height:1.8em;border-radius:50%;background:#1fbf75;color:#fff;display:grid;place-items:center;font-weight:700;font-size:.9em}
 .story .ember{offset-path:path("M150 120 C 330 90, 470 150, 450 245 S 200 290, 170 385 S 380 470, 470 505");animation:travel 5s cubic-bezier(.45,0,.55,1) infinite}
 .story .s2{animation-delay:1.7s}.story .s3{animation-delay:3.4s}
-@keyframes step{0%{opacity:0;transform:translateY(1em) scale(.96)}6%,82%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-.4em)}}
-@keyframes fill{0%,10%{transform:scaleX(.1)}30%,100%{transform:scaleX(1)}}
+@keyframes st1{0%{opacity:0;transform:translateY(1em) scale(.96)}5%,84%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-.4em)}}
+@keyframes st2{0%,16%{opacity:0;transform:translateY(1em) scale(.96)}21%,84%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-.4em)}}
+@keyframes st3{0%,34%{opacity:0;transform:translateY(1em) scale(.96)}39%,84%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-.4em)}}
+@keyframes st4{0%,52%{opacity:0;transform:translateY(1em) scale(.96)}57%,84%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-.4em)}}
+@keyframes fill{0%,20%{transform:scaleX(.1)}34%,100%{transform:scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.story .card{opacity:1}}
 /* split auth screens */
 body.split{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);min-height:100vh;background:var(--bg)}
