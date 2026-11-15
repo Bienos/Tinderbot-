@@ -108,3 +108,13 @@ def test_cross_origin_posts_blocked_when_origin_configured(client,monkeypatch):
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
     assert client.post('/api/register',json=REG,headers={'Origin':'https://evil.example'}).status_code==403
     assert client.post('/api/register',json=REG,headers={'Origin':'https://iskra.example'}).status_code==200
+
+
+def test_share_card_meta_and_assets(client,monkeypatch):
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
+    html=client.get('/').text
+    assert '<meta property="og:image" content="https://iskra.example/assets/og.png">' in html
+    assert 'twitter:card" content="summary_large_image"' in html and '{{' not in html
+    r=client.get('/assets/og.png');assert r.status_code==200 and r.headers['content-type']=='image/png' and r.content[:4]==b'\x89PNG'
+    assert client.get('/assets/icon.svg').headers['content-type'].startswith('image/svg+xml')
+    assert 'og:image' in client.get('/rejestracja').text

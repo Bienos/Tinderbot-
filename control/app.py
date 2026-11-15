@@ -159,8 +159,22 @@ async def security_headers(request: Request, call_next):
     return response
 
 
+SHARE = ('<meta property="og:type" content="website"><meta property="og:site_name" content="{{BRAND}}">'
+         '<meta property="og:title" content="{{BRAND}}: zamień dopasowania w spotkania">'
+         '<meta property="og:description" content="Asystent randkowy AI, który pisze Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła.">'
+         '<meta property="og:url" content="{{ORIGIN}}/"><meta property="og:image" content="{{ORIGIN}}/assets/og.png">'
+         '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
+         '<meta property="og:image:alt" content="Iskra: wiadomość, sygnały, szkic odpowiedzi i umówiona kawa">'
+         '<meta property="og:locale" content="pl_PL"><meta name="twitter:card" content="summary_large_image">'
+         '<meta name="twitter:title" content="{{BRAND}}: zamień dopasowania w spotkania">'
+         '<meta name="twitter:description" content="Asystent randkowy AI, który pisze Twoim stylem i wie, kiedy zaprosić.">'
+         '<meta name="twitter:image" content="{{ORIGIN}}/assets/og.png"><link rel="icon" type="image/svg+xml" href="/assets/icon.svg">')
+
+
 def page(name: str) -> HTMLResponse:
-    return HTMLResponse((STATIC / name).read_text(encoding='utf-8').replace('{{BRAND}}', BRAND))
+    origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
+    html = (STATIC / name).read_text(encoding='utf-8').replace('</head>', SHARE + '</head>', 1)
+    return HTMLResponse(html.replace('{{ORIGIN}}', origin).replace('{{BRAND}}', BRAND))
 
 
 @app.get('/')
@@ -180,9 +194,11 @@ def terms():
 
 @app.get('/assets/{name}')
 def asset(name: str):
-    if name not in ('landing.js', 'landing.css', 'account.js'):
+    types = {'landing.js': 'text/javascript', 'account.js': 'text/javascript', 'landing.css': 'text/css',
+             'og.png': 'image/png', 'icon.svg': 'image/svg+xml'}
+    if name not in types:
         raise HTTPException(404)
-    return FileResponse(STATIC / name, media_type='text/javascript' if name.endswith('.js') else 'text/css')
+    return FileResponse(STATIC / name, media_type=types[name], headers={'Cache-Control': 'public, max-age=86400'})
 
 
 @app.get('/zaloguj')
