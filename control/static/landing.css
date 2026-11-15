@@ -318,7 +318,7 @@ body.split{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);m
 @keyframes pop-in{from{opacity:0;transform:translateY(1em) rotate(-3deg)}to{opacity:1;transform:rotate(-3deg)}}
 @container (max-width:420px){.phone{left:17cqw;width:66cqw;height:120cqw;border-radius:10cqw}.screen{border-radius:8.5cqw}.lock{top:14cqw}.lock-time{font-size:14cqw}.notes{left:1cqw;right:1cqw;top:46cqw;font-size:12.5px}.ntf-top{font-size:.8em}.ntf-text{font-size:.92em}.chip{bottom:0;font-size:12.5px}}
 @media(max-width:520px){.scene{aspect-ratio:1/1.24}}
-.final{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);align-items:center;gap:36px 52px;margin-top:64px;padding:44px;border-radius:32px;background:#fff;border:1px solid var(--line);box-shadow:0 40px 80px -48px rgba(253,38,122,.55);max-width:940px}
+.final{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);align-items:center;gap:36px 52px;margin:64px auto 0;padding:44px;border-radius:32px;background:#fff;border:1px solid var(--line);box-shadow:0 40px 80px -48px rgba(253,38,122,.55);max-width:940px}
 .final-h{margin:0 0 24px;font-family:"Unbounded",sans-serif;font-weight:700;font-size:clamp(26px,3vw,36px);line-height:1.12;letter-spacing:-.03em;color:var(--ink)}
 .final-btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;font-size:18px;padding:17px 30px}.final-btn span{font-size:20px;transition:transform .15s}.final-btn:hover span{transform:translateX(3px)}
 .final-copy{text-align:center}.final-copy small{display:block;margin:14px auto 0;font-size:14px;line-height:1.5;color:var(--muted);max-width:36ch}
