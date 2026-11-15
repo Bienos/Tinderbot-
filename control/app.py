@@ -32,12 +32,40 @@ def db_path() -> Path:
     return Path(os.getenv('CONTROL_DB_PATH', str(BASE / 'control.db')))
 
 
-def connect():
-    con = sqlite3.connect(db_path())
-    con.row_factory = sqlite3.Row
-    con.execute('CREATE TABLE IF NOT EXISTS waitlist (id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT, '
-                'mode TEXT NOT NULL, created REAL NOT NULL, consent_terms INTEGER NOT NULL, consent_marketing INTEGER NOT NULL)')
-    return con
+SCHEMA = ('CREATE TABLE IF NOT EXISTS waitlist (id {pk}, email TEXT UNIQUE NOT NULL, name TEXT, mode TEXT NOT NULL, '
+          'created DOUBLE PRECISION NOT NULL, consent_terms INTEGER NOT NULL, consent_marketing INTEGER NOT NULL)')
+UPSERT = ('INSERT INTO waitlist(email,name,mode,created,consent_terms,consent_marketing) VALUES({p},{p},{p},{p},1,{p}) '
+          'ON CONFLICT(email) DO UPDATE SET name=excluded.name, mode=excluded.mode, consent_marketing=excluded.consent_marketing')
+LIST = 'SELECT email,name,mode,created,consent_marketing FROM waitlist ORDER BY created DESC'
+
+
+def _pg_url() -> str:
+    return os.getenv('DATABASE_URL', '').strip()
+
+
+def save_signup(email: str, name: str, mode: str, marketing: bool) -> None:
+    args = (email, name, mode, time.time(), int(marketing))
+    if _pg_url():
+        import psycopg
+        with psycopg.connect(_pg_url(), connect_timeout=10) as con:
+            con.execute(SCHEMA.format(pk='BIGSERIAL PRIMARY KEY'))
+            con.execute(UPSERT.format(p='%s'), args)
+        return
+    with closing(sqlite3.connect(db_path())) as con, con:
+        con.execute(SCHEMA.format(pk='INTEGER PRIMARY KEY'))
+        con.execute(UPSERT.format(p='?'), args)
+
+
+def list_signups() -> list[dict]:
+    keys = ('email', 'name', 'mode', 'created', 'consent_marketing')
+    if _pg_url():
+        import psycopg
+        with psycopg.connect(_pg_url(), connect_timeout=10) as con:
+            con.execute(SCHEMA.format(pk='BIGSERIAL PRIMARY KEY'))
+            return [dict(zip(keys, r)) for r in con.execute(LIST).fetchall()]
+    with closing(sqlite3.connect(db_path())) as con:
+        con.execute(SCHEMA.format(pk='INTEGER PRIMARY KEY'))
+        return [dict(zip(keys, r)) for r in con.execute(LIST).fetchall()]
 
 
 @app.middleware('http')
@@ -108,10 +136,7 @@ async def waitlist(request: Request):
         raise HTTPException(422, 'Podaj poprawny adres e-mail.')
     if body.get('adult') is not True or body.get('terms') is not True:
         raise HTTPException(422, 'Potwierdź, że masz 18 lat i akceptujesz regulamin oraz politykę prywatności.')
-    with closing(connect()) as con, con:
-        con.execute('INSERT INTO waitlist(email,name,mode,created,consent_terms,consent_marketing) VALUES(?,?,?,?,1,?) '
-                    'ON CONFLICT(email) DO UPDATE SET name=excluded.name, mode=excluded.mode',
-                    (email, name, mode, time.time(), int(body.get('marketing') is True)))
+    save_signup(email, name, mode, body.get('marketing') is True)
     return {'ok': True}
 
 
@@ -121,6 +146,5 @@ def admin_waitlist(request: Request):
     supplied = request.headers.get('authorization', '').removeprefix('Bearer ').strip()
     if len(expected) < 24 or not secrets.compare_digest(supplied, expected):
         raise HTTPException(401, 'Unauthorized')
-    with closing(connect()) as con:
-        rows = [dict(r) for r in con.execute('SELECT email,name,mode,created,consent_marketing FROM waitlist ORDER BY created DESC')]
+    rows = list_signups()
     return JSONResponse({'count': len(rows), 'items': rows})
