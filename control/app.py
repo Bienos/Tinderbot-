@@ -509,7 +509,7 @@ def _deploy_status(service_id: str) -> str:
     if cached and now - cached[0] < 6:
         return cached[1]
     try:
-        status = provision.deploy_status(service_id) if provision.api_ready() else 'unknown'
+        status = provision.deploy_status(service_id) if provision.can_query(service_id) else 'unknown'
     except Exception:
         status = 'unknown'
     _DEPLOY_CACHE[service_id] = (now, status)

@@ -29,8 +29,27 @@ def api_ready() -> bool:
     return all(os.getenv(k) for k in ('RENDER_API_KEY', 'RENDER_OWNER_ID'))
 
 
-def enabled() -> bool:
+def backend() -> str:
+    """Where new customers' bots are created: 'render' (default) or 'fly'. Existing instances keep their provider:
+    a Fly instance id is stored as 'fly:<app>', a Render one as the plain service id."""
+    return os.getenv('PROVISION_BACKEND', 'render').strip().lower()
+
+
+def render_enabled() -> bool:
     return api_ready() and bool(os.getenv('RENDER_ENV_GROUP_ID') or os.getenv('INSTANCE_TEMPLATE_SERVICE_ID'))
+
+
+def enabled() -> bool:
+    if backend() == 'fly':
+        from control import fly
+        return fly.enabled()
+    return render_enabled()
+
+
+def model_env() -> dict:
+    """Model settings for a new bot, copied server-side from the template instance on Render."""
+    with _client() as c:
+        return template_env(c)
 
 
 def _client() -> httpx.Client:
@@ -56,15 +75,20 @@ def template_env(c: httpx.Client) -> dict:
     return found
 
 
-def service_body(name: str, sso_secret: str, extra_env: dict | None = None) -> dict:
-    env = {
-        'PYTHON_VERSION': '3.12.14', 'WEB_CONCURRENCY': '1', 'AGENT_DB_PATH': '/var/data/agent.db',
+def instance_env(sso_secret: str, extra_env: dict | None = None) -> dict:
+    """Settings every customer bot gets, whichever provider runs it. Fresh secrets per instance."""
+    return {
+        'WEB_CONCURRENCY': '1', 'AGENT_DB_PATH': '/var/data/agent.db',
         'SEED_SIMULATOR': 'false', 'DATING_AGENT_SOURCE': 'fixture', 'WORKER_ENABLED': 'true', 'COOKIE_SECURE': 'true',
         'TINDER_ENABLED': 'true', 'TINDER_REQUESTS_PER_MINUTE': '30', 'TINDER_REQUESTS_PER_HOUR': '300',
         'DASHBOARD_TOKEN': secrets.token_urlsafe(32), 'TOKEN_ENCRYPTION_KEY': _key(), 'SSO_SECRET': sso_secret,
         'CONTROL_ORIGIN': os.getenv('PUBLIC_ORIGIN', '').rstrip('/'),
         **(extra_env or {}),
     }
+
+
+def service_body(name: str, sso_secret: str, extra_env: dict | None = None) -> dict:
+    env = {'PYTHON_VERSION': '3.12.14', **instance_env(sso_secret, extra_env)}
     return {
         'type': 'web_service', 'name': name, 'ownerId': os.environ['RENDER_OWNER_ID'],
         'repo': os.getenv('INSTANCE_REPO', 'https://github.com/Bienos/Tinderbot-'), 'branch': os.getenv('INSTANCE_BRANCH', 'main'),
@@ -83,6 +107,13 @@ def service_body(name: str, sso_secret: str, extra_env: dict | None = None) -> d
 
 
 def create_instance(account_id: int) -> dict:
+    if backend() == 'fly':
+        from control import fly
+        return fly.create_instance(account_id)
+    return render_create_instance(account_id)
+
+
+def render_create_instance(account_id: int) -> dict:
     """Create the service, link the shared env group and redeploy so the group's variables are loaded."""
     sso_secret = secrets.token_urlsafe(32)
     name = f'iskra-u{account_id}-{secrets.token_hex(2)}'
@@ -114,12 +145,25 @@ def link_existing(service_id: str) -> dict:
 
 
 def set_suspended(service_id: str, suspended: bool) -> None:
+    if service_id.startswith('fly:'):
+        from control import fly
+        return fly.set_suspended(service_id[4:], suspended)
     with _client() as c:
         c.post(f"/services/{service_id}/{'suspend' if suspended else 'resume'}").raise_for_status()
 
 
+def can_query(service_id: str) -> bool:
+    if service_id.startswith('fly:'):
+        from control import fly
+        return fly.api_ready()
+    return api_ready()
+
+
 def deploy_status(service_id: str) -> str:
-    """Status of the service's newest deploy on Render (e.g. build_in_progress, update_in_progress, live)."""
+    """Render-style status of the newest deploy (build_in_progress, update_in_progress, live, ...) for either provider."""
+    if service_id.startswith('fly:'):
+        from control import fly
+        return fly.deploy_status(service_id[4:])
     with _client() as c:
         r = c.get(f'/services/{service_id}/deploys', params={'limit': 1})
         r.raise_for_status()
