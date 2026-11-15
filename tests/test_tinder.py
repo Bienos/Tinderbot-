@@ -112,7 +112,9 @@ class Source:
     def handle(self,req):
         self.requests.append(req)
         assert req.url.host=='api.gotinder.com' and req.headers.get('X-Auth-Token')==TOKEN
-        assert req.headers.get('platform') is None
+        assert req.headers.get('platform')=='web' and req.headers.get('app-version') and req.headers.get('tinder-version')
+        # Never forge the browser-generated anti-automation signatures.
+        assert not any(h in req.headers for h in ('x-client-session','x-client-trace','x-agent-signals'))
         path=req.url.path
         if path=='/profile':return httpx.Response(self.profile_status,json={'data':{'_id':self.profile_owner}})
         if path=='/v2/matches':return httpx.Response(200,json={'data':{'matches':[
