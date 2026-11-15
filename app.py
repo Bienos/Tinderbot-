@@ -210,10 +210,11 @@ def build_stats(threads,hist,outcomes):
             'per_day':[{'day':d,**per_day[d]} for d in days],'tinder_requests':req}
 @app.get('/api/state')
 def state():
-    drafts=s.all_drafts();notes=s.notifications();rows=s.threads();hist={t['id']:s.messages(t['id']) for t in rows}
+    drafts=s.all_drafts();notes=s.notifications();rows=s.threads();by_thread=s.messages_by_thread();hist={t['id']:by_thread.get(t['id'],[]) for t in rows}
     outcomes={r['thread_id']:json.loads(r['value']) for r in s.rows('SELECT * FROM outcome_state')}
     from agent import strategy
     cfg=rt.settings()
+    ctx={'cfg':cfg,'hist':hist,'grants':{g['thread_id']:g for g in s.rows('SELECT * FROM grants')}}  # read once, not per thread
     profiles={}
     for r in s.rows('SELECT thread_id,value FROM tinder_threads'):
         try:profiles[r['thread_id']]=json.loads(r['value']).get('profile')
@@ -221,10 +222,11 @@ def state():
     threads=[]
     for t in rows:
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
-        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
+        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t,ctx);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
+    mem=rt.memory_by_thread()
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
-            'memory':{t['id']:rt.memory(t['id']) for t in rows},'outcome_details':outcomes,
+            'memory':{t['id']:mem.get(t['id'],[]) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
             'actions':s.rows('SELECT * FROM actions ORDER BY updated DESC LIMIT 100'),
             'connections':s.rows('SELECT id,enabled,can_reply FROM connections'),
