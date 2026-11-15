@@ -101,8 +101,23 @@ def profile_summary(person: dict, match: dict | None = None) -> dict:
             'matched_at': _iso(match.get('created_date')), 'last_activity': _iso(match.get('last_activity_date'))}
 
 
+TOKEN_SLOT = 'tinder_token'
+
+
+def valid_token_format(value: str) -> bool:
+    return bool(value) and 8 <= len(value) <= 4096 and all(33 <= ord(c) <= 126 for c in value)
+
+
+def token_source() -> str | None:
+    from agent import vault
+    if vault.has(TOKEN_SLOT): return 'vault'
+    return 'env' if os.getenv('TINDER_AUTH_TOKEN', '').strip() else None
+
+
 def token() -> str:
-    value = os.getenv('TINDER_AUTH_TOKEN', '').strip()
+    # A token saved by the customer in their own dashboard (encrypted) wins over the operator env variable.
+    from agent import vault
+    value = (vault.get(TOKEN_SLOT) or '') if vault.has(TOKEN_SLOT) else os.getenv('TINDER_AUTH_TOKEN', '').strip()
     if not value or len(value) > 4096 or any(ord(c) < 33 or ord(c) > 126 for c in value):
         raise TinderAuthError('tinder_token_missing_or_invalid')
     return value
@@ -113,7 +128,7 @@ def fingerprint() -> str:
 
 
 def configured() -> bool:
-    return os.getenv('TINDER_ENABLED', 'false').lower() == 'true' and bool(os.getenv('TINDER_AUTH_TOKEN', '').strip())
+    return os.getenv('TINDER_ENABLED', 'false').lower() == 'true' and token_source() is not None
 
 
 def poll_interval() -> int:
@@ -559,4 +574,11 @@ def public_status():
                             'auto_send': bool(value.get('auto_send',False)),
                             'error': value.get('error'), 'last_sync': value.get('last_sync'),
                             'next_poll': value.get('next_poll', 0), 'blocked_until':value.get('blocked_until',0), 'failures':value.get('failures',0)})
-    return {'configured': configured(), 'unofficial': True, 'connections': connections}
+    from agent import vault
+    tail = None
+    if token_source():
+        try: tail = fingerprint()[-6:]
+        except TinderAuthError: tail = None
+    return {'configured': configured(), 'enabled': os.getenv('TINDER_ENABLED', 'false').lower() == 'true',
+            'unofficial': True, 'connections': connections, 'token_source': token_source(),
+            'token_fingerprint': tail, 'vault_ready': vault.available()}

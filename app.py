@@ -323,6 +323,47 @@ def style_library():
     from agent import style
     return {**style.library_summary(),'suggested_style':style.suggested_style()}
 
+_TOKEN_ATTEMPTS=[]
+@app.post('/api/tinder/token')
+async def tinder_token_save(request:Request):
+    """Customer pastes their Tinder session token. Verified against Tinder, then stored encrypted; never echoed."""
+    from agent import vault
+    from agent.tinder import TinderClient,TinderAuthError,TinderError,valid_token_format,TOKEN_SLOT,connect
+    now=time.time();_TOKEN_ATTEMPTS[:]=[t for t in _TOKEN_ATTEMPTS if t>now-3600]
+    if len(_TOKEN_ATTEMPTS)>=10:raise HTTPException(429,'Za dużo prób. Spróbuj za godzinę.')
+    _TOKEN_ATTEMPTS.append(now)
+    try:body=await request.json()
+    except ValueError:raise HTTPException(422,'Nieprawidłowe dane')
+    value=str(body.get('token','')).strip().strip('"').strip("'") if isinstance(body,dict) else ''
+    if not (isinstance(body,dict) and body.get('account_owned') is True and body.get('acknowledge_unofficial') is True):
+        raise HTTPException(422,'Potwierdź, że to Twoje konto i że integracja jest nieoficjalna')
+    if not valid_token_format(value):raise HTTPException(422,'To nie wygląda na token Tindera. Skopiuj wartość TinderWeb/APIToken.')
+    if not vault.available():raise HTTPException(503,'Serwer nie ma klucza szyfrowania (TOKEN_ENCRYPTION_KEY). Token nie został zapisany.')
+    async with service.LOCK:
+        try:
+            async with TinderClient(value) as api:
+                api.reconnect=True
+                await api.profile();await api.check_inbox_access()
+        except TinderAuthError:
+            raise HTTPException(403,'Tinder odrzucił ten token. Zaloguj się ponownie na tinder.com i skopiuj nowy.')
+        except TinderError:
+            raise HTTPException(503,'Nie udało się sprawdzić tokena w Tinderze. Spróbuj za chwilę.')
+        vault.put(TOKEN_SLOT,value);value=None
+        rt.audit(None,'tinder_token_saved','Encrypted Tinder token saved by owner')
+        try:cid=await connect()
+        except TinderError as exc:raise HTTPException(503,str(exc))
+    return {'connected':True,'connection_id':cid}
+
+@app.delete('/api/tinder/token')
+async def tinder_token_delete():
+    from agent import vault
+    from agent.tinder import TOKEN_SLOT
+    async with service.LOCK:
+        vault.delete(TOKEN_SLOT)
+        with s.connect() as db:db.execute("UPDATE connections SET enabled=0 WHERE id LIKE 'tinder:%'")
+    rt.audit(None,'tinder_token_deleted','Owner removed the stored Tinder token; connection disabled')
+    return {'deleted':True}
+
 @app.post('/api/tinder/sync')
 async def tinder_sync():
     from agent.tinder import poll
