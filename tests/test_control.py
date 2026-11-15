@@ -422,7 +422,8 @@ def test_old_render_address_sends_page_visits_to_the_custom_domain(client,monkey
     assert r.status_code==301 and r.headers['location']=='https://winq.example/konto?platnosc=ok'
     for path in ('/health','/api/me','/admin/accounts'):                       # machines keep the old address
         assert client.get(path,headers={'host':'old-site.onrender.com'},follow_redirects=False).status_code!=301,path
-    assert client.post('/stripe/webhook',headers={'host':'old-site.onrender.com'},content=b'{}').status_code!=301
+    # The webhook path is exempt; a GET (405) checks that without importing stripe, which the bot's build lacks.
+    assert client.get('/stripe/webhook',headers={'host':'old-site.onrender.com'},follow_redirects=False).status_code!=301
     assert client.get('/',follow_redirects=False).status_code==200                  # the new domain itself is served
 
 
