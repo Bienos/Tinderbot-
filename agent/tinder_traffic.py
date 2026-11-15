@@ -24,12 +24,25 @@ def retry_after(value,default=300):
         return max(15,seconds)
     except (ValueError,TypeError):return default
 
+def import_phase():
+    """True until the first complete sync of the current Tinder connection has finished."""
+    for row in s.rows("SELECT value FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):
+        if not json.loads(row['value']).get('initial_import_done'):return True
+    return False
+
+def caps():
+    """Higher budget once, for the first full import; conservative budget for everyday syncing afterwards."""
+    minute,hour=integer('TINDER_REQUESTS_PER_MINUTE',30),integer('TINDER_REQUESTS_PER_HOUR',300)
+    if import_phase():
+        minute=max(minute,integer('TINDER_IMPORT_REQUESTS_PER_MINUTE',120));hour=max(hour,integer('TINDER_IMPORT_REQUESTS_PER_HOUR',1000))
+    return [(60,minute),(3600,hour)]
+
 def claim_request():
     now=time.time()
-    caps=[(60,integer('TINDER_REQUESTS_PER_MINUTE',30)),(3600,integer('TINDER_REQUESTS_PER_HOUR',300))]
+    caps_now=caps()
     with s.connect() as db:
         db.execute('BEGIN IMMEDIATE');db.execute('DELETE FROM tinder_requests WHERE ts<?',(now-3600,))
-        for window,cap in caps:
+        for window,cap in caps_now:
             rows=db.execute('SELECT ts FROM tinder_requests WHERE ts>? ORDER BY ts',(now-window,)).fetchall()
             if len(rows)>=cap:raise TrafficBudget(max(15,math.ceil(rows[0]['ts']+window-now)))
         db.execute('INSERT INTO tinder_requests(ts) VALUES(?)',(now,))

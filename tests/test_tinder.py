@@ -343,3 +343,14 @@ def test_profile_summary_prefers_card_sized_photo_and_reads_match_times():
     out=profile_summary(person,{'created_date':'2026-11-10T12:00:00.000Z','last_activity_date':'2026-11-12T08:30:00Z'})
     assert out['photos']==['https://images-ssl.gotinder.com/320.jpg']
     assert out['matched_at'].startswith('2026-11-10T12:00') and out['last_activity'].startswith('2026-11-12T08:30')
+
+
+async def test_first_complete_sync_marks_import_done_and_lowers_budget(source,monkeypatch):
+    from agent import tinder_traffic as traffic
+    monkeypatch.delenv('TINDER_REQUESTS_PER_MINUTE',raising=False)
+    await tinder.connect()
+    assert traffic.import_phase() and traffic.caps()[0][1]==120
+    await tinder.sync_connection(CID)
+    state=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
+    assert state['initial_import_done'] is True
+    assert not traffic.import_phase() and traffic.caps()[0][1]==30

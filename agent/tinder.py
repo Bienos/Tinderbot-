@@ -452,6 +452,9 @@ async def sync_connection(connection_id: str):
     with s.connect() as db:
         row=db.execute('SELECT value FROM connections WHERE id=?',(connection_id,)).fetchone();value=json.loads(row['value'])
         value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature})
+        if page.complete and not value.get('initial_import_done'):
+            value['initial_import_done']=True  # from now on the everyday (lower) request budget applies
+            rt.audit(None,'tinder_initial_import_done','First full import finished; switching to everyday request limits')
         db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),connection_id))
     status_update(connection_id, delay=delay, polled=True)
 
@@ -463,7 +466,8 @@ def clear_local_budget_block():
         if value.get('error') in ('local_request_budget', None, 'source_sync_failed'):
             value['blocked_until'] = 0 if value.get('error') == 'local_request_budget' else value.get('blocked_until', 0)
             value['next_poll'] = 0
-            with s.connect() as db: db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), row['id']))
+        value['initial_import_done'] = False  # owner asked for a full re-import: allow the import budget once more
+        with s.connect() as db: db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), row['id']))
 
 async def poll():
     if not configured() or rt.settings()['paused']: return

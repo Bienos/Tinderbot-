@@ -153,3 +153,16 @@ async def test_existing_cooldown_checks_do_not_count_as_new_server_throttles(sou
     value=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
     assert len(value['rate_limit_events'])==1
     assert tinder.public_status()['connections'][0]['enabled'] and len(source.requests)==before
+
+
+def test_import_budget_only_until_first_full_import(store,monkeypatch):
+    import json
+    from agent import storage as s, tinder_traffic as traffic
+    from agent.tinder import clear_local_budget_block
+    monkeypatch.delenv('TINDER_REQUESTS_PER_MINUTE',raising=False);monkeypatch.delenv('TINDER_REQUESTS_PER_HOUR',raising=False)
+    with s.connect() as db:db.execute("INSERT INTO connections VALUES('tinder:o',1,1,'o',?)",(json.dumps({'error':None}),))
+    assert traffic.import_phase() and traffic.caps()==[(60,120),(3600,1000)]
+    with s.connect() as db:db.execute("UPDATE connections SET value=? WHERE id='tinder:o'",(json.dumps({'initial_import_done':True}),))
+    assert not traffic.import_phase() and traffic.caps()==[(60,30),(3600,300)]
+    clear_local_budget_block()
+    assert traffic.import_phase()
