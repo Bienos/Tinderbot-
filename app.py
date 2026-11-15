@@ -216,11 +216,11 @@ class Settings(BaseModel):
     mode:__import__('typing').Literal['simulation','supervised','authorized_autonomy']='supervised'
     paused:bool=False
     language:str=Field(default='auto',max_length=30)
-    style:str=Field(default='short, casual; no forced questions or emoji',max_length=1000)
+    style:str=Field(default=rt.DEFAULT_STYLE,max_length=1000)
     profile:dict[str,str]=Field(default_factory=dict,max_length=30)
     feedback:list[str]=Field(default_factory=list,max_length=20)
     email:bool=False
-    retention_days:int=Field(default=30,ge=1,le=365)
+    retention_days:int=Field(default=365,ge=1,le=365)
     goal:__import__('typing').Literal['date','date_or_instagram','instagram','chat']='date'
     allow_instagram:bool=True
     pace:__import__('typing').Literal['slow','normal','fast']='normal'

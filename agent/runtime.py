@@ -7,10 +7,15 @@ import time
 from uuid import uuid4
 from agent import storage as s
 
-DEFAULTS = {'mode':'supervised','paused':False,'language':'auto','style':'short, casual; no forced questions or emoji',
-            'profile':{},'feedback':[], 'email':False,'retention_days':30,
+LEGACY_STYLE='short, casual; no forced questions or emoji'
+DEFAULT_STYLE=('krótko, zwykle około 30 znaków, jedno-dwa zdania, od małej litery, bez emoji, pytanie tylko gdy naturalne, '
+               'bez serii pytań, reaguj konkretnie na to, co napisała, lekki humor, bez komplementów na siłę')
+DEFAULT_DATE_IDEAS=['kawa albo matcha na mieście','spacer z kawą na wynos','piwo albo wino w luźnym barze',
+                    'wystawa, targi albo coś w tym stylu','planszówki w barze','lody albo gofry i spacer']
+DEFAULTS = {'mode':'supervised','paused':False,'language':'auto','style':DEFAULT_STYLE,
+            'profile':{},'feedback':[], 'email':False,'retention_days':365,
             'goal':'date','allow_instagram':True,'pace':'normal',
-            'availability':'zwykle wieczory w tygodniu, w weekend elastycznie','date_ideas':[]}
+            'availability':'zwykle wieczory w tygodniu, w weekend elastycznie','date_ideas':DEFAULT_DATE_IDEAS}
 
 def init():
     s.init_db()
@@ -66,7 +71,13 @@ def recover():
         db.execute("UPDATE jobs SET status='queued' WHERE status='processing'")
         db.execute("UPDATE outbox SET status='uncertain' WHERE status='sending'")
 
-def settings(): return {**DEFAULTS,**json.loads(s.rows('SELECT value FROM settings WHERE id=1')[0]['value'])}
+def settings():
+    stored=json.loads(s.rows('SELECT value FROM settings WHERE id=1')[0]['value'])
+    # Values that were only the old shipped defaults are upgraded; anything the owner typed is kept.
+    if stored.get('style')==LEGACY_STYLE:stored.pop('style')
+    if not stored.get('date_ideas'):stored.pop('date_ideas',None)
+    if stored.get('retention_days')==30:stored.pop('retention_days')
+    return {**DEFAULTS,**stored}
 def save_settings(value):
     with s.connect() as db: db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(value,ensure_ascii=False),))
     audit(None,'settings_changed','Owner updated configuration')

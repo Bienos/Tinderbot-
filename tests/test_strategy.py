@@ -96,3 +96,16 @@ def test_plan_reaches_model_and_wait_skips_model(store,monkeypatch):
     assert calls[-1]['conversation_plan']['move']=='invite'
     n=len(calls);d,g=engine.generate(h,{},plan={'move':'wait','why':'x'})
     assert len(calls)==n and d.action=='no_reply'
+
+
+def test_legacy_default_settings_upgrade_but_owner_values_stay(store):
+    import json as j
+    from agent import runtime as rt, storage as s
+    with s.connect() as db:
+        db.execute('UPDATE settings SET value=? WHERE id=1',(j.dumps({**rt.DEFAULTS,'style':rt.LEGACY_STYLE,'date_ideas':[],'retention_days':30,'language':'pl'}),))
+    cfg=rt.settings()
+    assert cfg['style']==rt.DEFAULT_STYLE and cfg['date_ideas']==rt.DEFAULT_DATE_IDEAS and cfg['retention_days']==365
+    assert cfg['language']=='pl'
+    with s.connect() as db:
+        db.execute('UPDATE settings SET value=? WHERE id=1',(j.dumps({**rt.DEFAULTS,'style':'mój własny styl'}),))
+    assert rt.settings()['style']=='mój własny styl'
