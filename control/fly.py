@@ -57,7 +57,7 @@ def _check(r: httpx.Response, what: str) -> httpx.Response:
     return r
 
 
-def machine_config(image: str, env: dict, volume_id: str, account_id: int) -> dict:
+def machine_config(image: str, env: dict, volume_id: str, account_id: int, host: str) -> dict:
     return {
         'image': image,
         'env': env,
@@ -68,7 +68,9 @@ def machine_config(image: str, env: dict, volume_id: str, account_id: int) -> di
                       'min_machines_running': 1,
                       'ports': [{'port': 443, 'handlers': ['tls', 'http']},
                                 {'port': 80, 'handlers': ['http'], 'force_https': True}]}],
+        # The bot only answers requests addressed to its own public name, so the check says which name it means.
         'checks': {'health': {'type': 'http', 'port': PORT, 'method': 'GET', 'path': '/health',
+                              'headers': [{'name': 'Host', 'values': [host]}],
                               'interval': '15s', 'timeout': '5s', 'grace_period': '20s'}},
         'restart': {'policy': 'always'},
         'metadata': {'fly_platform_version': 'v2', 'fly_process_group': 'app', 'iskra_account': str(account_id)},
@@ -97,7 +99,8 @@ def create_instance(account_id: int) -> dict:
             volume = _check(c.post(f'/apps/{name}/volumes', json={
                 'name': 'data', 'region': region, 'size_gb': 1, 'encrypted': True,
                 'auto_backup_enabled': True, 'snapshot_retention': 7}), 'create volume').json()
-            body = {'region': region, 'config': machine_config(os.environ['FLY_IMAGE'].strip(), public, volume['id'], account_id)}
+            body = {'region': region, 'config': machine_config(os.environ['FLY_IMAGE'].strip(), public, volume['id'], account_id,
+                                                                 f'{name}.fly.dev')}
             if version is not None:
                 body['min_secrets_version'] = version
             machine = _check(c.post(f'/apps/{name}/machines', json=body), 'create machine').json()

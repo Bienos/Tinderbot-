@@ -498,6 +498,7 @@ def test_fly_provisioning_builds_an_isolated_always_on_bot_with_secrets_outside_
     assert env['PUBLIC_ORIGIN']==f'https://{app}.fly.dev' and env['CONTROL_ORIGIN']=='http://testserver' and env['AGENT_DB_PATH']=='/var/data/agent.db'
     assert cfg['mounts']==[{'volume':'vol_123','path':'/var/data'}] and cfg['guest']['memory_mb']==256
     assert cfg['services'][0]['autostop']=='off' and cfg['restart']['policy']=='always' and cfg['image']=='registry.fly.io/iskra-img:latest'
+    assert cfg['checks']['health']['headers']==[{'name':'Host','values':[f'{app}.fly.dev']}]   # the bot rejects other Host headers
     assert 'DASHBOARD_TOKEN' not in str(rcalls)                               # nothing written back to Render
 
 
