@@ -15,3 +15,14 @@ complete-history reconciliation; durable receipt candidates with read-back;
 no synthesized successful sends; local permissions, automatic mode and revocation;
 secret-free errors and dashboard connection controls. This is unofficial access,
 not a Tinder partnership or a claim of written platform permission.
+
+# Fonts
+
+`static/fonts/` ships the Onest and Unbounded variable fonts (Latin and Latin
+Extended subsets, from the Fontsource packages `@fontsource-variable/onest` 5.3.1
+and `@fontsource-variable/unbounded` 5.3.0) so the agent panel matches the landing
+page without loading anything from a third-party server.
+
+- Onest, Copyright 2021 The Onest Project Authors (https://github.com/simpals/onest)
+- Unbounded, Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)
+- License: SIL Open Font License 1.1; complete notices in licenses/Onest-OFL.txt and licenses/Unbounded-OFL.txt

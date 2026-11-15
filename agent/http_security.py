@@ -35,6 +35,8 @@ class SecurityBoundary:
                     b'referrer-policy':b'no-referrer',b'x-frame-options':b'DENY',
                     b'content-security-policy':b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.gotinder.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"})
                 if origin.startswith('https://'):existing[b'strict-transport-security']=b'max-age=31536000'
+                # Public font files are the only cacheable responses; everything else stays no-store.
+                if message.get('status')==200 and scope['path'].startswith('/static/fonts/'):existing[b'cache-control']=b'public, max-age=604800'
                 message={**message,'headers':list(existing.items())}
             await send(message)
         async def reject(status,detail):await JSONResponse({'detail':detail},status)(scope,receive,safe_send)
