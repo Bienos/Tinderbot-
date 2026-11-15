@@ -415,6 +415,15 @@ async def sync_connection(connection_id: str):
     status_update(connection_id, delay=delay, polled=True)
 
 
+def clear_local_budget_block():
+    """Local request-budget pauses are our own limit, not Tinder's: allow an owner-requested sync to proceed."""
+    for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):
+        value = json.loads(row['value'])
+        if value.get('error') in ('local_request_budget', None, 'source_sync_failed'):
+            value['blocked_until'] = 0 if value.get('error') == 'local_request_budget' else value.get('blocked_until', 0)
+            value['next_poll'] = 0
+            with s.connect() as db: db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), row['id']))
+
 async def poll():
     if not configured() or rt.settings()['paused']: return
     for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):

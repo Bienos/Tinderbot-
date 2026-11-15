@@ -140,7 +140,7 @@ def build_stats(threads,hist,outcomes):
     try:
         req={'minute':s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?',(now-60,))[0]['n'],'hour':s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?',(now-3600,))[0]['n']}
     except Exception:req=None
-    return {'matches':len(threads),'by_state':dict(by_state),'messages_you':mine,'messages_them':theirs,
+    return {'with_photos':sum(1 for t in threads if (t.get('profile') or {}).get('photos')),'matches':len(threads),'by_state':dict(by_state),'messages_you':mine,'messages_them':theirs,
             'conversations_two_way':both,'we_wrote':wrote,'they_replied':replied,
             'drafts':{r['status']:r['n'] for r in s.rows('SELECT status,COUNT(*) n FROM drafts GROUP BY status')},
             'actions':s.rows('SELECT status,automatic,COUNT(*) n FROM actions GROUP BY status,automatic'),
@@ -286,15 +286,23 @@ async def tinder_connect(body:TinderConnect):
     return {'connection_id':cid,'unofficial':True,'automatic_sending':True,
             'scope':'Consented and disclosed threads; no per-message approval'}
 
+_BG=set()
 @app.post('/api/tinder/restore-deleted')
 async def tinder_restore_deleted():
-    """Allow the next sync to re-import Tinder conversations removed by retention or manual delete."""
+    """One click: keep conversations (retention >= 365 days), allow re-import, then sync in the background."""
+    from agent.tinder import poll,clear_local_budget_block
     async with service.LOCK:
+        cfg=rt.settings()
+        if cfg.get('retention_days',30)<365:rt.save_settings({**cfg,'retention_days':365})
         with s.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             n=db.execute("DELETE FROM tombstones WHERE thread_id LIKE 'tinder:%'").rowcount
+        clear_local_budget_block()
     rt.audit(None,'tinder_reimport_allowed','Owner allowed re-import of deleted Tinder conversations: %d'%n)
-    return {'restored':n}
+    async def run():
+        async with service.LOCK:await poll()
+    task=asyncio.create_task(run());_BG.add(task);task.add_done_callback(_BG.discard)
+    return {'restored':n,'retention_days':365,'sync':'started'}
 
 @app.post('/api/tinder/sync')
 async def tinder_sync():
