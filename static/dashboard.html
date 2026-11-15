@@ -183,6 +183,44 @@ textarea.inp{font-family:inherit;line-height:1.45}
 header{flex-wrap:wrap;row-gap:10px}header nav{flex-wrap:wrap}header nav :is(button,a){white-space:nowrap}
 @media(max-width:1560px){.topbadge{display:none}}
 @media(min-width:761px) and (max-width:1240px){header nav:not(.tabs) :is(button,a){padding:7px 12px;font-size:14px}}
+
+/* Start guide: the same four steps on Rozmowy, behind the Autopilot button and in Settings → Tinder. */
+.guide{display:flex;flex-direction:column;gap:10px;grid-column:1/-1;margin-top:8px}
+.gstep{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;align-items:start;border:1.5px solid var(--line);border-radius:18px;padding:14px 16px;background:var(--card)}
+.gstep.now{border-color:rgba(253,38,122,.45);box-shadow:0 10px 28px -18px rgba(253,38,122,.7)}
+.gstep.done{background:#f7fcf9;border-color:rgba(31,157,85,.28)}
+.gstep.wait{border-color:rgba(242,165,22,.5);background:#fffaf0}
+.gstep.todo{opacity:.6}
+.gnum{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;background:var(--soft);color:var(--muted)}
+.gstep.now .gnum{background:var(--grad);color:#fff}
+.gstep.done .gnum{background:#1f9d55;color:#fff}
+.gstep.wait .gnum{background:#f2a516;color:#fff}
+.gtxt b{font-size:15px;display:block;margin-top:6px}
+.gtxt .gdesc{margin:4px 0 0}
+.gctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.gctl .presets{margin:0}
+.primary.big{padding:13px 26px;font-size:16px}
+.bioex{cursor:pointer;font:inherit;font-size:14px;font-weight:600;color:var(--ink)}
+.bioex:hover{background:#fff}
+.guide>.mresult:empty{display:none}
+.guide .howto{margin-top:2px}
+/* Settings: white fields on a white card, fewer pink-on-pink tiles. */
+.inp{background:#fff;border:1.5px solid var(--off)}
+.inp::placeholder{color:#b9a7b1}
+textarea.inp{font-family:inherit;font-size:14px}
+.sv-main .scard{background:#fff;border:1.5px solid var(--line)}
+.sv-main .group+.group,.sv-main .group+.switchrow{border-top:1px solid var(--line);padding-top:20px}
+.sv-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}
+.sv-head h2{flex:1 1 auto}
+.sv-head p{flex-basis:100%;order:2}
+.sv-head .mresult{order:1;margin:0 0 0 auto;font-size:12px;color:var(--muted);flex:none}
+.sv-head .mresult.ok{color:#1f9d55}.sv-head .mresult.err{color:var(--pink);flex-basis:100%;order:3}
+.measured{margin-top:10px;padding:12px 14px;border-radius:14px;background:var(--soft);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.measured .gdesc{margin:0}
+details.advanced{border-top:1px solid var(--line);padding-top:14px}
+details.advanced summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--muted);margin-bottom:12px}
+@media(max-width:820px){.sv-nav{flex-wrap:wrap;overflow:visible}.sv-item{padding:8px 13px;font-size:14px;background:var(--card);border:1.5px solid var(--line)}.sv-item.active{border-color:var(--pink);color:var(--pink)}.sv-head .mresult{order:3;margin:6px 0 0;flex-basis:100%}}
+@media(max-width:560px){.gstep{grid-template-columns:28px minmax(0,1fr);gap:10px;padding:12px}.gnum{width:28px;height:28px;font-size:13px}.primary.big{width:100%}}
 </style></head><body>
 <header><div class="brand"><h1 aria-label="Winq"><svg class="wordmark" viewBox="-1205 -825 4120 990" aria-hidden="true" focusable="false"><defs><linearGradient id="wq-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient></defs><g transform="translate(-1205 -825) scale(15.4687)"><path class="wm-tile" d="M64.00 32.00L63.97 42.75L63.89 46.17L63.75 48.64L63.56 50.64L63.31 52.32L63.00 53.79L62.64 55.09L62.21 56.25L61.72 57.30L61.17 58.24L60.55 59.09L59.86 59.86L59.09 60.55L58.24 61.17L57.30 61.72L56.25 62.21L55.09 62.64L53.79 63.00L52.32 63.31L50.64 63.56L48.64 63.75L46.17 63.89L42.75 63.97L32.00 64.00L21.25 63.97L17.83 63.89L15.36 63.75L13.36 63.56L11.68 63.31L10.21 63.00L8.91 62.64L7.75 62.21L6.70 61.72L5.76 61.17L4.91 60.55L4.14 59.86L3.45 59.09L2.83 58.24L2.28 57.30L1.79 56.25L1.36 55.09L1.00 53.79L0.69 52.32L0.44 50.64L0.25 48.64L0.11 46.17L0.03 42.75L0.00 32.00L0.03 21.25L0.11 17.83L0.25 15.36L0.44 13.36L0.69 11.68L1.00 10.21L1.36 8.91L1.79 7.75L2.28 6.70L2.83 5.76L3.45 4.91L4.14 4.14L4.91 3.45L5.76 2.83L6.70 2.28L7.75 1.79L8.91 1.36L10.21 1.00L11.68 0.69L13.36 0.44L15.36 0.25L17.83 0.11L21.25 0.03L32.00 0.00L42.75 0.03L46.17 0.11L48.64 0.25L50.64 0.44L52.32 0.69L53.79 1.00L55.09 1.36L56.25 1.79L57.30 2.28L58.24 2.83L59.09 3.45L59.86 4.14L60.55 4.91L61.17 5.76L61.72 6.70L62.21 7.75L62.64 8.91L63.00 10.21L63.31 11.68L63.56 13.36L63.75 15.36L63.89 17.83L63.97 21.25Z" fill="url(#wq-g)"/><ellipse class="wm-eye" cx="19.5" cy="31.5" rx="7.6" ry="9.4" fill="#fff"/><path class="wm-wink" d="M32.5 34Q40.5 23 48.5 34" fill="none" stroke="#fff" stroke-width="7.4" stroke-linecap="round"/></g><path fill="currentColor" d="M835.6 -115H772.2L933.6 -571.4H1138L924.4 0H715.8L536.8 -474H605.2L424.2 0H215.6L2.4 -571.4H207.6L369.4 -115H304.8L473.8 -571.4H668.6Z M1166.4 -580.2 1268.6 -559.8 1370.8 -580.2V0H1166.4Z M1426.4 -571.4H1630.8L1668.4 -342.8V0H1464V-373.8Z M1877.8 -587.8Q1960.2 -587.8 2018 -554.9Q2075.8 -522 2106.5 -461.9Q2137.2 -401.8 2137.2 -319.6V0H1932.8V-289.6Q1932.8 -354 1900.3 -387.8Q1867.8 -421.6 1807 -421.6Q1764.6 -421.6 1733.3 -403.7Q1702 -385.8 1685.2 -352.9Q1668.4 -320 1668.4 -274.8L1605 -307.6Q1617 -399.2 1655.8 -461.5Q1694.6 -523.8 1752 -555.8Q1809.4 -587.8 1877.8 -587.8Z M2914.4 -571.4V165H2710V-176L2718.4 -223V-382.6L2710 -407.4V-571.4Z M2775 -285.4Q2761.4 -194.6 2720.1 -126.7Q2678.8 -58.8 2614.9 -21.2Q2551 16.4 2470.2 16.4Q2386.6 16.4 2322.9 -21.4Q2259.2 -59.2 2223.5 -127.4Q2187.8 -195.6 2187.8 -285.4Q2187.8 -376.2 2223.5 -444.2Q2259.2 -512.2 2322.9 -550Q2386.6 -587.8 2470.2 -587.8Q2551 -587.8 2614.9 -550.5Q2678.8 -513.2 2720.6 -445.5Q2762.4 -377.8 2775 -285.4Z M2394.2 -285.4Q2394.2 -242.8 2411.7 -210.1Q2429.2 -177.4 2460.3 -158.6Q2491.4 -139.8 2531.8 -139.8Q2573.2 -139.8 2610.2 -158.6Q2647.2 -177.4 2675.5 -210.1Q2703.8 -242.8 2717.6 -285.4Q2703.8 -328 2675.5 -361Q2647.2 -394 2610.2 -412.8Q2573.2 -431.6 2531.8 -431.6Q2491.4 -431.6 2460.3 -412.8Q2429.2 -394 2411.7 -361Q2394.2 -328 2394.2 -285.4Z"/><path class="wm-spark" d="M1268.4 -626.6Q1215.4 -626.6 1182.4 -653.4Q1149.4 -680.2 1149.4 -725.8Q1149.4 -771.4 1182.4 -798.2Q1215.4 -825 1268.4 -825Q1322.8 -825 1355.3 -798.2Q1387.8 -771.4 1387.8 -725.8Q1387.8 -680.2 1355.3 -653.4Q1322.8 -626.6 1268.4 -626.6Z"/></svg></h1><span class="eyebrow">Panel</span></div><div class="topbadge">Połączone konta • kontrola właściciela</div><nav class="tabs"><button class="tab active" id="tab-chats">Rozmowy</button><button class="tab" id="tab-stats">Statystyki</button><button class="tab" id="tab-settings">Ustawienia</button></nav><nav><button class="secondary apbtn" id="autopilot-btn" type="button">Autopilot</button> <button class="secondary" id="open-activity">Aktywność</button> <a class="secondary" id="account-link" href="/" hidden>Konto</a> <button class="secondary" id="logout">Wyloguj</button> <button class="primary"  id="pause-all">Wstrzymaj agenta</button></nav></header><div id="account-alert" role="alert" hidden></div>
 <div id="onboard" hidden></div>
