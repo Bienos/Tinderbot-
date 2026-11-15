@@ -1,5 +1,7 @@
 # Setup and deployment
 
+For the prepared hosted path, use [GO_LIVE.md](GO_LIVE.md) and the repository’s render.yaml. It runs natively on Render with one persistent disk, simulator disabled, and credentials entered through the provider UI. Review paid resources before applying.
+
 ## One-command local startup
 
 From the project directory run `./run.sh` (Python 3.12+, network access for packages/Chromium). On Linux, missing shared browser libraries may require `playwright install-deps chromium` through your OS package manager. Open http://127.0.0.1:8765 and sign in using `runtime/dashboard-token`, or set your own DASHBOARD_TOKEN. The worker starts automatically, in supervised mode. Choose simulation in Settings for autonomous fictional messaging.

@@ -9,7 +9,7 @@
 - **Offline rollouts:** scripts/evaluate.py invokes the actual generation pipeline successively with each authored incoming turn; outgoing authored turns are not replayed. With no key these are policy/demo/abstention decisions, **not live language-quality evaluation**. Authored incoming turns are fixed inputs, not adaptive human counterparts. Default: 20 original families, three decision steps each.
 - **Live model / human / real participants:** not performed. No credentials or consenting live accounts were provided. Naturalness score remains null.
 
-The current suite has **113 passing tests**, including 19 account-traffic cases, 23 security cases, 25 existing mocked Tinder tests and three real Chromium simulator tests. The current executed suite is recorded in reports/VALIDATION.md and reports/tests.xml. The prior 46-test suite is preserved as a historical baseline before Tinder integration. The executed suite summary and environment are in reports/VALIDATION.md; the JUnit output is reports/tests.xml. Run commands are in DEPLOYMENT.md.
+The current suite has **116 passing tests**, including three cloud-deployment cases, 19 account-traffic cases, 23 security cases, 25 existing mocked Tinder tests and three real Chromium simulator tests. The current executed suite is recorded in reports/VALIDATION.md and reports/tests.xml. The prior 46-test suite is preserved as a historical baseline before Tinder integration. The executed suite summary and environment are in reports/VALIDATION.md; the JUnit output is reports/tests.xml. Run commands are in DEPLOYMENT.md.
 
 ## Corpus QA
 

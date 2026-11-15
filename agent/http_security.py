@@ -5,6 +5,13 @@ import os
 from starlette.responses import JSONResponse
 MAX_BODY_BYTES=65536
 
+def public_origin():
+    value=(os.getenv('PUBLIC_ORIGIN') or os.getenv('RENDER_EXTERNAL_URL') or 'http://127.0.0.1:8765').rstrip('/')
+    parsed=urlsplit(value)
+    if parsed.scheme not in ('http','https') or not parsed.netloc or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment or not value.isascii():
+        raise RuntimeError('PUBLIC_ORIGIN must be an ASCII HTTP(S) origin without a path or credentials')
+    return value
+
 def internal_request(scope):
     from agent.auth import same_secret,token
     headers={k.lower():v for k,v in scope['headers']}
@@ -19,7 +26,7 @@ class SecurityBoundary:
     async def __call__(self,scope,receive,send):
         if scope['type']!='http':return await self.app(scope,receive,send)
         headers={k.lower():v for k,v in scope['headers']}
-        origin=os.getenv('PUBLIC_ORIGIN','http://127.0.0.1:8765')
+        origin=public_origin()
         expected=urlsplit(origin).netloc.lower().encode('ascii')
         async def safe_send(message):
             if message['type']=='http.response.start':

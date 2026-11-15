@@ -2,6 +2,10 @@
 
 A working single-owner FastAPI application for independent conversations, permission-based autonomous execution, a local fictional browser chat, a Telegram Business integration, and an optional unofficial Tinder connector adapted from OpenDate.
 
+## Go live online
+
+[Open the Render deployment setup](https://dashboard.render.com/blueprint/new?repo=https://github.com/Bienos/Tinderbot-) using the committed render.yaml. It proposes one small paid Python service plus a persistent disk. Enter secrets only in Render, review charges and apply; then follow the [go-live walkthrough](docs/GO_LIVE.md). No hosted service has been created yet.
+
 ## Start
 
 ```bash

@@ -1,0 +1,44 @@
+# Creates a paid always-on service and persistent disk only when the owner applies it.
+# Real secrets are entered in Render, never committed here.
+services:
+  - type: web
+    name: tinderbot-personal-agent
+    runtime: python
+    repo: https://github.com/Bienos/Tinderbot-
+    branch: main
+    region: frankfurt
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: python -m pip install -r requirements.lock && python -m pytest -q
+    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1 --no-access-log --limit-concurrency 100 --timeout-keep-alive 5
+    healthCheckPath: /health
+    disk:
+      name: conversation-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.14"
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: AGENT_DB_PATH
+        value: /var/data/agent.db
+      - key: SEED_SIMULATOR
+        value: "false"
+      - key: DATING_AGENT_SOURCE
+        value: fixture
+      - key: WORKER_ENABLED
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TINDER_ENABLED
+        value: "true"
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: DASHBOARD_TOKEN
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TINDER_AUTH_TOKEN
+        sync: false

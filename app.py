@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse,JSONResponse,HTMLResponse
 from pydantic import BaseModel,Field,ConfigDict
 from agent import storage as s,runtime as rt,service,tinder as tinder_integration
 from agent.auth import token,same_secret,create_session,session_valid,revoke_session
-from agent.http_security import SecurityBoundary,internal_request
+from agent.http_security import SecurityBoundary,internal_request,public_origin
 from agent.dispatch import DispatchDenied
 from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
@@ -17,7 +17,7 @@ BASE=Path(__file__).resolve().parent
 LOGIN='''<!doctype html><title>Conversation Agent · Sign in</title><style>body{font:17px system-ui;background:#f8f4eb;max-width:420px;margin:15vh auto}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}small{color:#666}</style><h1>Conversation Agent</h1><p>Sign in with your dashboard access token.</p><form><input type=password autocomplete=current-password required aria-label="Access token"><button>Sign in</button></form><small>The local token is stored in runtime/dashboard-token. Set DASHBOARD_TOKEN for deployment.</small><p id=error></p><script src="/static/login.js" defer></script>'''
 @asynccontextmanager
 async def lifespan(app):
-    rt.init();token()
+    public_origin();rt.init();token()
     # A process lease prevents independent workers reserving simultaneous browser sends.
     owner=secrets.token_hex(16)
     with s.connect() as db:
@@ -46,7 +46,7 @@ LOGIN_ATTEMPTS=[]
 @app.middleware('http')
 async def auth(request,call_next):
     origin=request.headers.get('origin')
-    allowed=os.getenv('PUBLIC_ORIGIN','http://127.0.0.1:8765')
+    allowed=public_origin()
     if request.method not in ('GET','HEAD','OPTIONS') and origin and origin!=allowed and not (origin=='http://127.0.0.1:8765' and internal_request(request.scope)):return JSONResponse({'detail':'Cross-origin request blocked'},403)
     path=request.url.path
     if path not in ('/health','/auth/login','/webhooks/telegram','/static/login.js'):
@@ -77,7 +77,7 @@ def login(body:Login,request:Request):
     if not same_secret(body.token,token()):
         LOGIN_FAILURES[host]=failures+[now];raise HTTPException(401,'Sign in failed')
     LOGIN_FAILURES.pop(host,None)
-    r=JSONResponse({'ok':True});r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=os.getenv('PUBLIC_ORIGIN','').startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
+    r=JSONResponse({'ok':True});r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=public_origin().startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
     return r
 @app.post('/auth/logout')
 def logout(request:Request):

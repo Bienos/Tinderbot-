@@ -1,0 +1,98 @@
+[
+  {
+    "name": "blueprint",
+    "url": "https://render.com/docs/blueprint-spec.md",
+    "status": 200,
+    "bytes": 60939,
+    "preview": "# Blueprint YAML Reference\n\nEvery [Render Blueprint](/docs/infras",
+    "sha256": "56d84e8866805899f11067d56510e274a51f1e262ae23b0a7e0fded0c5579e99"
+  },
+  {
+    "name": "plans",
+    "url": "https://render.com/docs/compute-plans.md",
+    "status": 200,
+    "bytes": 14769,
+    "preview": "# Render Compute Plans \u2014 Specify your service's available CPU a",
+    "sha256": "bbede7342908c3d62b860ddde5785e81bfdc557d9ea0bb4f62d5c83cfc2d3243"
+  },
+  {
+    "name": "env",
+    "url": "https://render.com/docs/configure-environment-variables.md",
+    "status": 200,
+    "bytes": 10863,
+    "preview": "# Environment Variables and Secrets\n\nYou can (and should!) use *e",
+    "sha256": "e14aa70f607b829d3645973a01f4ba8a2c0a995a7fe7d23a47c0fca7b50dbcaf"
+  },
+  {
+    "name": "defaults",
+    "url": "https://render.com/docs/environment-variables.md",
+    "status": 200,
+    "bytes": 6761,
+    "preview": "# Default Environment Variables\n\nRender automatically sets the va",
+    "sha256": "90486435d56485fcf669f1ad0dd492de1d8d66afd7f28f53589462dc9d73e40d"
+  },
+  {
+    "name": "health",
+    "url": "https://render.com/docs/health-checks.md",
+    "status": 200,
+    "bytes": 6281,
+    "preview": "# Health Checks \u2014 Render makes sure your services are ready for",
+    "sha256": "9ce20fa79bc1838196dca96117e50015981d117d56d7b7b42f047701bb92a08e"
+  },
+  {
+    "name": "deploys",
+    "url": "https://render.com/docs/deploys.md",
+    "status": 200,
+    "bytes": 26773,
+    "preview": "# Deploying on Render \u2014 Understand how deploys work.\n\nRender ca",
+    "sha256": "58ed3fbe0555fd4524326eb2608d2c67e1aad3da293e3d02c666567258936534"
+  },
+  {
+    "name": "disks",
+    "url": "https://render.com/docs/disks.md",
+    "status": 200,
+    "bytes": 9942,
+    "preview": "# Persistent Disks \u2014 Preserve your service's filesystem changes",
+    "sha256": "a1b916b90a92d4261af0275fc8b5be6a8c31cc83af6dcd918f4c0e018112be81"
+  },
+  {
+    "name": "web",
+    "url": "https://render.com/docs/web-services.md",
+    "status": 200,
+    "bytes": 13301,
+    "preview": "# Web Services \u2014 Host dynamic web apps (Express, Django, etc.) ",
+    "sha256": "fe6dfb2178259445225eda45f720db686b095a3d0f68ec9fcbdf2e2d673e3965"
+  },
+  {
+    "name": "python",
+    "url": "https://render.com/docs/python-version.md",
+    "status": 200,
+    "bytes": 2193,
+    "preview": "# Setting Your Python Version\n\n\n> *Issues deploying your Python a",
+    "sha256": "643940e3c9f514b24b08b28127ce824c3eb08b0bd05c15841a0e0a9249c9fc62"
+  },
+  {
+    "name": "cli",
+    "url": "https://render.com/docs/cli.md",
+    "status": 200,
+    "bytes": 15063,
+    "preview": "# The Render CLI \u2014 Manage your Render resources from the comman",
+    "sha256": "ad81a3b43a6358619944555d873096b0012f3bded2883d64d40d97da9168ad89"
+  },
+  {
+    "name": "mcp",
+    "url": "https://render.com/docs/mcp-server.md",
+    "status": 200,
+    "bytes": 19659,
+    "preview": "# Render MCP Server \u2014 Manage your Render resources from Claude,",
+    "sha256": "87ae14383db081255d4a0421c53f7fe5a01d0e5750a9ec81d331e6149baf77d9"
+  },
+  {
+    "name": "schema",
+    "url": "https://render.com/schema/render.yaml.json",
+    "status": 200,
+    "bytes": 46591,
+    "preview": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  ",
+    "sha256": "6c6721a602ef6d368d5c9384c473cefaae99980e43dd4b1adcf8a2f258fc54f4"
+  }
+]

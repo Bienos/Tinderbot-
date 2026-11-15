@@ -4,7 +4,9 @@
 
 `PLAYWRIGHT_BROWSERS_PATH=/workspace/pw-browsers RUN_BROWSER_E2E=1 .venv/bin/python -m pytest -q --junitxml=reports/tests.xml`
 
-**113 passed, 0 failed, 0 errors, 0 skipped**, 22.26 seconds in JUnit. This includes **19 new account-traffic cases**, **23 security cases**, **25 existing mocked Tinder cases**, **3 real Chromium simulator tests**, and **43 other existing cases**. The single pinned Starlette/httpx test-client deprecation warning remains visible.
+**116 passed, 0 failed, 0 errors, 0 skipped**, 22.26 seconds in the earlier account-traffic JUnit run. The current complete run took 21.744 seconds.
+
+Three additional cloud-deployment cases validate Render HTTPS-origin derivation, secure session/login behavior, a fresh simulator-free background worker and settings persisting across restart; an explicit custom origin overrides the generated platform URL and malformed origins fail closed. This includes **19 new account-traffic cases**, **23 security cases**, **25 existing mocked Tinder cases**, **3 real Chromium simulator tests**, and **43 other existing cases**. The single pinned Starlette/httpx test-client deprecation warning remains visible.
 
 The previous 94-test security-hardened validation and XML are preserved in VALIDATION_PRE_TRAFFIC.md and tests_pre_traffic.xml. The historical source archive used for the request-count comparison is dating-agent-security-hardened.zip (SHA-256 d45a73cbf5cc6ec03755d3fc5f2c11cddc3924b33462d8addea13e5f6814b096). Historical artifacts describe earlier code, not current controls.
 
@@ -33,3 +35,7 @@ Python syntax compilation and `docker compose config --quiet` passed. Runtime de
 No real Tinder account, live model, live Telegram account or SMTP server was accessed. All Tinder request/send tests use mocked HTTP, and browser tests use only our local fictional site. The implementation does not demonstrate invisibility or a measured reduction in account-ban probability. Platform restrictions and live endpoint compatibility remain unresolved external risks.
 
 Automatic sending remains on by default for an explicitly connected, consented/disclosed Tinder account. Budgets, pause/revoke and restriction stops can defer/block dispatch without requiring approval for every ordinary message. Tinder's account-specific setting does not change Telegram's execution mode.
+
+## Prepared Render hosting path
+
+The native-Python render.yaml uses the documented smallest paid web compute plan (0.5c-512mb), one instance, a 1 GB /var/data disk, generated dashboard credentials and two owner-supplied secret placeholders. No fictional simulator or Chromium runs in this hosted configuration. It passed Render’s fetched public JSON Schema. Render CLI 2.36.0 was downloaded from the official release and SHA-256 verified; account-aware CLI validation was blocked by no selected/authenticated CLI workspace. The dashboard must perform normal account validation when the owner applies it. No Render resource or deployment was created. See docs/GO_LIVE.md and reports/render_deployment_sources.json.
