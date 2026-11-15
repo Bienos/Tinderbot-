@@ -141,9 +141,9 @@ def canon_text(language: str = 'pl') -> str:
     return '\n\n'.join(lines)
 
 
-def style_stats(examples: list[dict] | None = None) -> dict:
+def style_stats(examples: list[dict] | None = None, own: list[dict] | None = None) -> dict:
     """Measurable voice features of the owner's replies (or the corpus when no own replies exist yet)."""
-    own = own_pairs()
+    own = own_pairs() if own is None else own
     source = own if len(own) >= 15 else list(corpus_pairs())
     replies = [p['reply'] for p in source] or ['']
     lengths = [len(r) for r in replies]
@@ -155,15 +155,25 @@ def style_stats(examples: list[dict] | None = None) -> dict:
             'laugh_pct': round(100 * sum(1 for r in replies if re.search(r'\b(xd+|haha\w*|hah\w*|lol)\b', r, re.I)) / len(replies))}
 
 
+_SUMMARY: dict = {}
+
+
 def library_summary() -> dict:
-    corpus = corpus_pairs()
-    return {'corpus_pairs': len(corpus), 'corpus_pl': sum(1 for p in corpus if p['lang'] == 'pl'),
-            'own_pairs': len(own_pairs()), 'stats': style_stats()}
+    """What the Settings → Style card shows. One pass over the messages, cached until a message is added."""
+    from agent import storage as s
+    key = tuple(s.rows("SELECT COUNT(*) n, COALESCE(MAX(m.synced_at),'') last FROM messages m JOIN threads t ON t.id=m.thread_id "
+                       "WHERE t.platform!='simulator'")[0].values())
+    if _SUMMARY.get('key') != key:
+        corpus, own = corpus_pairs(), own_pairs()
+        stats = style_stats(own=own)
+        _SUMMARY.update(key=key, value={'corpus_pairs': len(corpus), 'corpus_pl': sum(1 for p in corpus if p['lang'] == 'pl'),
+                                        'own_pairs': len(own), 'stats': stats, 'suggested_style': suggested_style(stats)})
+    return dict(_SUMMARY['value'])
 
 
-def suggested_style() -> str:
+def suggested_style(st: dict | None = None) -> str:
     """A plain-language style description derived from measured features, for the owner to accept or edit."""
-    st = style_stats()
+    st = st or style_stats()
     parts = [f"krótko, zwykle około {st['median_chars']} znaków, jedno-dwa zdania"]
     parts.append('od małej litery' if st['lowercase_start_pct'] >= 60 else 'zdania od wielkiej litery')
     parts.append('bez emoji' if st['emoji_pct'] < 5 else 'emoji z umiarem')
