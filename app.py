@@ -17,16 +17,34 @@ from agent.adapters import StaleAction,sim_send,telegram_update
 from agent.triage import project
 BASE=Path(__file__).resolve().parent
 LOGIN='''<!doctype html><title>Conversation Agent · Sign in</title><style>body{font:17px system-ui;background:#f4f5f7;max-width:420px;margin:15vh auto}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}small{color:#666}</style><h1>Conversation Agent</h1><p>Sign in with your dashboard access token.</p><form><input type=password autocomplete=current-password required aria-label="Access token"><button>Sign in</button></form><small>The local token is stored in runtime/dashboard-token. Set DASHBOARD_TOKEN for deployment.</small><p id=error></p><script src="/static/login.js" defer></script>'''
+LEASE_WAIT_SECONDS=30
+
+
+def lease_owner():
+    import socket
+    return f'{socket.gethostname()}:{os.getpid()}:{secrets.token_hex(8)}'
+
+
+def lease_blocks(prior,owner):
+    """Another live worker of THIS container holds the lease. A lease left by a previous container (restart or
+    redeploy: the disk moves to the new one) is stale, because only one container can mount the data disk."""
+    if not prior or prior['expires']<=time.time():return False
+    return prior['owner'].split(':',1)[0]==owner.split(':',1)[0]
+
+
 @asynccontextmanager
 async def lifespan(app):
     public_origin();rt.init();token()
     # A process lease prevents independent workers reserving simultaneous browser sends.
-    owner=secrets.token_hex(16)
-    with s.connect() as db:
-        db.execute('BEGIN IMMEDIATE')
-        prior=db.execute("SELECT * FROM leases WHERE name='coordinator'").fetchone()
-        if prior and prior['expires']>time.time():raise RuntimeError('Another coordinator owns this database; use one ASGI worker')
-        db.execute('INSERT OR REPLACE INTO leases VALUES(?,?,?)',('coordinator',owner,time.time()+120))
+    owner=lease_owner()
+    for attempt in range(LEASE_WAIT_SECONDS):
+        with s.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            prior=db.execute("SELECT * FROM leases WHERE name='coordinator'").fetchone()
+            if not lease_blocks(prior,owner):
+                db.execute('INSERT OR REPLACE INTO leases VALUES(?,?,?)',('coordinator',owner,time.time()+120));break
+        await asyncio.sleep(1)
+    else:raise RuntimeError('Another coordinator owns this database; use one ASGI worker')
     rt.recover()
     async def heartbeat():
         while True:

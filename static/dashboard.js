@@ -2,7 +2,7 @@
 let data=null, selected=null, filter='all';
 const statuses={not_synced:'Jeszcze nie sprawdzono',new_match:'Nowy match',needs_reply:'Odpowiedź oczekuje',waiting:'Czekasz na odpowiedź',paused:'Wstrzymana',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia'};
 function el(tag,cls,text){let x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=String(text);return x}
-async function api(path,method='GET',payload){let res=await fetch(path,{method,headers:{'Content-Type':'application/json','X-Agent-Request':'dashboard'},body:payload?JSON.stringify(payload):undefined});let body=await res.json();if(!res.ok)throw Error(body.detail||res.status);return body}
+async function api(path,method='GET',payload){let res=await fetch(path,{method,headers:{'Content-Type':'application/json','X-Agent-Request':'dashboard'},body:payload?JSON.stringify(payload):undefined});let body=await res.json().catch(()=>({}));if(!res.ok)throw Object.assign(Error(body.detail||res.status),{status:res.status});return body}
 
 function safeImg(u){try{let x=new URL(u);return x.protocol==='https:'&&(x.hostname==='gotinder.com'||x.hostname.endsWith('.gotinder.com'))?x.href:null}catch(e){return null}}
 const IMG_CACHE=new Map();
@@ -205,7 +205,12 @@ next.onclick=()=>{skip.add(t.id);showQueue(skip)};again.onclick=async()=>{again.
 ta.onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();yes.click()}};row.append(yes,next,again);p.append(row,err);ta.focus()}
 async function pauseAll(){await api('/api/settings','PUT',{...data.settings,paused:!data.settings.paused});await refresh()}
 function showActivity(){let p=panel('Activity & reliability');p.append(el('p','','Last worker tick: '+data.worker.last_tick));for(let a of data.activity)p.append(el('p','fact',a.ts+' · '+(a.thread_id||'system')+' · '+a.event+' · '+a.detail));p.append(el('h2','','Metrics'));for(let m of data.metrics)p.append(el('p','fact',m.name+': '+m.total+' ('+m.samples+' samples)'));p.append(el('h2','','Delivery status'));for(let a of data.actions)p.append(el('p','fact',a.thread_id+' · '+a.status));for(let o of data.outbox)p.append(el('p','fact','Notification '+o.id+': '+o.status+' · attempts '+o.attempts));}
-refresh().catch(e=>document.getElementById('status').textContent=e.message);setInterval(()=>{if(!document.getElementById('panel').open&&!document.getElementById('viewer')?.open)refresh().catch(()=>{})},5000)
+function connBanner(on,text){let b=document.getElementById('conn-banner');if(!b){b=el('div','connbanner');b.id='conn-banner';b.setAttribute('role','status');document.body.prepend(b)}b.hidden=!on;if(text)b.textContent=text}
+let failures=0;
+async function safeRefresh(){try{await refresh();if(failures)connBanner(false);failures=0}catch(e){failures++;
+ if(e.status===401){location.reload();return}
+ connBanner(true,data?'Brak połączenia z serwerem. Pokazuję ostatnie dane, ponawiam…':'Łączę z serwerem… Jeśli właśnie był restart, to potrwa kilkanaście sekund.')}}
+safeRefresh();setInterval(()=>{if(!document.getElementById('panel').open&&!document.getElementById('viewer')?.open)safeRefresh()},5000)
 
 
 document.getElementById('tab-settings').addEventListener('click',()=>showSettings());document.getElementById('queue-btn')?.addEventListener('click',()=>showQueue());document.getElementById('logout').addEventListener('click',logoutNow);document.getElementById('open-activity').addEventListener('click',showActivity);document.getElementById('pause-all').addEventListener('click',pauseAll);document.getElementById('close-panel').addEventListener('click',()=>document.getElementById('panel').close());

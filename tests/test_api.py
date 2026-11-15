@@ -61,3 +61,13 @@ def test_state_survives_threads_added_during_request(store,monkeypatch):
         return rows
     monkeypatch.setattr(s,'threads',racing)
     assert application.state()['threads']
+
+
+def test_lease_left_by_previous_container_does_not_block_startup():
+    import time
+    from app import lease_blocks
+    me='host-new:40:aa'
+    assert not lease_blocks(None,me)
+    assert not lease_blocks({'owner':'host-old:40:bb','expires':time.time()+100},me)  # restarted container
+    assert lease_blocks({'owner':'host-new:41:cc','expires':time.time()+100},me)      # second worker here
+    assert not lease_blocks({'owner':'host-new:41:cc','expires':time.time()-1},me)    # expired
