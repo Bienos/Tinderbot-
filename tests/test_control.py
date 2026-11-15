@@ -26,7 +26,7 @@ OK={'email':'Jan@Example.com','name':'Jan','mode':'drafts','adult':True,'terms':
 
 def test_pages_render_with_brand_and_strict_csp(client):
     r=client.get('/')
-    assert r.status_code==200 and 'Iskra' in r.text and '{{BRAND}}' not in r.text
+    assert r.status_code==200 and 'Winq' in r.text and '{{BRAND}}' not in r.text
     assert "script-src 'self'" in r.headers['content-security-policy']
     assert client.get('/prywatnosc').status_code==200 and client.get('/regulamin').status_code==200
     assert client.get('/assets/landing.js').status_code==200 and client.get('/assets/../app.py').status_code==404
@@ -234,7 +234,7 @@ def test_paid_checkout_provisions_instance_once_and_cancel_suspends(client,monke
     assert ('POST','/v1/env-groups/evg-x/services/srv-new',{}) in calls and ('POST','/v1/services/srv-new/deploys',{}) in calls
     me=client.get('/api/me').json();assert me['panel_ready'] and me['provision_state']=='done'
     assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://iskra-u1-ab12.onrender.com/auth/sso?t=')
-    assert [m['subject'] for m in mailer.SENT]==['Witaj w Iskrze','Płatność przyjęta','Twój panel jest gotowy','Płatność przyjęta']
+    assert [m['subject'] for m in mailer.SENT]==['Witaj w Winq','Płatność przyjęta','Twój panel jest gotowy','Płatność przyjęta']
     ev2=json.dumps({'type':'customer.subscription.deleted','data':{'object':{'customer':'cus_p','status':'canceled'}}})
     client.post('/stripe/webhook',content=ev2,headers=_signed(ev2,'whsec_p'))
     assert calls[-1][:2]==('POST','/v1/services/srv-new/suspend')
@@ -400,7 +400,7 @@ def test_landing_seo_head_canonical_structured_data_and_no_third_party_fonts(cli
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example');monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
     html=client.get('/').text
     assert '<link rel="canonical" href="https://iskra.example/">' in html
-    assert '<title>Iskra – asystent randkowy AI do odpowiedzi na Tinderze</title>' in html and 'noindex' not in html
+    assert '<title>Winq, asystent randkowy AI do odpowiedzi na Tinderze</title>' in html and 'noindex' not in html
     assert 'fonts.googleapis.com' not in html and 'fonts.gstatic.com' not in html
     assert "googleapis" not in client.get('/').headers['content-security-policy']
     block=re.search(r'<script type="application/ld\+json">(.*?)</script>',html,re.S).group(1)
@@ -432,7 +432,7 @@ def test_robots_sitemap_and_llms_txt(client,monkeypatch):
     sm=client.get('/sitemap.xml');assert sm.headers['content-type'].startswith('application/xml')
     assert sm.text.count('<url>')==3 and '<loc>https://iskra.example/</loc>' in sm.text and 'zaloguj' not in sm.text
     llms=client.get('/llms.txt').text
-    assert llms.startswith('# Iskra') and '49 zł / mies.' in llms and 'nie jest powiązana z Tinder' in llms
+    assert llms.startswith('# Winq') and '49 zł / mies.' in llms and 'nie jest powiązany z Tinder' in llms
 
 
 def test_fonts_are_served_from_here_with_long_cache_and_unknown_names_404(client):

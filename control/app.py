@@ -25,7 +25,7 @@ from control import mailer, provision
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
-BRAND = os.getenv('BRAND_NAME', 'Iskra')
+BRAND = os.getenv('BRAND_NAME', 'Winq')
 EMAIL = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$')
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
        "font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
@@ -177,13 +177,13 @@ async def security_headers(request: Request, call_next):
 
 
 SHARE = ('<meta property="og:type" content="website"><meta property="og:site_name" content="{{BRAND}}">'
-         '<meta property="og:title" content="{{BRAND}}: zamień dopasowania w spotkania">'
+         '<meta property="og:title" content="{{BRAND}}. Zamień dopasowania w spotkania">'
          '<meta property="og:description" content="Asystent randkowy AI, który pisze Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła.">'
          '<meta property="og:url" content="{{ORIGIN}}{{PATH}}"><meta property="og:image" content="{{ORIGIN}}/assets/og.png">'
          '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
-         '<meta property="og:image:alt" content="Iskra: wiadomość, sygnały, szkic odpowiedzi i umówiona kawa">'
+         '<meta property="og:image:alt" content="{{BRAND}} w akcji, wiadomość, sygnały, szkic odpowiedzi i umówiona kawa">'
          '<meta property="og:locale" content="pl_PL"><meta name="twitter:card" content="summary_large_image">'
-         '<meta name="twitter:title" content="{{BRAND}}: zamień dopasowania w spotkania">'
+         '<meta name="twitter:title" content="{{BRAND}}. Zamień dopasowania w spotkania">'
          '<meta name="twitter:description" content="Asystent randkowy AI, który pisze Twoim stylem i wie, kiedy zaprosić.">'
          '<meta name="twitter:image" content="{{ORIGIN}}/assets/og.png"><link rel="icon" type="image/svg+xml" href="/assets/icon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png">')
 
@@ -224,7 +224,7 @@ def structured_data(html: str, origin: str, price: str) -> str:
              {'@type': 'WebSite', '@id': origin + '/#website', 'url': origin + '/', 'name': BRAND, 'inLanguage': 'pl-PL',
               'publisher': {'@id': origin + '/#org'}},
              {'@type': 'WebApplication', '@id': origin + '/#app', 'name': BRAND, 'url': origin + '/', 'inLanguage': 'pl-PL',
-              'description': 'Asystent randkowy AI: pisze odpowiedzi w Twoim stylu i podpowiada moment na zaproszenie na randkę. Ty zatwierdzasz każdą wiadomość.',
+              'description': 'Asystent randkowy AI, który pisze odpowiedzi w Twoim stylu i podpowiada moment na zaproszenie na randkę. Ty zatwierdzasz każdą wiadomość.',
               'applicationCategory': 'LifestyleApplication', 'operatingSystem': 'Web', 'publisher': {'@id': origin + '/#org'}}]
     cost = re.search(r'(\d+(?:[.,]\d+)?)\s*zł', price)
     if cost:
@@ -319,7 +319,7 @@ def llms(request: Request):
     text = (f'# {BRAND}\n\n'
             f'> {BRAND} to płatny asystent randkowy AI dla dorosłych (18+). Pisze szkice odpowiedzi na Tinderze w stylu użytkownika '
             f'i podpowiada, kiedy zaprosić na randkę. Użytkownik zatwierdza każdą wiadomość. Cena: {price}, anulowanie w każdej chwili. '
-            f'{BRAND} nie jest powiązana z Tinder ani Match Group.\n\n'
+            f'{BRAND} nie jest powiązany z Tinder ani Match Group.\n\n'
             f'## Strony\n\n'
             f'- [Strona główna]({origin}/): co robi {BRAND}, jak działa, cennik i najczęstsze pytania\n'
             f'- [Regulamin]({origin}/regulamin): zasady korzystania z usługi\n'

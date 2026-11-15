@@ -203,4 +203,4 @@ body.split{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);m
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.setup-bar span::after,.setup-steps li.now::before{animation:none}}
 
-.brand .wordmark{height:30px;width:auto;display:block}.wm-spark{fill:var(--ember)}.brand.light .wm-spark{fill:#fff}
+.brand .wordmark{height:30px;width:auto;display:block}.wm-spark{fill:var(--ember)}.brand.light .wm-spark{fill:#fff}.brand.light .wm-tile{fill:#fff}.brand.light .wm-eye{fill:var(--ember)}.brand.light .wm-wink{stroke:var(--ember)}

@@ -33,22 +33,22 @@ PAGE_CSS=(':root{--pink:#fd267a;--ink:#2a0f22;--text:#57404f;--muted:#8a7482;--l
  '@media(max-width:420px){main{padding:28px 22px}}')
 
 def control_origin():
-    """The Iskra account site this instance belongs to (CONTROL_ORIGIN), or '' when it runs on its own."""
+    """The Winq account site this instance belongs to (CONTROL_ORIGIN), or '' when it runs on its own."""
     value=os.getenv('CONTROL_ORIGIN','').strip().rstrip('/')
     return value if value.startswith(('https://','http://')) else ''
 
 def brand_page(title,body,status=200,head=''):
     return HTMLResponse('<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         f'<meta name="theme-color" content="#fff6f8"><link rel="icon" type="image/svg+xml" href="/static/icon.svg"><link rel="stylesheet" href="/static/fonts/fonts.css">{head}'
-        f'<title>{html.escape(title)} · Iskra</title><style>{PAGE_CSS}</style></head><body><main><div class="brand" role="img" aria-label="Iskra">{WORDMARK}</div>{body}</main></body></html>',status)
+        f'<title>{html.escape(title)} · Winq</title><style>{PAGE_CSS}</style></head><body><main><div class="brand" role="img" aria-label="Winq">{WORDMARK}</div>{body}</main></body></html>',status)
 
 def login_page():
     form=('<form><input type="password" autocomplete="current-password" required aria-label="Token dostępu" placeholder="Token dostępu">'
           '<button class="btn" type="submit">Zaloguj się</button><p id="error" role="alert"></p></form><script src="/static/login.js" defer></script>')
     account=control_origin()
     if account:
-        body=(f'<h1>Zaloguj się do panelu</h1><p>Panel otwierasz ze swojego konta Iskra. Zalogujemy Cię automatycznie.</p>'
-              f'<a class="btn" href="{html.escape(account)}/konto/panel">Zaloguj się przez konto Iskra</a>'
+        body=(f'<h1>Zaloguj się do panelu</h1><p>Panel otwierasz ze swojego konta Winq. Zalogujemy Cię automatycznie.</p>'
+              f'<a class="btn" href="{html.escape(account)}/konto/panel">Zaloguj się przez konto Winq</a>'
               f'<details><summary>Mam token dostępu</summary>{form}</details>')
     else:
         body=(f'<h1>Zaloguj się do panelu</h1><p>Wpisz token dostępu do panelu.</p>{form}'
@@ -172,7 +172,7 @@ def login(body:Login,request:Request):
     return r
 @app.get('/auth/sso')
 def sso(t:str='',request:Request=None):
-    """Single sign-on from the Iskra account page: a 60-second, single-use token HMAC-signed with SSO_SECRET."""
+    """Single sign-on from the Winq account page: a 60-second, single-use token HMAC-signed with SSO_SECRET."""
     from agent.auth import verify_sso
     if not verify_sso(t,public_origin()):
         account=control_origin()
