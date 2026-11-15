@@ -45,3 +45,14 @@ curl -X POST https://iskra-landing.onrender.com/admin/fly/update-image -H "Autho
 - Czy 256 MB wystarcza podczas pełnego importu historii (lokalnie bot zajmował 41 MB w spoczynku, na Renderze
   do 180 MB przy imporcie). Jeśli nie, `FLY_MEMORY_MB=512` (ok. 3,7 USD miesięcznie).
 - Pierwsze utworzenie bota przez API, adres `.fly.dev`, logowanie z konta (SSO) i restart.
+
+## Adresy paneli w Twojej domenie (`https://<id>.app.winq.site`)
+- Zwrotnica `winq-router` (deploy/router) przyjmuje `*.app.winq.site` i przekazuje każde zapytanie do bota
+  `winq-b-<id>` przez sieć Fly (`fly-replay`). Boty nie mają wtedy publicznych adresów.
+- Identyfikator w adresie jest losowy i nic nie mówi o kliencie.
+- Włączenie: rekordy DNS (niżej) + certyfikat `*.app.winq.site` na `winq-router`, potem w Renderze
+  `FLY_PUBLIC_DOMAIN=app.winq.site`. Bez tej zmiennej boty dostają adresy `<aplikacja>.fly.dev`.
+- DNS w home.pl: `A *.app -> 66.241.125.201`, `AAAA *.app -> 2a09:8280:1::207:e346:0`,
+  `CNAME _acme-challenge.app -> app.winq.site.x2r5p5r.flydns.net.`
+- Koszt stały: 2 maszyny zwrotnicy (ok. 4,4 USD) + certyfikat wildcard 1 USD miesięcznie.
+- Zwrotnica jest bezstanowa i niczego nie loguje; nazwa marki w `APP_PREFIX` musi zgadzać się z `BRAND_NAME`.

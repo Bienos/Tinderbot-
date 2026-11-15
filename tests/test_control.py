@@ -572,3 +572,27 @@ def test_admin_rolls_only_fly_bots_to_a_new_image(client,monkeypatch):
     assert {c[1].split('/')[3] for c in updates}=={'iskra-u1-aaa','iskra-u4-ddd'} and all(c[2]['config']['image']=='registry.fly.io/iskra-img:git-abc' for c in updates)
     assert all(c[2]['config']['mounts'] for c in updates)                        # data volume stays attached
     assert client.post('/admin/fly/update-image',json={'image':'docker.io/evil/img'},headers=ADMIN).status_code==422
+
+
+def test_fly_with_own_domain_gives_a_private_bot_behind_the_front_door(client,monkeypatch):
+    import re
+    from control import provision,fly
+    import control.app as capp
+    _fly_env(monkeypatch);monkeypatch.setenv('FLY_PUBLIC_DOMAIN','app.winq.site')
+    fcalls=[];monkeypatch.setattr(provision,'TRANSPORT',_template_mock([]));monkeypatch.setattr(fly,'TRANSPORT',_fly_mock(fcalls))
+    client.post('/api/register',json=REG,headers={'Origin':'http://testserver'});acc=capp.q('SELECT id FROM accounts',fetch=True)[0]
+    assert capp.run_provision(acc['id'])=='done'
+    row=capp.q('SELECT * FROM accounts WHERE id=?',(acc['id'],),fetch=True)[0]
+    m=re.fullmatch(r'fly:winq-b-([0-9a-f]{8})',row['render_service_id']);assert m,row['render_service_id']
+    bot=m.group(1)
+    assert row['instance_url']==f'https://{bot}.app.winq.site'                 # what the router maps back to winq-b-<id>
+    assert f"u{acc['id']}-" not in row['render_service_id']                   # no customer number in the name or address
+    assert not any(p.endswith('ip_assignments') for _,p,_,_ in fcalls)         # no public address for the bot
+    cfg=next(c[2] for c in fcalls if c[0]=='POST' and c[1].endswith('/machines'))['config']
+    assert cfg['env']['PUBLIC_ORIGIN']==f'https://{bot}.app.winq.site'
+    assert cfg['checks']['health']['headers']==[{'name':'Host','values':[f'{bot}.app.winq.site']}]
+    import sys;from pathlib import Path
+    sys.path.insert(0,str(Path(capp.__file__).resolve().parent.parent/'deploy'/'router'))
+    monkeypatch.setenv('PUBLIC_DOMAIN','app.winq.site');import importlib,router;importlib.reload(router)
+    assert router.BOT_ID.match(bot) and router.PREFIX=='winq-b-'                # router and provisioning agree
+    sys.path.pop(0)

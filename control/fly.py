@@ -10,6 +10,8 @@ Settings on the control service:
   FLY_REGION      default "fra" (Frankfurt)
   FLY_MEMORY_MB   default 256 (multiples of 256)
   FLY_SWAP_MB     default 512: swap for short memory spikes (e.g. the first full import)
+  FLY_PUBLIC_DOMAIN  e.g. app.winq.site: panels at https://<id>.app.winq.site via deploy/router (no public IPs
+                     on bots). Unset: each bot gets its own <app>.fly.dev address.
 Model settings are copied server-side from the template bot on Render (INSTANCE_TEMPLATE_SERVICE_ID), so the model
 key never sits in this service's own settings.
 """
@@ -88,9 +90,17 @@ def create_instance(account_id: int) -> dict:
     """App, public address, secrets, volume, Machine. On any failure the half-made app is removed again."""
     from control import provision
     brand = re.sub(r'[^a-z0-9]', '', os.getenv('BRAND_NAME', 'winq').lower()) or 'bot'
-    name = f'{brand}-u{account_id}-{secrets.token_hex(3)}'  # customers see this in their panel's address
+    domain = os.getenv('FLY_PUBLIC_DOMAIN', '').strip().lower().strip('.')
+    if domain:
+        # Panel at https://<random id>.<domain>, served through the front door (deploy/router): the bot app gets no
+        # public address. The id says nothing about the customer or how many customers there are.
+        bot_id = secrets.token_hex(4)
+        name, host = f'{brand}-b-{bot_id}', f'{bot_id}.{domain}'
+    else:
+        name = f'{brand}-u{account_id}-{secrets.token_hex(3)}'
+        host = f'{name}.fly.dev'
     region = os.getenv('FLY_REGION', 'fra').strip() or 'fra'
-    origin = f'https://{name}.fly.dev'
+    origin = f'https://{host}'
     sso_secret = secrets.token_urlsafe(32)
     env = provision.instance_env(sso_secret, provision.model_env())
     hidden = {k: v for k, v in env.items() if k in SECRET_KEYS}
@@ -100,15 +110,14 @@ def create_instance(account_id: int) -> dict:
         _check(c.post('/apps', json={'name': name, 'org_slug': os.environ['FLY_ORG'].strip(), 'idempotency_key': name}),
                'create app')
         try:
-            for kind in ('shared_v4', 'v6'):  # a new app has no address until one is assigned
+            for kind in (() if domain else ('shared_v4', 'v6')):  # public address only without the front door
                 _check(c.post(f'/apps/{name}/ip_assignments', json={'type': kind}), 'assign ' + kind)
             stored = _check(c.post(f'/apps/{name}/secrets', json={'values': hidden}), 'set secrets').json()
             version = stored.get('version', stored.get('Version'))
             volume = _check(c.post(f'/apps/{name}/volumes', json={
                 'name': 'data', 'region': region, 'size_gb': 1, 'encrypted': True,
                 'auto_backup_enabled': True, 'snapshot_retention': 7}), 'create volume').json()
-            body = {'region': region, 'config': machine_config(os.environ['FLY_IMAGE'].strip(), public, volume['id'], account_id,
-                                                                 f'{name}.fly.dev')}
+            body = {'region': region, 'config': machine_config(os.environ['FLY_IMAGE'].strip(), public, volume['id'], account_id, host)}
             if version is not None:
                 body['min_secrets_version'] = version
             machine = _check(c.post(f'/apps/{name}/machines', json=body), 'create machine').json()
