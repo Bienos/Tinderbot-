@@ -51,7 +51,10 @@ SCHEMAS = [
 
 MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status', "TEXT NOT NULL DEFAULT 'none'"),
               ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0'), ('accounts', 'render_service_id', 'TEXT'),
-              ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT')]
+              ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
+              ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
+              ('accounts', 'withdrawn_at', 'DOUBLE PRECISION')]
+WITHDRAWAL_DAYS = 14
 
 
 def _pg_url() -> str:
@@ -188,7 +191,14 @@ def page(name: str) -> HTMLResponse:
     origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     html = (STATIC / name).read_text(encoding='utf-8').replace('</head>', SHARE + '</head>', 1)
     price = os.getenv('PLAN_PRICE', '').strip() or 'cena widoczna przy płatności'
+    for key, fallback in LEGAL_FIELDS.items():
+        html = html.replace('{{' + key + '}}', os.getenv(key, '').strip() or fallback)
     return HTMLResponse(html.replace('{{ORIGIN}}', origin).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND))
+
+
+# Seller identity required by art. 8 of the e-services act and art. 12 of the consumer-rights act.
+LEGAL_FIELDS = {'LEGAL_NAME': '[imię i nazwisko lub firma]', 'LEGAL_ADDRESS': '[adres]',
+                'LEGAL_ID': '[NIP albo „działalność nierejestrowana”]', 'LEGAL_EMAIL': 'kontakt@iskra.example'}
 
 
 @app.get('/')
@@ -359,7 +369,8 @@ def me(request: Request):
     return {'email': acc['email'], 'name': acc.get('name') or '', 'status': acc['status'],
             'billing_enabled': billing_enabled(), 'plan_status': acc.get('plan_status') or 'none', 'has_access': has_access(acc),
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
-            'provision_state': acc.get('provision_state') or '',
+            'provision_state': acc.get('provision_state') or '', 'can_withdraw': can_withdraw(acc),
+            'withdrawn': bool(acc.get('withdrawn_at')),
             'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc)}
 
 
@@ -386,6 +397,11 @@ def billing_enabled() -> bool:
     return link_mode() or all(os.getenv(k) for k in ('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET'))
 
 
+def can_withdraw(acc: dict) -> bool:
+    paid = acc.get('paid_at')
+    return bool(paid) and not acc.get('withdrawn_at') and not acc.get('comped') and time.time() - float(paid) <= WITHDRAWAL_DAYS * 86400
+
+
 def has_access(acc: dict) -> bool:
     return bool(acc.get('comped')) or not billing_enabled() or acc.get('plan_status') in ('active', 'trialing')
 
@@ -404,6 +420,10 @@ async def billing_checkout(request: Request):
         raise HTTPException(503, 'Płatności nie są jeszcze włączone.')
     if acc.get('plan_status') in ('active', 'trialing'):
         raise HTTPException(409, 'Masz już aktywną subskrypcję.')
+    body = await _json(request)
+    if body.get('start_now') is not True:
+        raise HTTPException(422, 'Zaznacz zgodę na rozpoczęcie usługi przed upływem 14 dni i akceptację regulaminu.')
+    q('UPDATE accounts SET start_consent_at=? WHERE id=?', (time.time(), acc['id']))
     if link_mode():
         from urllib.parse import urlencode
         return {'url': os.environ['STRIPE_PAYMENT_LINK'] + '?' + urlencode({'client_reference_id': str(acc['id']), 'prefilled_email': acc['email'], 'locale': 'pl'})}
@@ -419,6 +439,38 @@ async def billing_checkout(request: Request):
         params['customer_email'] = acc['email']
     session = stripe.checkout.Session.create(api_key=os.environ['STRIPE_SECRET_KEY'], **params)
     return {'url': session.url}
+
+
+@app.post('/api/billing/withdraw')
+async def billing_withdraw(request: Request, tasks: BackgroundTasks):
+    """Consumer withdrawal within 14 days (art. 27 consumer-rights act), one click plus confirmation, no reason needed."""
+    _same_origin(request)
+    acc = current_account(request)
+    if not acc:
+        raise HTTPException(401, 'Nie jesteś zalogowany.')
+    if (await _json(request)).get('confirm') is not True:
+        raise HTTPException(422, 'Potwierdź odstąpienie od umowy.')
+    if not can_withdraw(acc):
+        raise HTTPException(409, 'Termin 14 dni na odstąpienie minął albo umowa nie została jeszcze zawarta. '
+                                 'Subskrypcję możesz anulować w „Zarządzaj subskrypcją”.')
+    now = time.time()
+    q("UPDATE accounts SET withdrawn_at=?, plan_status='withdrawn' WHERE id=?", (now, acc['id']))
+    if acc.get('render_service_id') and provision.enabled():
+        tasks.add_task(_safe_suspend, acc['render_service_id'])
+    tasks.add_task(mailer.withdrawal_confirmed, acc['email'], _origin(request))
+    owner = os.getenv('LEGAL_EMAIL', '').strip()
+    if owner:
+        tasks.add_task(mailer.safe_send, owner, f'Odstąpienie od umowy: konto {acc["id"]}',
+                       f'Klient {acc["email"]} odstąpił od umowy. Anuluj subskrypcję w Stripe (klient {acc.get("stripe_customer")}) '
+                       f'i zwróć kwotę pomniejszoną o dni korzystania w ciągu 14 dni.')
+    return {'withdrawn': True}
+
+
+def _safe_suspend(service_id: str) -> None:
+    try:
+        provision.set_suspended(service_id, True)
+    except Exception:
+        pass
 
 
 @app.post('/api/billing/portal')
@@ -458,14 +510,16 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
     if event['type'] == 'checkout.session.completed' and obj.get('mode') == 'subscription':
         ref = str(obj.get('client_reference_id') or '')
         if ref.isdigit():
-            q("UPDATE accounts SET stripe_customer=?, plan_status='active' WHERE id=?", (obj.get('customer'), int(ref)))
+            q("UPDATE accounts SET stripe_customer=?, plan_status='active', withdrawn_at=NULL, paid_at=COALESCE(paid_at, ?) WHERE id=?",
+              (obj.get('customer'), time.time(), int(ref)))
             rows = q('SELECT email FROM accounts WHERE id=?', (int(ref),), fetch=True)
             if rows:
                 tasks.add_task(mailer.payment_ok, rows[0]['email'], _origin(request))
                 tasks.add_task(run_provision, int(ref), _origin(request))
     elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
         status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
-        q('UPDATE accounts SET plan_status=? WHERE stripe_customer=?', (status[:30], obj.get('customer')))
+        # A withdrawn contract stays withdrawn until the owner cancels it in Stripe; only a fresh checkout reopens it.
+        q('UPDATE accounts SET plan_status=? WHERE stripe_customer=? AND withdrawn_at IS NULL', (status[:30], obj.get('customer')))
         for acc in q('SELECT render_service_id FROM accounts WHERE stripe_customer=? AND render_service_id IS NOT NULL', (obj.get('customer'),), fetch=True):
             if provision.enabled():
                 tasks.add_task(_suspend, acc['render_service_id'], status not in ('active', 'trialing'))

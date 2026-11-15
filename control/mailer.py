@@ -60,6 +60,12 @@ def panel_ready(to: str, origin: str) -> None:
               f'(Ustawienia, Tinder). Zajmie to około 2 minut.\n{origin}/konto')
 
 
+def withdrawal_confirmed(to: str, origin: str) -> None:
+    safe_send(to, 'Potwierdzamy odstąpienie od umowy', 'Otrzymaliśmy Twoje oświadczenie o odstąpieniu od umowy. Subskrypcja '
+              'zostanie anulowana, a zwrot (pomniejszony o dni korzystania z usługi) trafi na Twoją metodę płatności '
+              f'w ciągu 14 dni. Konto i dane możesz usunąć na stronie konta: {origin}/konto')
+
+
 def password_reset(to: str, link: str) -> None:
     safe_send(to, 'Ustaw nowe hasło', 'Ktoś (mamy nadzieję, że Ty) poprosił o zmianę hasła. Link działa przez godzinę:\n'
               f'{link}\n\nJeśli to nie Ty, zignoruj tę wiadomość. Twoje hasło się nie zmieni.')

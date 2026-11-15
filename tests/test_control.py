@@ -136,7 +136,7 @@ def test_billing_checkout_webhook_and_panel_gate(client,monkeypatch):
     monkeypatch.setattr(stripe.checkout.Session,'create',staticmethod(fake_create))
     client.post('/api/register',json=REG)
     acc_id=None
-    out=client.post('/api/billing/checkout').json();assert out['url'].startswith('https://checkout.stripe.com/')
+    out=client.post('/api/billing/checkout',json={'start_now':True}).json();assert out['url'].startswith('https://checkout.stripe.com/')
     assert seen['mode']=='subscription' and seen['customer_email']=='ola@example.com' and seen['client_reference_id'].isdigit()
     acc_id=seen['client_reference_id']
     me=client.get('/api/me').json();assert me['has_access'] is False and me['plan_status']=='none'
@@ -147,7 +147,7 @@ def test_billing_checkout_webhook_and_panel_gate(client,monkeypatch):
     assert client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_test')).json()=={'received':True}
     me=client.get('/api/me').json();assert me['has_access'] and me['plan_status']=='active' and me['panel_ready'] and me['can_manage_billing']
     assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://x.onrender.com/auth/sso?t=')
-    assert client.post('/api/billing/checkout').status_code==409
+    assert client.post('/api/billing/checkout',json={'start_now':True}).status_code==409
     ev2=json.dumps({'id':'evt_2','object':'event','type':'customer.subscription.deleted','data':{'object':{'object':'subscription','customer':'cus_123','status':'canceled'}}})
     client.post('/stripe/webhook',content=ev2,headers=_signed(ev2,'whsec_test'))
     me=client.get('/api/me').json();assert me['plan_status']=='canceled' and not me['has_access'] and not me['panel_ready']
@@ -171,7 +171,7 @@ def test_payment_link_mode_needs_no_secret_key(client,monkeypatch):
     monkeypatch.setenv('STRIPE_PORTAL_URL','https://billing.stripe.com/p/login/test_x')
     client.post('/api/register',json=REG)
     assert client.get('/api/me').json()['billing_enabled'] is True
-    url=client.post('/api/billing/checkout').json()['url'];qs=parse_qs(urlparse(url).query)
+    url=client.post('/api/billing/checkout',json={'start_now':True}).json()['url'];qs=parse_qs(urlparse(url).query)
     assert url.startswith('https://buy.stripe.com/test_abc?') and qs['prefilled_email']==['ola@example.com'] and qs['client_reference_id'][0].isdigit()
     ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':qs['client_reference_id'][0],'customer':'cus_9'}}})
     client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_link'))
@@ -221,7 +221,7 @@ def test_paid_checkout_provisions_instance_once_and_cancel_suspends(client,monke
 
 def parse_id(client):
     from urllib.parse import urlparse,parse_qs
-    return parse_qs(urlparse(client.post('/api/billing/checkout').json()['url']).query)['client_reference_id'][0]
+    return parse_qs(urlparse(client.post('/api/billing/checkout',json={'start_now':True}).json()['url']).query)['client_reference_id'][0]
 
 
 def test_failed_provision_is_recorded_and_retryable(client,monkeypatch):
@@ -255,3 +255,33 @@ def test_password_reset_flow(client):
     client.cookies.clear()
     assert client.post('/api/login',json={'email':'ola@example.com','password':'nowe-dlugie-haslo'}).status_code==200
     assert client.get('/nie-pamietam-hasla').status_code==200 and client.get('/nowe-haslo').status_code==200
+
+
+def test_checkout_requires_start_consent_and_withdrawal_within_14_days(client,monkeypatch):
+    import time as _t
+    from control import app as capp
+    monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/test_x');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_test')
+    monkeypatch.setenv('LEGAL_EMAIL','owner@example.com')
+    client.post('/api/register',json={'email':'w@example.com','password':'długiehasło123','adult':True,'terms':True})
+    assert client.post('/api/billing/checkout').status_code==422
+    assert client.post('/api/billing/checkout',json={'start_now':True}).status_code==200
+    assert capp.q('SELECT start_consent_at FROM accounts WHERE email=?',('w@example.com',),fetch=True)[0]['start_consent_at']
+    assert client.post('/api/billing/withdraw',json={'confirm':True}).status_code==409  # nothing paid yet
+    capp.q("UPDATE accounts SET paid_at=?, plan_status='active', stripe_customer='cus_w' WHERE email=?",(_t.time(),'w@example.com'))
+    assert client.get('/api/me').json()['can_withdraw'] is True
+    assert client.post('/api/billing/withdraw',json={}).status_code==422
+    capp.mailer.SENT.clear()
+    assert client.post('/api/billing/withdraw',json={'confirm':True}).json()=={'withdrawn':True}
+    me=client.get('/api/me').json();assert me['withdrawn'] and not me['has_access'] and not me['can_withdraw']
+    assert {m['to'] for m in capp.mailer.SENT}=={'w@example.com','owner@example.com'}
+    capp.q("UPDATE accounts SET plan_status='withdrawn' WHERE email=?",('w@example.com',))
+    capp.q("UPDATE accounts SET paid_at=? WHERE email=?",(_t.time()-15*86400,'w@example.com'))
+    capp.q("UPDATE accounts SET withdrawn_at=NULL WHERE email=?",('w@example.com',))
+    assert client.post('/api/billing/withdraw',json={'confirm':True}).status_code==409  # past 14 days
+
+
+def test_legal_pages_fill_seller_identity(client,monkeypatch):
+    monkeypatch.setenv('LEGAL_NAME','Jan Testowy')
+    r=client.get('/regulamin');assert r.status_code==200 and 'Jan Testowy' in r.text and '{{' not in r.text
+    assert 'Odstąpienie od umowy' in r.text and 'art. 50' in r.text
+    p=client.get('/prywatnosc');assert p.status_code==200 and 'art. 9' in p.text and '{{' not in p.text

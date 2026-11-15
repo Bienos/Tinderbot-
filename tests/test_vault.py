@@ -88,10 +88,10 @@ def test_endpoint_verifies_then_stores_encrypted_and_never_echoes(store,key,monk
     with pytest.raises(HTTPException) as e:call(application,{'token':TOKEN})
     assert e.value.status_code==422
     FakeClient.result='denied'
-    with pytest.raises(HTTPException) as e:call(application,{'token':TOKEN,'account_owned':True,'acknowledge_unofficial':True})
+    with pytest.raises(HTTPException) as e:call(application,{'token':TOKEN,'account_owned':True,'acknowledge_unofficial':True,'sensitive_data':True})
     assert e.value.status_code==403 and not vault.has(tinder.TOKEN_SLOT)
     FakeClient.result='ok'
-    out=call(application,{'token':' "'+TOKEN+'" ','account_owned':True,'acknowledge_unofficial':True})
+    out=call(application,{'token':' "'+TOKEN+'" ','account_owned':True,'acknowledge_unofficial':True,'sensitive_data':True})
     assert out=={'connected':True,'connection_id':'tinder:owner'} and TOKEN not in str(out)
     assert vault.get(tinder.TOKEN_SLOT)==TOKEN
     import asyncio
@@ -103,5 +103,5 @@ def test_endpoint_refuses_without_key(store,monkeypatch):
     import app as application
     from fastapi import HTTPException
     monkeypatch.delenv('TOKEN_ENCRYPTION_KEY',raising=False);application._TOKEN_ATTEMPTS.clear()
-    with pytest.raises(HTTPException) as e:call(application,{'token':TOKEN,'account_owned':True,'acknowledge_unofficial':True})
+    with pytest.raises(HTTPException) as e:call(application,{'token':TOKEN,'account_owned':True,'acknowledge_unofficial':True,'sensitive_data':True})
     assert e.value.status_code==503

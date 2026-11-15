@@ -1,17 +1,60 @@
 <!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/landing.css"><title>Polityka prywatności · {{BRAND}}</title></head><body>
-<header class="nav"><a class="brand" href="/"><span>{{BRAND}}</span></a><nav><a class="btn small" href="/#beta">Dołącz do bety</a></nav></header>
+<header class="nav"><a class="brand" href="/">{{BRAND}}</a><nav><a href="/regulamin">Regulamin</a><a href="/prywatnosc">Prywatność</a><a class="btn small" href="/rejestracja">Załóż konto</a></nav></header>
 <main class="legal">
 <h1>Polityka prywatności</h1>
-<p class="draft-note">Wersja robocza. Przed uruchomieniem płatnej usługi dokument musi zweryfikować prawnik i uzupełnić dane administratora.</p>
-<h2>1. Administrator</h2><p>Administratorem danych jest [nazwa firmy, adres, NIP, e-mail kontaktowy].</p>
-<h2>2. Jakie dane przetwarzamy</h2>
-<ul><li>Lista oczekujących na betę: e-mail, imię (opcjonalnie), preferowany tryb, zgody i data zgłoszenia.</li>
-<li>Konto w usłudze: dane logowania do panelu, ustawienia, styl i fakty, które sam podajesz.</li>
-<li>Połączone konto aplikacji randkowej: token sesji (przechowywany wyłącznie zaszyfrowany AES-256 na Twoim osobnym serwerze), dopasowania, zdjęcia profilowe w postaci linków i treść rozmów potrzebna do przygotowania odpowiedzi.</li></ul>
-<h2>3. Dane szczególnej kategorii</h2><p>Korzystanie z aplikacji randkowej może ujawniać informacje o życiu seksualnym lub orientacji. Przetwarzamy je wyłącznie na podstawie Twojej wyraźnej zgody (art. 9 ust. 2 lit. a RODO), którą możesz w każdej chwili wycofać.</p>
-<h2>4. Dane osób, z którymi rozmawiasz</h2><p>Przetwarzamy treść rozmów i podstawowe dane profilu Twoich rozmówców tylko w zakresie potrzebnym do przygotowania odpowiedzi, na podstawie prawnie uzasadnionego interesu. Nie sprzedajemy ich, nie łączymy między użytkownikami i usuwamy zgodnie z ustawionym okresem przechowywania.</p>
-<h2>5. Odbiorcy</h2><p>Hosting w UE (Render, Frankfurt), operator płatności (Stripe: dane rozliczeniowe, bez przechowywania kart u nas) oraz dostawca modelu językowego (Anthropic) jako podmiot przetwarzający, na podstawie umowy powierzenia. Dane wysyłane do modelu nie są domyślnie używane do jego trenowania.</p>
-<h2>6. Okres przechowywania</h2><p>Lista oczekujących: do startu usługi lub wycofania zgody. Rozmowy: zgodnie z ustawioną retencją (domyślnie 365 dni). Token: do jego usunięcia albo odłączenia konta.</p>
-<h2>7. Twoje prawa</h2><p>Dostęp, sprostowanie, usunięcie, ograniczenie, przeniesienie, sprzeciw, wycofanie zgody oraz skarga do Prezesa UODO.</p>
-<h2>8. Bezpieczeństwo</h2><p>Osobny serwer dla każdego użytkownika, szyfrowanie tokenów, brak zapisu tokenów w logach, połączenia HTTPS i ograniczony dostęp administracyjny.</p>
-</main></body></html>
+<p class="meta">Obowiązuje od 15 listopada 2026 r.</p>
+<p>Ta polityka wyjaśnia, jakie dane przetwarzamy, po co, jak długo i jakie masz prawa. Piszemy ją prostym językiem, bo dotyczy prywatnych rozmów.</p>
+
+<h2>1. Administrator</h2>
+<p>Administratorem danych jest {{LEGAL_NAME}}, {{LEGAL_ADDRESS}}, {{LEGAL_ID}}. We wszystkich sprawach dotyczących danych pisz na <a href="mailto:{{LEGAL_EMAIL}}">{{LEGAL_EMAIL}}</a>.</p>
+
+<h2>2. Jakie dane i w jakim celu</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Dane</th><th>Cel</th><th>Podstawa prawna (RODO)</th><th>Jak długo</th></tr></thead>
+<tbody>
+<tr><td>E-mail, imię, hasło (w postaci skrótu), zgody</td><td>Prowadzenie Konta i logowanie</td><td>Art. 6 ust. 1 lit. b (umowa)</td><td>Do usunięcia Konta</td></tr>
+<tr><td>Dane rozliczeniowe i historia płatności</td><td>Subskrypcja, faktury, rozliczenia</td><td>Art. 6 ust. 1 lit. b i c (umowa, obowiązek prawny)</td><td>5 lat od końca roku podatkowego</td></tr>
+<tr><td>Token sesji Aplikacji randkowej</td><td>Połączenie Panelu z Twoim kontem</td><td>Art. 6 ust. 1 lit. b</td><td>Do odłączenia konta lub usunięcia Konta</td></tr>
+<tr><td>Twoje rozmowy, dopasowania, linki do zdjęć profilowych, ustawienia stylu i fakty o Tobie</td><td>Szkice odpowiedzi, plan rozmowy, statystyki</td><td>Art. 6 ust. 1 lit. b; dla danych szczególnych art. 9 ust. 2 lit. a (wyraźna zgoda)</td><td>Zgodnie z ustawioną retencją (domyślnie 365 dni od ostatniej wiadomości)</td></tr>
+<tr><td>Logi techniczne bez treści rozmów (np. zdarzenia, błędy)</td><td>Bezpieczeństwo i naprawa usterek</td><td>Art. 6 ust. 1 lit. f (uzasadniony interes)</td><td>Do 365 dni</td></tr>
+<tr><td>E-mail do wiadomości o nowościach (tylko jeśli się zgodzisz)</td><td>Informacje o Usłudze</td><td>Art. 6 ust. 1 lit. a (zgoda)</td><td>Do wycofania zgody</td></tr>
+</tbody></table></div>
+
+<h2>3. Dane szczególnej kategorii</h2>
+<p>Korzystanie z aplikacji randkowej może ujawniać informacje o Twoim życiu seksualnym lub orientacji. Przetwarzamy je wyłącznie w zakresie potrzebnym do działania Usługi, na podstawie Twojej wyraźnej zgody wyrażonej przy połączeniu konta. Zgodę możesz wycofać w każdej chwili, odłączając konto. Wycofanie zgody nie wpływa na zgodność z prawem przetwarzania sprzed jej wycofania.</p>
+
+<h2>4. Dane osób, z którymi rozmawiasz</h2>
+<p>Aby przygotować odpowiedź, przetwarzamy treść rozmowy oraz podstawowe dane profilu Twojego rozmówcy (imię, wiek, opis i linki do zdjęć udostępnionych w Aplikacji randkowej). Robimy to na podstawie prawnie uzasadnionego interesu (art. 6 ust. 1 lit. f RODO) i w minimalnym zakresie. Nie kontaktujemy się z tymi osobami, nie tworzymy ich profili poza Twoim Panelem, nie łączymy danych między użytkownikami i nie sprzedajemy ich. Zdjęć nie kopiujemy, przechowujemy tylko linki. Dane te usuwamy razem z rozmową.</p>
+
+<h2>5. Komu przekazujemy dane</h2>
+<p>Korzystamy z zaufanych dostawców, którzy przetwarzają dane na nasze polecenie, na podstawie umów powierzenia:</p>
+<ul><li><b>Render Services, Inc.</b>: hosting serwerów w regionie Frankfurt (UE).</li>
+<li><b>Stripe Payments Europe Ltd.</b> (Irlandia): obsługa płatności. Stripe jest też samodzielnym administratorem niektórych danych płatniczych.</li>
+<li><b>Anthropic</b>: model językowy przygotowujący szkice. Przekazujemy tylko fragmenty rozmów potrzebne do odpowiedzi. Zgodnie z warunkami komercyjnymi dostawcy dane z API nie są domyślnie używane do trenowania modeli.</li>
+<li><b>Dostawca poczty e-mail</b>: wysyłka wiadomości o Koncie i płatnościach (bez treści rozmów).</li></ul>
+<p>Część dostawców ma siedzibę w USA. Przekazanie danych poza Europejski Obszar Gospodarczy odbywa się na podstawie decyzji Komisji Europejskiej w sprawie EU-US Data Privacy Framework lub standardowych klauzul umownych (art. 46 RODO). Kopię zabezpieczeń możesz otrzymać na żądanie.</p>
+<p>Operator Aplikacji randkowej otrzymuje zapytania wysyłane z Twojego Panelu w Twoim imieniu, tak jak przy normalnym korzystaniu z aplikacji. Jego zasady przetwarzania danych opisuje jego własna polityka.</p>
+
+<h2>6. Jak chronimy dane</h2>
+<ul><li>Każdy użytkownik ma osobny serwer i osobną bazę danych.</li>
+<li>Token Aplikacji randkowej jest szyfrowany algorytmem AES-256-GCM kluczem przypisanym wyłącznie do Twojego serwera i nie jest nigdy zapisywany w logach.</li>
+<li>Hasła przechowujemy wyłącznie jako skróty kryptograficzne (scrypt). Połączenia są szyfrowane (HTTPS).</li>
+<li>Dostęp administracyjny jest ograniczony do niezbędnego minimum i chroniony osobnym, długim kluczem.</li></ul>
+
+<h2>7. Pliki cookie</h2>
+<p>Używamy wyłącznie plików cookie niezbędnych do logowania i bezpieczeństwa sesji. Nie stosujemy cookies reklamowych ani analitycznych, dlatego nie prosimy o zgodę na ich użycie.</p>
+
+<h2>8. Zautomatyzowane przetwarzanie</h2>
+<p>Szkice odpowiedzi i plan rozmowy są tworzone automatycznie, ale nie podejmujemy wobec Ciebie decyzji, które wywoływałyby skutki prawne lub w podobny sposób istotnie na Ciebie wpływały (art. 22 RODO). O tym, co zostaje wysłane, decydujesz Ty.</p>
+
+<h2>9. Twoje prawa</h2>
+<p>Masz prawo do dostępu do danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia, sprzeciwu wobec przetwarzania opartego na uzasadnionym interesie oraz do wycofania zgody w dowolnym momencie. Większość z nich zrealizujesz sam w Panelu i na stronie Konta (usunięcie tokenu, rozmów lub całego Konta). W pozostałych sprawach napisz na <a href="mailto:{{LEGAL_EMAIL}}">{{LEGAL_EMAIL}}</a>. Odpowiemy w ciągu miesiąca. Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa).</p>
+
+<h2>10. Osoby niepełnoletnie</h2>
+<p>Usługa jest wyłącznie dla osób pełnoletnich. Jeżeli dowiemy się, że Konto założyła osoba poniżej 18 lat, usuniemy je wraz z danymi.</p>
+
+<h2>11. Zmiany polityki</h2>
+<p>O istotnych zmianach poinformujemy e-mailem z wyprzedzeniem. Aktualna wersja jest zawsze dostępna na tej stronie.</p>
+</main>
+<footer><p><b>{{BRAND}}</b> · {{LEGAL_NAME}}</p><nav><a href="/prywatnosc">Prywatność</a><a href="/regulamin">Regulamin</a></nav></footer>
+</body></html>

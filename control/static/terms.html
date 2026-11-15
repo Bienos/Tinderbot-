@@ -1,12 +1,105 @@
 <!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/landing.css"><title>Regulamin · {{BRAND}}</title></head><body>
-<header class="nav"><a class="brand" href="/"><span>{{BRAND}}</span></a><nav><a class="btn small" href="/#beta">Dołącz do bety</a></nav></header>
+<header class="nav"><a class="brand" href="/">{{BRAND}}</a><nav><a href="/regulamin">Regulamin</a><a href="/prywatnosc">Prywatność</a><a class="btn small" href="/rejestracja">Załóż konto</a></nav></header>
 <main class="legal">
-<h1>Regulamin</h1>
-<p class="draft-note">Wersja robocza. Przed uruchomieniem płatnej usługi dokument musi zweryfikować prawnik.</p>
-<h2>1. Usługa</h2><p>{{BRAND}} to narzędzie AI pomagające prowadzić rozmowy w aplikacjach randkowych: przygotowuje szkice odpowiedzi, plan rozmowy i statystyki. Usługa jest dla osób pełnoletnich.</p>
-<h2>2. Nieoficjalna integracja</h2><p>{{BRAND}} nie jest powiązany z Tinder ani Match Group. Połączenie z kontem jest nieoficjalne i może naruszać regulamin aplikacji randkowej. Aplikacja może ograniczyć lub zablokować Twoje konto. Podłączasz konto na własne ryzyko i odpowiadasz za zgodność z regulaminem tej aplikacji.</p>
-<h2>3. Twoje obowiązki</h2><ul><li>Podłączasz wyłącznie własne konto.</li><li>Autopilota włączasz tylko w rozmowach, w których druga osoba wie o pomocy AI i się na nią zgodziła.</li><li>Nie używasz usługi do nękania, oszustw, spamu ani wprowadzania w błąd.</li></ul>
-<h2>4. Treści generowane przez AI</h2><p>Szkice mogą zawierać błędy. Odpowiadasz za wiadomości wysłane z Twojego konta. Usługa nie dopisuje faktów o Tobie, których nie podałeś.</p>
-<h2>5. Płatności i subskrypcja</h2><p>Dostęp jest płatny w subskrypcji. Płatności obsługuje Stripe; nie przechowujemy danych kart. Zamawiając, prosisz o rozpoczęcie usługi przed upływem 14 dni na odstąpienie od umowy i przyjmujesz do wiadomości, że po jej pełnym wykonaniu tracisz to prawo. Subskrypcję anulujesz w każdej chwili w portalu płatności; dostęp działa do końca opłaconego okresu.</p><h2>6. Rozwiązanie</h2><p>Możesz w każdej chwili odłączyć konto i usunąć dane. Możemy zawiesić dostęp w razie naruszenia regulaminu.</p>
-<h2>7. Kontakt i reklamacje</h2><p>[e-mail kontaktowy]. Reklamacje rozpatrujemy w ciągu 14 dni.</p>
-</main></body></html>
+<h1>Regulamin usługi {{BRAND}}</h1>
+<p class="meta">Obowiązuje od 15 listopada 2026 r.</p>
+<nav class="toc" aria-label="Spis treści"><a href="#s1">1. Kto świadczy usługę</a><a href="#s2">2. Definicje</a><a href="#s3">3. Czym jest usługa</a><a href="#s4">4. Wymagania techniczne</a><a href="#s5">5. Konto</a><a href="#s6">6. Subskrypcja i płatności</a><a href="#s7">7. Odstąpienie od umowy</a><a href="#s8">8. Połączenie z aplikacją randkową</a><a href="#s9">9. Zasady korzystania</a><a href="#s10">10. Treści tworzone przez AI</a><a href="#s11">11. Odpowiedzialność</a><a href="#s12">12. Dostępność i zmiany usługi</a><a href="#s13">13. Reklamacje</a><a href="#s14">14. Rozwiązanie umowy</a><a href="#s15">15. Dane osobowe</a><a href="#s16">16. Zmiany regulaminu</a><a href="#s17">17. Spory i prawo właściwe</a></nav>
+
+<h2 id="s1">1. Kto świadczy usługę</h2>
+<p>Usługę {{BRAND}} świadczy {{LEGAL_NAME}}, {{LEGAL_ADDRESS}}, {{LEGAL_ID}} („my", „Usługodawca"). Kontakt: <a href="mailto:{{LEGAL_EMAIL}}">{{LEGAL_EMAIL}}</a>. Regulamin jest regulaminem świadczenia usług drogą elektroniczną w rozumieniu art. 8 ustawy o świadczeniu usług drogą elektroniczną. Udostępniamy go bezpłatnie przed zawarciem umowy, w formie, która pozwala go pobrać, zapisać i wydrukować.</p>
+
+<h2 id="s2">2. Definicje</h2>
+<ul><li><b>Usługa</b>: asystent konwersacji opisany w pkt 3, dostępny przez stronę {{BRAND}} i Panel.</li>
+<li><b>Konto</b>: konto użytkownika w serwisie {{BRAND}}, chronione e-mailem i hasłem.</li>
+<li><b>Panel</b>: Twój prywatny panel działający na osobnym serwerze przypisanym tylko do Twojego Konta.</li>
+<li><b>Aplikacja randkowa</b>: zewnętrzny serwis (np. Tinder), którego operatorem nie jesteśmy.</li>
+<li><b>Konsument</b>: osoba fizyczna zawierająca umowę niezwiązaną bezpośrednio z jej działalnością gospodarczą lub zawodową. Te same uprawnienia dotyczące klauzul niedozwolonych, odstąpienia i rękojmi przysługują osobie fizycznej prowadzącej działalność, gdy umowa nie ma dla niej charakteru zawodowego.</li>
+<li><b>Subskrypcja</b>: odpłatny, odnawiany co miesiąc dostęp do Usługi.</li></ul>
+
+<h2 id="s3">3. Czym jest usługa</h2>
+<p>{{BRAND}} pomaga prowadzić rozmowy w aplikacjach randkowych. W ramach Subskrypcji otrzymujesz:</p>
+<ul><li>szkice odpowiedzi przygotowane przez model sztucznej inteligencji, dopasowane do opisanego przez Ciebie stylu,</li>
+<li>analizę etapu rozmowy i podpowiedź kolejnego kroku,</li>
+<li>statystyki rozmów i wyników,</li>
+<li>opcjonalnie tryb automatycznego wysyłania (autopilot) w rozmowach, które sam wskażesz, na zasadach z pkt 9,</li>
+<li>osobny serwer z szyfrowanym przechowywaniem danych dostępowych.</li></ul>
+<p>Usługa jest narzędziem wspierającym. Nie gwarantujemy konkretnych rezultatów, takich jak liczba odpowiedzi lub spotkań, ponieważ zależą one od innych osób i od Ciebie.</p>
+
+<h2 id="s4">4. Wymagania techniczne</h2>
+<p>Potrzebujesz urządzenia z dostępem do internetu, aktualnej przeglądarki (Chrome, Safari, Firefox lub Edge) z włączoną obsługą JavaScript i plików cookie niezbędnych do logowania, aktywnego adresu e-mail oraz własnego konta w Aplikacji randkowej. Korzystanie z internetu wiąże się z typowymi zagrożeniami, takimi jak złośliwe oprogramowanie czy próby przejęcia haseł. Chroń swoje dane logowania i nie udostępniaj ich innym osobom.</p>
+
+<h2 id="s5">5. Konto</h2>
+<ol><li>Usługa jest przeznaczona wyłącznie dla osób, które ukończyły 18 lat.</li>
+<li>Umowa o prowadzenie Konta zostaje zawarta z chwilą rejestracji, na czas nieokreślony i bezpłatnie. Możesz ją wypowiedzieć w każdej chwili, usuwając Konto.</li>
+<li>Podajesz prawdziwe dane i odpowiadasz za bezpieczeństwo swojego hasła. O podejrzeniu nieuprawnionego dostępu poinformuj nas niezwłocznie.</li>
+<li>Jedno Konto jest przeznaczone dla jednej osoby i jednego konta w Aplikacji randkowej.</li></ol>
+
+<h2 id="s6">6. Subskrypcja i płatności</h2>
+<ol><li>Cena Subskrypcji wynosi {{PRICE}} (kwota brutto) i jest widoczna przed zamówieniem oraz na stronie płatności.</li>
+<li>Umowa o świadczenie Usługi w ramach Subskrypcji zostaje zawarta z chwilą skutecznej płatności. Potwierdzenie zawarcia umowy wraz z tym Regulaminem otrzymasz e-mailem.</li>
+<li>Płatności obsługuje Stripe Payments Europe Ltd. Nie przechowujemy danych Twojej karty.</li>
+<li>Subskrypcja odnawia się automatycznie co miesiąc i jest pobierana z tej samej metody płatności, dopóki jej nie anulujesz.</li>
+<li>Subskrypcję anulujesz w każdej chwili w „Zarządzaj subskrypcją" na stronie Konta. Anulowanie działa na koniec opłaconego okresu, a do tego czasu zachowujesz dostęp. Nie stosujemy okresu wypowiedzenia ani opłat za rezygnację.</li>
+<li>O zmianie ceny poinformujemy Cię e-mailem co najmniej 30 dni przed jej wejściem w życie. Nowa cena obowiązuje od pierwszego okresu rozliczeniowego po tym terminie. Jeżeli się na nią nie zgadzasz, możesz anulować Subskrypcję bez kosztów przed jej wejściem w życie.</li>
+<li>Jeżeli płatność się nie powiedzie, dostęp do Panelu może zostać wstrzymany do czasu jej uregulowania. Twoje ustawienia nie są wtedy usuwane.</li></ol>
+
+<h2 id="s7">7. Odstąpienie od umowy</h2>
+<ol><li>Jeżeli jesteś Konsumentem, możesz odstąpić od umowy w terminie 14 dni od jej zawarcia bez podawania przyczyny.</li>
+<li>Aby odstąpić, użyj przycisku „Odstąp od umowy" na stronie Konta albo wyślij oświadczenie na <a href="mailto:{{LEGAL_EMAIL}}">{{LEGAL_EMAIL}}</a>. Możesz skorzystać z wzoru poniżej, ale nie jest to obowiązkowe. Do zachowania terminu wystarczy wysłanie oświadczenia przed jego upływem.</li>
+<li>Zamawiając, żądasz rozpoczęcia świadczenia Usługi od razu, przed upływem terminu na odstąpienie. Jeżeli odstąpisz, zapłacisz wyłącznie za okres, w którym Usługa była świadczona do chwili odstąpienia, a różnicę zwrócimy w ciągu 14 dni tą samą metodą płatności, bez dodatkowych kosztów.</li>
+<li>Potwierdzenie otrzymania oświadczenia o odstąpieniu prześlemy e-mailem.</li></ol>
+<p class="form-sample"><b>Wzór oświadczenia:</b> „Ja, [imię i nazwisko], niniejszym odstępuję od umowy o świadczenie usługi {{BRAND}} zawartej dnia [data]. Adres e-mail konta: [e-mail]. Data, podpis (jeśli wysyłasz na papierze)."</p>
+
+<h2 id="s8">8. Połączenie z Aplikacją randkową</h2>
+<ol><li>{{BRAND}} nie jest powiązany z Tinder, Match Group ani innym operatorem Aplikacji randkowej. Nazwy aplikacji należą do ich właścicieli i są używane wyłącznie opisowo.</li>
+<li>Połączenie z Aplikacją randkową odbywa się przy użyciu Twojego tokenu sesji, który sam wklejasz w Panelu. Nie jest to oficjalna integracja udostępniona przez operatora tej aplikacji.</li>
+<li>Regulaminy Aplikacji randkowych mogą zakazywać korzystania z narzędzi zewnętrznych. Operator Aplikacji randkowej może w związku z tym ograniczyć, zawiesić lub zablokować Twoje konto. Decyzję o połączeniu konta podejmujesz samodzielnie i świadomie, a w każdej chwili możesz je odłączyć przyciskiem „Usuń token i rozłącz".</li>
+<li>Stosujemy środki ograniczające to ryzyko: limity liczby zapytań, automatyczne wstrzymanie działania, gdy platforma prosi o przerwę lub weryfikację, oraz brak działań na kontach innych osób. Nie mamy wpływu na decyzje operatora Aplikacji randkowej ani na zmiany w jej działaniu, które mogą czasowo uniemożliwić korzystanie z części funkcji.</li>
+<li>Jeśli operator Aplikacji randkowej trwale uniemożliwi działanie Usługi, poinformujemy Cię o tym i zwrócimy proporcjonalną część opłaty za niewykorzystany okres.</li></ol>
+
+<h2 id="s9">9. Zasady korzystania</h2>
+<ol><li>Możesz łączyć wyłącznie własne konto w Aplikacji randkowej.</li>
+<li>Tryb autopilota możesz włączyć tylko w rozmowie, w której druga osoba wie, że korzystasz z pomocy sztucznej inteligencji, i się na to zgodziła. Taki wymóg wynika m.in. z art. 50 rozporządzenia (UE) 2024/1689 (AI Act).</li>
+<li>Zakazane jest używanie Usługi do nękania, gróźb, oszustw (w tym tzw. romance scam), wyłudzeń, spamu, kontaktu z osobami niepełnoletnimi, podszywania się pod inne osoby oraz dostarczania treści bezprawnych.</li>
+<li>Nie wolno podejmować prób uzyskania dostępu do Paneli innych użytkowników, obchodzenia zabezpieczeń ani zakłócania działania Usługi.</li>
+<li>W razie naruszenia tych zasad możemy zawiesić dostęp po uprzednim wezwaniu do zaprzestania naruszeń, a w przypadkach rażących, takich jak oszustwo lub kontakt z osobą niepełnoletnią, bez wezwania.</li></ol>
+
+<h2 id="s10">10. Treści tworzone przez AI</h2>
+<ol><li>Szkice odpowiedzi są tworzone automatycznie i mogą zawierać błędy. Fakty o Tobie są brane wyłącznie z informacji, które sam podasz w ustawieniach.</li>
+<li>W trybie szkiców to Ty decydujesz, czy i jaką wiadomość wysłać. W trybie autopilota decydujesz, w których rozmowach go włączyć, i możesz go w każdej chwili zatrzymać.</li>
+<li>Usługa nie podejmuje wobec Ciebie decyzji wywołujących skutki prawne.</li></ol>
+
+<h2 id="s11">11. Odpowiedzialność</h2>
+<ol><li>Odpowiadamy za należyte świadczenie Usługi na zasadach przewidzianych prawem, w tym za zgodność usługi cyfrowej z umową zgodnie z rozdziałem 5b ustawy o prawach konsumenta.</li>
+<li>Nie odpowiadamy za działania i decyzje osób trzecich, na które nie mamy wpływu, w szczególności operatorów Aplikacji randkowych (pkt 8) oraz Twoich rozmówców, ani za skutki wiadomości, które sam wysłałeś lub zatwierdziłeś.</li>
+<li>Nie ponosimy odpowiedzialności za szkody wynikłe z udostępnienia przez Ciebie danych logowania osobom trzecim.</li>
+<li>Wobec przedsiębiorców, którzy nie korzystają z ochrony konsumenckiej, nasza odpowiedzialność jest ograniczona do szkody rzeczywistej i do wysokości opłat zapłaconych w ciągu 12 miesięcy przed zdarzeniem. Nie dotyczy to szkody wyrządzonej umyślnie.</li>
+<li>Postanowienia tego punktu nie wyłączają ani nie ograniczają uprawnień Konsumenta przewidzianych bezwzględnie obowiązującymi przepisami prawa.</li></ol>
+
+<h2 id="s12">12. Dostępność i zmiany usługi</h2>
+<ol><li>Dokładamy starań, aby Usługa działała stale. Możliwe są krótkie przerwy techniczne. O planowanych dłuższych przerwach informujemy z wyprzedzeniem.</li>
+<li>Możemy wprowadzać zmiany w Usłudze z ważnych przyczyn: zmian prawa, bezpieczeństwa, zmian po stronie Aplikacji randkowej lub rozwoju funkcji. Jeżeli zmiana istotnie i niekorzystnie wpływa na dostęp do Usługi, poinformujemy Cię z wyprzedzeniem, a Ty możesz wypowiedzieć umowę w ciągu 30 dni i otrzymać zwrot za niewykorzystany okres.</li></ol>
+
+<h2 id="s13">13. Reklamacje</h2>
+<ol><li>Reklamację możesz złożyć e-mailem na <a href="mailto:{{LEGAL_EMAIL}}">{{LEGAL_EMAIL}}</a>. Opisz problem i podaj adres e-mail Konta.</li>
+<li>Odpowiemy w ciągu 14 dni. Jeżeli nie odpowiemy w tym terminie, reklamację uważa się za uwzględnioną.</li>
+<li>Jeżeli Usługa jest niezgodna z umową, możesz żądać doprowadzenia jej do zgodności, a gdy to niemożliwe lub nieskuteczne, obniżenia ceny lub odstąpienia od umowy, na zasadach ustawy o prawach konsumenta.</li></ol>
+
+<h2 id="s14">14. Rozwiązanie umowy</h2>
+<ol><li>Możesz w każdej chwili anulować Subskrypcję (pkt 6) i usunąć Konto na stronie Konta.</li>
+<li>Możemy wypowiedzieć umowę z zachowaniem 30-dniowego terminu z ważnej przyczyny, np. zakończenia świadczenia Usługi, zwracając opłatę za niewykorzystany okres. W przypadku rażącego naruszenia pkt 9 możemy rozwiązać umowę ze skutkiem natychmiastowym.</li>
+<li>Po rozwiązaniu umowy Twój serwer zostaje wyłączony, a dane są usuwane zgodnie z Polityką prywatności.</li></ol>
+
+<h2 id="s15">15. Dane osobowe</h2>
+<p>Zasady przetwarzania danych opisuje <a href="/prywatnosc">Polityka prywatności</a>.</p>
+
+<h2 id="s16">16. Zmiany regulaminu</h2>
+<p>Możemy zmienić Regulamin z ważnych przyczyn, takich jak zmiana przepisów, zmiana zakresu Usługi, zmiana operatora płatności lub potrzeba zwiększenia bezpieczeństwa. O zmianach poinformujemy e-mailem co najmniej 14 dni przed ich wejściem w życie (30 dni przy zmianie ceny). Jeżeli nie akceptujesz zmian, możesz rozwiązać umowę przed ich wejściem w życie bez ponoszenia kosztów.</p>
+
+<h2 id="s17">17. Spory i prawo właściwe</h2>
+<ol><li>Umowa podlega prawu polskiemu. Jeżeli jesteś Konsumentem z innego państwa UE, zachowujesz ochronę, jaką dają Ci bezwzględnie obowiązujące przepisy Twojego państwa.</li>
+<li>Konsument może skorzystać z pozasądowych sposobów rozwiązywania sporów, np. pomocy miejskiego lub powiatowego rzecznika konsumentów, stałych polubownych sądów konsumenckich przy wojewódzkich inspektoratach Inspekcji Handlowej lub organizacji konsumenckich. Informacje są dostępne na stronie <a href="https://prawakonsumenta.uokik.gov.pl/" rel="noopener" target="_blank">prawakonsumenta.uokik.gov.pl</a>.</li>
+<li>Spory z Konsumentami rozstrzyga sąd właściwy według przepisów ogólnych.</li></ol>
+</main>
+<footer><p><b>{{BRAND}}</b> · {{LEGAL_NAME}}</p><nav><a href="/prywatnosc">Prywatność</a><a href="/regulamin">Regulamin</a></nav></footer>
+</body></html>

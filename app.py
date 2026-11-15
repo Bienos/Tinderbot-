@@ -348,6 +348,8 @@ async def tinder_token_save(request:Request):
     value=str(body.get('token','')).strip().strip('"').strip("'") if isinstance(body,dict) else ''
     if not (isinstance(body,dict) and body.get('account_owned') is True and body.get('acknowledge_unofficial') is True):
         raise HTTPException(422,'Potwierdź, że to Twoje konto i że integracja jest nieoficjalna')
+    if body.get('sensitive_data') is not True:
+        raise HTTPException(422,'Potrzebujemy Twojej wyraźnej zgody na przetwarzanie danych z aplikacji randkowej (art. 9 RODO).')
     if not valid_token_format(value):raise HTTPException(422,'To nie wygląda na token Tindera. Skopiuj wartość TinderWeb/APIToken.')
     if not vault.available():raise HTTPException(503,'Serwer nie ma klucza szyfrowania (TOKEN_ENCRYPTION_KEY). Token nie został zapisany.')
     async with service.LOCK:
@@ -360,7 +362,7 @@ async def tinder_token_save(request:Request):
         except TinderError:
             raise HTTPException(503,'Nie udało się sprawdzić tokena w Tinderze. Spróbuj za chwilę.')
         vault.put(TOKEN_SLOT,value);value=None
-        rt.audit(None,'tinder_token_saved','Encrypted Tinder token saved by owner')
+        rt.audit(None,'tinder_token_saved','Encrypted Tinder token saved by owner; explicit art. 9 GDPR consent given')
         try:cid=await connect()
         except TinderError as exc:raise HTTPException(503,str(exc))
     return {'connected':True,'connection_id':cid}
