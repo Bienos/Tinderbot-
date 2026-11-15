@@ -24,7 +24,7 @@
     <svg viewBox="0 0 24 24" class="mark" aria-hidden="true"><path fill="url(#fire)" d="M12.9 2.2c.3 2.4-.6 4-2 5.5-1.3 1.4-2.7 2.8-2.7 5.1 0 1.2.5 2.2 1.2 2.9-.1-1.7.7-2.8 1.8-3.6 1.1-.8 2-1.9 2.1-3.6 2.5 1.8 4 4.3 4 7.1 0 3.6-2.8 6.4-6.6 6.4S4 20.2 4 16.6c0-3.8 2.2-6.4 4.4-8.4 2.2-2 4-3.4 4.5-6z"/></svg>
     {{BRAND}}
   </a>
-  <nav aria-label="Sekcje"><a href="#efekty">Co zyskujesz</a><a href="#kontrola">Kontrola</a><a href="#pytania">Pytania</a><a class="btn small" href="#beta">Zapisz się do bety</a></nav>
+  <nav aria-label="Sekcje"><a href="#efekty">Co zyskujesz</a><a href="#kontrola">Kontrola</a><a href="#pytania">Pytania</a><a href="/zaloguj">Zaloguj się</a><a class="btn small" href="/rejestracja">Załóż konto</a></nav>
 </header>
 
 <main>
@@ -32,38 +32,28 @@
   <div class="hero-copy">
     <h1>Zamień dopasowania w&nbsp;spotkania.</h1>
     <p class="lead">{{BRAND}} odpisuje Twoim stylem, wyczuwa moment na zaproszenie i pilnuje, żeby żadna dobra rozmowa nie zgasła w ciszy. Ty tylko decydujesz, co wychodzi.</p>
-    <div class="cta"><a class="btn" href="#beta">Zapisz się do bety</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
+    <div class="cta"><a class="btn" href="/rejestracja">Załóż konto w becie</a><a class="link" href="#jak">Zobacz, jak to działa</a></div>
     <p class="note">Beta dla niewielkiej grupy: każda osoba dostaje własny, osobny serwer.</p>
   </div>
 
-  <figure class="spark" aria-label="Abstrakcja: dwie osoby połączone świecącą wstęgą rozmowy, która rozpala iskrę">
+  <figure class="spark story" aria-label="Jak działa Iskra: wiadomość, analiza sygnałów, szkic odpowiedzi, umówione spotkanie">
     <svg viewBox="0 0 600 600" class="spark-svg" aria-hidden="true">
       <defs>
-        <radialGradient id="orbPink" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ff8db4"/><stop offset=".7" stop-color="#fd267a"/><stop offset="1" stop-color="#d4105f"/></radialGradient>
-        <radialGradient id="orbOrange" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ffb08f"/><stop offset=".7" stop-color="#ff6036"/><stop offset="1" stop-color="#e2401a"/></radialGradient>
-        <radialGradient id="blobA"><stop offset="0" stop-color="#ff5a95" stop-opacity=".55"/><stop offset="1" stop-color="#ff5a95" stop-opacity="0"/></radialGradient>
-        <radialGradient id="blobB"><stop offset="0" stop-color="#ff9b6b" stop-opacity=".55"/><stop offset="1" stop-color="#ff9b6b" stop-opacity="0"/></radialGradient>
-        <radialGradient id="flare"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#ffd0bd"/><stop offset=".6" stop-color="#ff6036" stop-opacity=".45"/><stop offset="1" stop-color="#fd267a" stop-opacity="0"/></radialGradient>
-        <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+        <radialGradient id="blobA"><stop offset="0" stop-color="#ff5a95" stop-opacity=".45"/><stop offset="1" stop-color="#ff5a95" stop-opacity="0"/></radialGradient>
+        <radialGradient id="blobB"><stop offset="0" stop-color="#ff9b6b" stop-opacity=".45"/><stop offset="1" stop-color="#ff9b6b" stop-opacity="0"/></radialGradient>
+        <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
       </defs>
-      <circle class="blob ba" cx="170" cy="400" r="210" fill="url(#blobA)"/>
-      <circle class="blob bb" cx="440" cy="190" r="200" fill="url(#blobB)"/>
-      <g class="rings" fill="none" stroke="url(#fire)">
-        <circle cx="300" cy="300" r="250" stroke-opacity=".12" stroke-width="1"/>
-        <circle cx="300" cy="300" r="190" stroke-opacity=".16" stroke-width="1" stroke-dasharray="2 10"/>
-      </g>
-      <path class="ribbon-glow" d="M120 440 C 170 250, 290 480, 300 300 S 430 140, 486 160" fill="none" stroke="url(#fire)" stroke-width="22" stroke-linecap="round" filter="url(#soft)" opacity=".55"/>
-      <path class="ribbon" d="M120 440 C 170 250, 290 480, 300 300 S 430 140, 486 160" fill="none" stroke="url(#fire)" stroke-width="5" stroke-linecap="round"/>
-      <path class="ribbon-flow" d="M120 440 C 170 250, 290 480, 300 300 S 430 140, 486 160" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 22"/>
-      <g class="orb you"><circle class="orb-ring" cx="120" cy="440" r="56" fill="none" stroke="#fd267a" stroke-opacity=".35" stroke-width="1.5"/><circle cx="120" cy="440" r="36" fill="url(#orbPink)"/></g>
-      <g class="orb her"><circle class="orb-ring" cx="486" cy="160" r="56" fill="none" stroke="#ff6036" stroke-opacity=".35" stroke-width="1.5"/><circle cx="486" cy="160" r="36" fill="url(#orbOrange)"/></g>
-      <circle class="ember e1" r="6" fill="#fd267a"/><circle class="ember e2" r="4" fill="#ff6036"/><circle class="ember e3" r="5" fill="#ff8db4"/><circle class="ember e4" r="3.5" fill="#ffb08f"/>
-      <g class="flare"><circle cx="300" cy="300" r="78" fill="url(#flare)"/><path class="star" fill="#fff" d="M300 246 C 304 286, 314 296, 354 300 C 314 304, 304 314, 300 354 C 296 314, 286 304, 246 300 C 286 296, 296 286, 300 246 Z"/></g>
-      <g class="rise" fill="url(#fire)"><circle class="r1" cx="282" cy="260" r="3"/><circle class="r2" cx="318" cy="270" r="2.4"/><circle class="r3" cx="300" cy="250" r="2"/><circle class="r4" cx="270" cy="285" r="2.2"/><circle class="r5" cx="332" cy="292" r="2.8"/></g>
+      <circle class="blob ba" cx="170" cy="420" r="230" fill="url(#blobA)"/>
+      <circle class="blob bb" cx="450" cy="170" r="220" fill="url(#blobB)"/>
+      <path class="ribbon-glow" d="M150 120 C 330 90, 470 150, 450 245 S 200 290, 170 385 S 380 470, 470 505" fill="none" stroke="url(#fire)" stroke-width="20" stroke-linecap="round" filter="url(#soft)" opacity=".45"/>
+      <path class="ribbon" d="M150 120 C 330 90, 470 150, 450 245 S 200 290, 170 385 S 380 470, 470 505" fill="none" stroke="url(#fire)" stroke-width="4" stroke-linecap="round"/>
+      <path class="ribbon-flow" d="M150 120 C 330 90, 470 150, 450 245 S 200 290, 170 385 S 380 470, 470 505" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 20"/>
+      <circle class="ember s1" r="6" fill="#fd267a"/><circle class="ember s2" r="4" fill="#ff6036"/><circle class="ember s3" r="5" fill="#ff8db4"/>
     </svg>
-    <span class="bubble b1"><i></i>haha serio? też tam byłam</span>
-    <span class="bubble b2"><i></i>a ty co robisz w weekend?</span>
-    <span class="bubble b3">kawa w czwartek, 19:00?</span>
+    <div class="card c1"><div class="who"><span class="av">O</span><b>Ola, 25</b><small>przed chwilą</small></div><p class="msg">a ty co robisz w weekend?</p></div>
+    <div class="card c2"><div class="tag">Okno na zaproszenie</div><div class="meter"><i></i></div><div class="sig"><span>dopytuje</span><span>żartuje</span><span>szybko odpisuje</span></div></div>
+    <div class="card c3"><p class="draft">raczej góry, jeśli pogoda dopisze. a może kawa w czwartek wieczorem?</p><div class="act"><small>Twoim stylem</small><b>Wyślij</b></div></div>
+    <div class="card c4"><div class="date"><span class="day">CZW</span><span class="num">19:00</span></div><div><b>Kawa na mieście</b><p>Ola: chętnie!</p></div><span class="ok" aria-hidden="true">✓</span></div>
   </figure>
 </section>
 
@@ -133,22 +123,8 @@
   <div class="beta-art" aria-hidden="true"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="92" fill="url(#glow)"/><path fill="url(#fire)" transform="translate(-60 -62) scale(.62)" d="M262 196c4 22-6 37-19 51-12 13-25 26-25 47 0 11 5 20 11 27-1-16 6-26 17-33 10-8 18-18 19-33 23 17 37 40 37 66 0 33-26 59-61 59s-60-26-60-59c0-35 20-59 41-78 20-18 37-31 40-47z"/></svg></div>
   <div class="beta-copy">
     <h2>Następne dobre dopasowanie nie musi zgasnąć.</h2>
-    <p>Zapisz się, a odezwiemy się, gdy zwolni się miejsce w becie. Zapis nic nie kosztuje i niczego nie wymaga.</p>
-    <form id="waitlist" novalidate>
-      <div class="row2">
-        <label>E-mail<input type="email" name="email" autocomplete="email" required></label>
-        <label><span>Imię <span class="opt">(opcjonalnie)</span></span><input type="text" name="name" autocomplete="given-name" maxlength="60"></label>
-      </div>
-      <label>Jak chcesz korzystać?
-        <select name="mode"><option value="drafts">Szkice: zatwierdzam każdą wiadomość</option><option value="autopilot">Autopilot w wybranych rozmowach</option><option value="unsure">Jeszcze nie wiem</option></select>
-      </label>
-      <label class="hp" aria-hidden="true">Strona<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
-      <label class="check"><input type="checkbox" name="adult" required> Mam ukończone 18 lat.</label>
-      <label class="check"><input type="checkbox" name="terms" required> Akceptuję <a href="/regulamin" target="_blank">regulamin</a> i <a href="/prywatnosc" target="_blank">politykę prywatności</a>.</label>
-      <label class="check"><input type="checkbox" name="marketing"> Chcę dostawać informacje o nowościach (opcjonalnie).</label>
-      <button class="btn" type="submit">Zapisz się do bety</button>
-      <p id="form-result" role="status"></p>
-    </form>
+    <p>Załóż konto, a przygotujemy Twój osobny serwer. Rejestracja nic nie kosztuje i do niczego nie zobowiązuje.</p>
+    <div class="cta beta-cta"><a class="btn" href="/rejestracja">Załóż konto w becie</a><a class="link" href="/zaloguj">Mam już konto</a></div>
   </div>
 </section>
 </main>
@@ -157,6 +133,6 @@
   <p><b>{{BRAND}}</b> jest tylko dla osób pełnoletnich. Nie jesteśmy powiązani z Tinder, Match Group ani żadną aplikacją randkową; ich nazwy należą do właścicieli.</p>
   <nav aria-label="Dokumenty"><a href="/prywatnosc">Prywatność</a><a href="/regulamin">Regulamin</a></nav>
 </footer>
-<script src="/assets/landing.js" defer></script>
+
 </body>
 </html>

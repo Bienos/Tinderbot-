@@ -58,3 +58,28 @@ def revoke_session(value):
     from agent import storage as s
     if valid_secret(value):
         with s.connect() as db:db.execute('DELETE FROM sessions WHERE id=?',(digest(value),))
+
+
+def verify_sso(value,audience):
+    """Accept a control-plane sign-in token once: valid HMAC, our origin as audience, not expired, unused nonce."""
+    import base64,hmac,json
+    from agent import storage as s
+    secret=os.getenv('SSO_SECRET','')
+    if len(secret)<32 or not isinstance(value,str) or len(value)>2000 or value.count('.')!=1:return False
+    payload,sig=value.split('.')
+    pad=lambda x:x+'='*(-len(x)%4)
+    try:
+        expected=hmac.new(secret.encode(),payload.encode(),hashlib.sha256).digest()
+        if not hmac.compare_digest(expected,base64.urlsafe_b64decode(pad(sig))):return False
+        data=json.loads(base64.urlsafe_b64decode(pad(payload)))
+    except (ValueError,TypeError):return False
+    now=time.time()
+    if data.get('aud','').rstrip('/')!=audience.rstrip('/') or not (now-5<data.get('exp',0)<=now+65):return False
+    nonce=str(data.get('n',''))
+    if not 16<=len(nonce)<=64:return False
+    with s.connect() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS sso_nonces (nonce TEXT PRIMARY KEY, expires REAL NOT NULL)')
+        db.execute('DELETE FROM sso_nonces WHERE expires<?',(now,))
+        if db.execute('SELECT 1 FROM sso_nonces WHERE nonce=?',(nonce,)).fetchone():return False
+        db.execute('INSERT INTO sso_nonces VALUES(?,?)',(nonce,now+120))
+    return True

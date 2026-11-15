@@ -52,7 +52,7 @@ async def auth(request,call_next):
     allowed=public_origin()
     if request.method not in ('GET','HEAD','OPTIONS') and origin and origin!=allowed and not (origin=='http://127.0.0.1:8765' and internal_request(request.scope)):return JSONResponse({'detail':'Cross-origin request blocked'},403)
     path=request.url.path
-    if path not in ('/health','/auth/login','/webhooks/telegram','/static/login.js'):
+    if path not in ('/health','/auth/login','/auth/sso','/webhooks/telegram','/static/login.js'):
         auth=request.headers.get('authorization','')
         authenticated=same_secret(auth[7:],token()) if auth.startswith('Bearer ') else session_valid(request.cookies.get('agent_session',''))
         if not authenticated:
@@ -85,6 +85,17 @@ def login(body:Login,request:Request):
     LOGIN_FAILURES.pop(host,None)
     r=JSONResponse({'ok':True});r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=public_origin().startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
     return r
+@app.get('/auth/sso')
+def sso(t:str='',request:Request=None):
+    """Single sign-on from the Iskra account page: a 60-second, single-use token HMAC-signed with SSO_SECRET."""
+    from agent.auth import verify_sso
+    if not verify_sso(t,public_origin()):
+        return HTMLResponse('<!doctype html><meta charset="utf-8"><title>Link wygasł</title><p>Link logowania wygasł albo był już użyty. Wróć do konta i kliknij „Otwórz mój panel" jeszcze raz.</p>',401)
+    # A same-site meta refresh (not a 30x) so the SameSite=Strict session cookie is sent on the next request.
+    r=HTMLResponse('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/"><title>Logowanie…</title><p>Logowanie…</p>')
+    r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=public_origin().startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
+    return r
+
 @app.post('/auth/logout')
 def logout(request:Request):
     revoke_session(request.cookies.get('agent_session',''))
@@ -173,7 +184,7 @@ def state():
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
             'actions':s.rows('SELECT * FROM actions ORDER BY updated DESC LIMIT 100'),
             'connections':s.rows('SELECT id,enabled,can_reply FROM connections'),
-            'tinder':tinder_integration.public_status(),'stats':build_stats(threads,hist,outcomes),
+            'tinder':tinder_integration.public_status(),'account_url':os.getenv('CONTROL_ORIGIN','').rstrip('/'),'stats':build_stats(threads,hist,outcomes),
             'outbox':s.rows('SELECT id,status,attempts,error FROM outbox'),
             'metrics':s.rows('SELECT name,SUM(value) AS total,COUNT(*) AS samples FROM metrics GROUP BY name')}
 class Flags(BaseModel):
