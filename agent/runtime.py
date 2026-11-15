@@ -111,17 +111,20 @@ def job_end(job,status,error=None):
                    (status,error,time.time()+min(300,2**min(job['attempts']+1,8)),time.time(),job['id']))
 
 def eligible(thread):
+    """May the agent prepare drafts here and may the owner send one he approved? (Owner reviews every message.)
+    Sending without the owner's click is a separate, stricter gate: auto_allowed()."""
     cfg=settings()
     if thread.get('platform') not in (None,'simulator'):
-        grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
         con=s.rows('SELECT * FROM connections WHERE id=?',(thread['connection_id'],))
-        if not con or not con[0]['enabled'] or not con[0]['can_reply'] or not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return False
+        if not con or not con[0]['enabled'] or not con[0]['can_reply']:return False
+    if thread.get('platform') == 'telegram':
+        # Telegram participants talk to a bot account directly: nothing is generated before their consent.
+        grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
+        if not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return False
     if thread.get('platform') == 'tinder':
         from agent.tinder import connection, TinderError
         try: connection(thread['connection_id'])
         except TinderError: return False
-        grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
-        if not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return False
     return not cfg['paused'] and not thread['user_paused'] and not thread['user_archived'] and thread['source_visibility']=='available'
 
 def auto_allowed(thread):

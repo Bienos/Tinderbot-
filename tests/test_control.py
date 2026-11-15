@@ -128,6 +128,7 @@ def _signed(payload,secret):
 
 
 def test_billing_checkout_webhook_and_panel_gate(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     import json,stripe
     monkeypatch.setenv('STRIPE_SECRET_KEY','sk_test_x');monkeypatch.setenv('STRIPE_PRICE_ID','price_x');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_test')
     seen={}
@@ -164,6 +165,7 @@ def test_comped_account_skips_billing(client,monkeypatch):
 
 
 def test_payment_link_mode_needs_no_secret_key(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     import json
     from urllib.parse import urlparse,parse_qs
     monkeypatch.delenv('STRIPE_SECRET_KEY',raising=False);monkeypatch.delenv('STRIPE_PRICE_ID',raising=False)
@@ -196,6 +198,7 @@ def _provision_env(monkeypatch):
 
 
 def test_paid_checkout_provisions_instance_once_and_cancel_suspends(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     import json
     from control import provision,mailer
     _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls));mailer.SENT.clear()
@@ -225,6 +228,7 @@ def parse_id(client):
 
 
 def test_failed_provision_is_recorded_and_retryable(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     import json
     from control import provision
     _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls,fail=True))
@@ -237,6 +241,7 @@ def test_failed_provision_is_recorded_and_retryable(client,monkeypatch):
 
 
 def test_comped_emails_are_free_on_signup(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     monkeypatch.setenv('COMPED_EMAILS','boss@example.com, ola@example.com');monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/t');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_p')
     client.post('/api/register',json=REG)
     me=client.get('/api/me').json();assert me['has_access'] is True and me['billing_enabled'] is True
@@ -258,6 +263,7 @@ def test_password_reset_flow(client):
 
 
 def test_checkout_requires_start_consent_and_withdrawal_within_14_days(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     import time as _t
     from control import app as capp
     monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/test_x');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_test')
@@ -303,6 +309,7 @@ def _template_mock(calls):
 
 
 def test_provision_copies_only_model_settings_from_template(client,monkeypatch):
+    pytest.importorskip('stripe')  # only the control service installs Stripe
     import json
     from control import provision
     _provision_env(monkeypatch);monkeypatch.delenv('RENDER_ENV_GROUP_ID');monkeypatch.setenv('INSTANCE_TEMPLATE_SERVICE_ID','srv-tpl')

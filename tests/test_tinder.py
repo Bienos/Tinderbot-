@@ -231,7 +231,11 @@ async def test_expired_profile_disables_connection(source):
     assert s.rows('SELECT enabled FROM connections WHERE id=?',(CID,))[0]['enabled']==0
     calls=len(source.requests);await tinder.poll();assert len(source.requests)==calls
 async def test_missing_match_unknown_and_deleted_not_reimported(source):
-    await setup_thread(source);source.matches_visible=False;await tinder.sync_connection(CID)
+    await setup_thread(source);source.matches_visible=False
+    for _ in range(tinder.MISSES_BEFORE_HIDDEN-1):
+        await tinder.sync_connection(CID)
+        assert service.thread_by_id(TID)['source_visibility']=='available'  # one gap in the listing does not hide it
+    await tinder.sync_connection(CID)
     assert service.thread_by_id(TID)['source_visibility']=='not_observed'
     rt.delete_thread(TID);source.matches_visible=True;await tinder.sync_connection(CID)
     assert not service.thread_by_id(TID) and not s.rows('SELECT * FROM tinder_threads WHERE thread_id=?',(TID,))
@@ -354,3 +358,28 @@ async def test_first_complete_sync_marks_import_done_and_lowers_budget(source,mo
     state=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
     assert state['initial_import_done'] is True
     assert not traffic.import_phase() and traffic.caps()[0][1]==30
+
+
+async def test_thread_hidden_by_old_gap_comes_back_when_listed_again(source):
+    await setup_thread(source)
+    s.set_thread_flags(TID,visibility='not_observed')  # left over from an earlier partial listing
+    await tinder.sync_connection(CID)
+    assert service.thread_by_id(TID)['source_visibility']=='available'
+
+
+def _json_request(payload):
+    from starlette.requests import Request
+    body=json.dumps(payload).encode()
+    async def receive():return {'type':'http.request','body':body,'more_body':False}
+    return Request({'type':'http','method':'POST','headers':[(b'content-type',b'application/json')]},receive)
+
+
+async def test_owner_sends_edited_draft_without_autopilot_consent(source,monkeypatch):
+    import app as application
+    t=await setup_thread(source,grant=False);model_stub(monkeypatch)
+    while (job:=rt.claim()):await service.process_job(job)
+    assert not rt.auto_allowed(t) and not source.posts  # no autopilot without disclosure and consent
+    d=[r for r in s.all_drafts() if r['thread_id']==TID and r['status']=='pending'][-1]
+    with pytest.raises(__import__('fastapi').HTTPException):await application.approve(d['id'],_json_request({'body':''}))
+    out=await application.approve(d['id'],_json_request({'body':'  poprawione przeze mnie  '}))
+    assert source.posts and source.posts[-1]['message']=='poprawione przeze mnie', out

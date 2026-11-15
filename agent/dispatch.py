@@ -17,7 +17,8 @@ def guard(thread_id,action_id,text,anchor,history):
     if t['platform']!='simulator':
         grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread_id,))
         con=s.rows('SELECT * FROM connections WHERE id=?',(t['connection_id'],))
-        if not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):
+        # The owner's click makes the owner the sender; only automatic sends need the participant's consent.
+        if a['automatic'] and (not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed'))):
             raise DispatchDenied('Consent or disclosure revoked')
         if not con or not con[0]['enabled'] or not con[0]['can_reply']:
             raise DispatchDenied('Connection revoked')

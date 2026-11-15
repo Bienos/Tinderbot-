@@ -405,6 +405,30 @@ async def _history(api: TinderClient, thread: dict, owner: str) -> list[dict]:
     return page.items
 
 
+MISSES_BEFORE_HIDDEN = 3
+
+
+def _tinder_value(tid: str) -> dict:
+    rows = s.rows('SELECT value FROM tinder_threads WHERE thread_id=?', (tid,))
+    return json.loads(rows[0]['value']) if rows else {}
+
+
+def _save_tinder_value(tid: str, value: dict) -> None:
+    with s.connect() as db:
+        db.execute('INSERT OR REPLACE INTO tinder_threads VALUES(?,?)', (tid, json.dumps(value)))
+
+
+def _mark_read_failed(tid: str) -> None:
+    _save_tinder_value(tid, {**_tinder_value(tid), 'read_failed': True})
+
+
+def _bump_missed(tid: str) -> int:
+    value = _tinder_value(tid)
+    value['missed'] = int(value.get('missed', 0)) + 1
+    _save_tinder_value(tid, value)
+    return value['missed']
+
+
 async def sync_connection(connection_id: str):
     con, prior_state = connection(connection_id)
     changed=False
@@ -431,7 +455,10 @@ async def sync_connection(connection_id: str):
                 db.execute('INSERT INTO threads(id,display_name,platform,connection_id,chat_id,source_seen) VALUES(?,?,?,?,?,1) '
                            'ON CONFLICT(id) DO UPDATE SET display_name=excluded.display_name',
                            (tid, str(person.get('name') or 'Tinder contact')[:100], 'tinder', connection_id, match_id))
-                db.execute('INSERT OR REPLACE INTO tinder_threads VALUES(?,?)', (tid, json.dumps({**cached,'person_id':person_id})))
+                db.execute('INSERT OR REPLACE INTO tinder_threads VALUES(?,?)', (tid, json.dumps({**{k:v for k,v in cached.items() if k!='missed'},'person_id':person_id})))
+            if not cached.get('read_failed'):
+                # Listed by Tinder again: it is there. A one-off gap in an earlier listing must not hide it for good.
+                s.set_thread_flags(tid, visibility='available')
             thread = next(t for t in s.threads() if t['id'] == tid)
             if not traffic.should_read(thread,cached,activity_key):continue
             previous_hash=rt.history_hash(s.source_for_thread(tid))
@@ -440,16 +467,21 @@ async def sync_connection(connection_id: str):
                 changed=changed or previous_hash!=rt.history_hash(history)
                 s.set_thread_flags(tid, visibility='available')
                 thread['source_visibility'] = 'available'; ingest(thread, history)
-                with s.connect() as db:db.execute('UPDATE tinder_threads SET value=? WHERE thread_id=?',(json.dumps({**cached,'person_id':person_id,'activity_key':activity_key,'last_read':time.time()}),tid))
+                ok={k:v for k,v in cached.items() if k not in ('read_failed','missed')}
+                with s.connect() as db:db.execute('UPDATE tinder_threads SET value=? WHERE thread_id=?',(json.dumps({**ok,'person_id':person_id,'activity_key':activity_key,'last_read':time.time()}),tid))
             except TinderProtocolError:
+                _mark_read_failed(tid)
                 s.set_thread_flags(tid, visibility='not_observed')
                 rt.audit(tid, 'tinder_thread_needs_review', 'Incomplete, unsupported or ambiguous message data; no send')
             except TinderUnavailable:
+                _mark_read_failed(tid)
                 s.set_thread_flags(tid, visibility='not_observed')
         if page.complete:
             for thread in s.threads():
                 if thread['connection_id'] == connection_id and thread['id'] not in observed:
-                    s.set_thread_flags(thread['id'], visibility='not_observed')
+                    # Hide only after several complete listings in a row without it (unmatch), not after one gap.
+                    if _bump_missed(thread['id']) >= MISSES_BEFORE_HIDDEN:
+                        s.set_thread_flags(thread['id'], visibility='not_observed')
     idle_rounds=0 if changed else prior_state.get('idle_rounds',0)+1
     delay=min(poll_interval()*(2**min(idle_rounds,5)),max(poll_interval(),traffic.integer('TINDER_IDLE_POLL_INTERVAL',900,60,86400)))
     with s.connect() as db:
@@ -541,7 +573,8 @@ class TinderAdapter:
             connection(thread['connection_id'])
             if not current or not rt.eligible(current) or rt.settings_hash() != action['settings_hash']:
                 raise StaleAction('Conversation, account or profile permission changed')
-            if not grants or not all(grants[0][k] for k in ('enabled', 'participant_consent', 'disclosed')):
+            # Owner-approved sends need no grant; automatic sends need consent and disclosure, checked again here.
+            if action['automatic'] and (not grants or not all(grants[0][k] for k in ('enabled', 'participant_consent', 'disclosed'))):
                 raise StaleAction('Thread consent or disclosure revoked')
             if action['automatic'] and not rt.auto_allowed(current): raise StaleAction('Automatic sending paused')
             from agent.dispatch import guard

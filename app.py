@@ -216,9 +216,21 @@ def reject(draft_id:int):
     if d['status']!='pending':raise HTTPException(409,'Draft resolved')
     s.set_draft_status(draft_id,'rejected');return {'ok':True}
 @app.post('/api/drafts/{draft_id}/approve')
-async def approve(draft_id:int):
+async def approve(draft_id:int,request:Request):
+    """Owner sends a draft, optionally after editing it. The owner is the author of what goes out."""
+    try:payload=await request.json()
+    except ValueError:payload=None
+    edited=payload.get('body') if isinstance(payload,dict) else None
+    if edited is not None:
+        edited=str(edited).strip()
+        if not 1<=len(edited)<=1000:raise HTTPException(422,'Wiadomość musi mieć od 1 do 1000 znaków.')
     if service.LOCK.locked():raise HTTPException(409,'Coordinator busy')
     async with service.LOCK:
+        if edited is not None:
+            with s.connect() as db:
+                if db.execute("UPDATE drafts SET body=? WHERE id=? AND status='pending'",(edited,draft_id)).rowcount!=1:
+                    raise HTTPException(409,'Draft already resolved or unavailable')
+            rt.audit(None,'draft_edited','Owner edited a draft before sending')
         try:return await service.execute(draft_id)
         except DispatchDenied as e:raise HTTPException(409,str(e))
         except PermissionError as e:raise HTTPException(403,str(e))

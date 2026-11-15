@@ -111,8 +111,9 @@ async def execute(draft_id,automatic=False):
         s.set_draft_status(d['id'],'stale');raise StaleAction('Profile or writing preferences changed; regenerate draft')
     if t['platform']!='simulator':
         if not d['generator'].startswith('LLM-reviewed:'):raise PermissionError('Live replies require a reviewed model response')
-        grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(t['id'],))
-        if not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):raise PermissionError('Consent, disclosure and owner grant required')
+        if automatic:
+            grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(t['id'],))
+            if not grants or not all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):raise PermissionError('Consent, disclosure and owner grant required')
     a=adapter(t);fresh=await a.snapshot(t);ingest(t,fresh)
     if not fresh or fresh[-1]['id']!=d['anchor_message_id']:
         s.set_draft_status(d['id'],'stale');rt.metric('stale_drafts');raise StaleAction('New message invalidates draft')
