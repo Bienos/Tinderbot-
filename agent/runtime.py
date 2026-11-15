@@ -127,17 +127,36 @@ def eligible(thread):
         except TinderError: return False
     return not cfg['paused'] and not thread['user_paused'] and not thread['user_archived'] and thread['source_visibility']=='available'
 
+AI_MENTION=re.compile(r"(?<![\w])(ai|a\.i\.|bot\w*|chat\s?gpt|sztuczn\w*|automat\w*)(?![\w])",re.I)
+
+
+def auto_consent(thread):
+    """Has the other person been told that AI writes here? Either an explicit per-conversation grant from the owner,
+    or the owner's Tinder bio says so (checked on every sync). A conversation where she mentions AI or bots goes back
+    to the owner for good, and the owner can switch any single conversation off."""
+    grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
+    if grants and all(grants[0][k] for k in ('enabled','participant_consent','disclosed')):return True
+    if grants:return False  # owner set this conversation explicitly (e.g. switched autopilot off)
+    if thread.get('platform')!='tinder':return False
+    con=s.rows('SELECT value FROM connections WHERE id=?',(thread['connection_id'],))
+    value=json.loads(con[0]['value']) if con else {}
+    if not (value.get('bio_mode') and value.get('bio_disclosure')):return False
+    if any(m['sender']=='them' and AI_MENTION.search(m['body'] or '') for m in s.messages(thread['id'])):
+        with s.connect() as db:db.execute('INSERT OR IGNORE INTO grants VALUES(?,?,?,?)',(thread['id'],0,0,0))
+        audit(thread['id'],'autopilot_handed_to_owner','She mentioned AI or bots; this conversation now needs the owner')
+        return False
+    return True
+
+
 def auto_allowed(thread):
     cfg=settings()
     if not eligible(thread):return False
     if thread['platform']=='simulator':return cfg['mode']=='simulation'
-    grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread['id'],))
     con=s.rows('SELECT * FROM connections WHERE id=?',(thread['connection_id'],))
     platform_auto=cfg['mode']=='authorized_autonomy'
     if thread['platform']=='tinder':
         platform_auto=cfg['mode']!='simulation' and bool(con and json.loads(con[0]['value']).get('auto_send',False))
-    return bool(platform_auto and grants and all(grants[0][k] for k in ('enabled','participant_consent','disclosed'))
-                and con and con[0]['enabled'] and con[0]['can_reply'])
+    return bool(platform_auto and auto_consent(thread) and con and con[0]['enabled'] and con[0]['can_reply'])
 
 def retain(thread,history):
     """Store bounded, source-linked observations, never convert questions to facts.

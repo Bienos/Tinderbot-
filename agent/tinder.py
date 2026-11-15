@@ -248,6 +248,7 @@ class TinderClient:
         if not isinstance(root, dict): raise TinderProtocolError('invalid_profile')
         user = root.get('user', root)
         if not isinstance(user, dict): raise TinderProtocolError('invalid_profile')
+        self.owner_bio = user.get('bio') if isinstance(user.get('bio'), str) else ''
         return ident(user.get('_id') or user.get('id'))
 
     async def pages(self, path: str, key: str, count: int, extra: dict | None = None) -> Page:
@@ -407,6 +408,15 @@ async def _history(api: TinderClient, thread: dict, owner: str) -> list[dict]:
 
 MISSES_BEFORE_HIDDEN = 3
 
+# The owner's bio tells every match, before the first message, that an AI assistant writes. Both an AI word and a
+# messaging word are required: "używam AI" alone does not say that replies come from AI.
+_AI_WORD = re.compile(r'(?<![\w])(ai|a\.i\.|sztuczn\w*\s+inteligencj\w*|chat\s?gpt|bot\w*|asystent\w*\s+ai)(?![\w])', re.I)
+_MSG_WORD = re.compile(r'(pisz|pisa|odpis|odpowiad|wiadomo|czat|chat|rozmow|messag|repl|text|writ)', re.I)
+
+
+def bio_discloses_ai(bio: str) -> bool:
+    return bool(bio) and bool(_AI_WORD.search(bio)) and bool(_MSG_WORD.search(bio))
+
 
 def _tinder_value(tid: str) -> dict:
     rows = s.rows('SELECT value FROM tinder_threads WHERE thread_id=?', (tid,))
@@ -486,7 +496,8 @@ async def sync_connection(connection_id: str):
     delay=min(poll_interval()*(2**min(idle_rounds,5)),max(poll_interval(),traffic.integer('TINDER_IDLE_POLL_INTERVAL',900,60,86400)))
     with s.connect() as db:
         row=db.execute('SELECT value FROM connections WHERE id=?',(connection_id,)).fetchone();value=json.loads(row['value'])
-        value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature})
+        value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature,
+                      'bio_disclosure':bio_discloses_ai(getattr(api,'owner_bio','')),'bio_checked':time.time()})
         if page.complete and not value.get('initial_import_done'):
             value['initial_import_done']=True  # from now on the everyday (lower) request budget applies
             rt.audit(None,'tinder_initial_import_done','First full import finished; switching to everyday request limits')
@@ -574,7 +585,7 @@ class TinderAdapter:
             if not current or not rt.eligible(current) or rt.settings_hash() != action['settings_hash']:
                 raise StaleAction('Conversation, account or profile permission changed')
             # Owner-approved sends need no grant; automatic sends need consent and disclosure, checked again here.
-            if action['automatic'] and (not grants or not all(grants[0][k] for k in ('enabled', 'participant_consent', 'disclosed'))):
+            if action['automatic'] and not rt.auto_consent(current):
                 raise StaleAction('Thread consent or disclosure revoked')
             if action['automatic'] and not rt.auto_allowed(current): raise StaleAction('Automatic sending paused')
             from agent.dispatch import guard
@@ -612,6 +623,7 @@ def public_status():
         value = json.loads(row['value'])
         connections.append({'id': row['id'], 'enabled': bool(row['enabled']), 'unofficial': True,
                             'auto_send': bool(value.get('auto_send',False)),
+                            'bio_mode': bool(value.get('bio_mode',False)), 'bio_disclosure': bool(value.get('bio_disclosure',False)),
                             'error': value.get('error'), 'last_sync': value.get('last_sync'),
                             'next_poll': value.get('next_poll', 0), 'blocked_until':value.get('blocked_until',0), 'failures':value.get('failures',0)})
     from agent import vault

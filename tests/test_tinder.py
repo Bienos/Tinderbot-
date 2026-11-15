@@ -108,7 +108,7 @@ def raw_message(mid='in-1',text='hey',sender=PERSON):
 class Source:
     def __init__(self):
         self.messages=[raw_message()];self.requests=[];self.posts=[];self.behavior='ok'
-        self.profile_owner=OWNER;self.matches_visible=True;self.hide_sent=False;self.profile_status=200;self.new_id=0
+        self.profile_owner=OWNER;self.owner_bio='';self.matches_visible=True;self.hide_sent=False;self.profile_status=200;self.new_id=0
     def handle(self,req):
         self.requests.append(req)
         assert req.url.host=='api.gotinder.com' and req.headers.get('X-Auth-Token')==TOKEN
@@ -116,7 +116,7 @@ class Source:
         # Never forge the browser-generated anti-automation signatures.
         assert not any(h in req.headers for h in ('x-client-session','x-client-trace','x-agent-signals'))
         path=req.url.path
-        if path=='/profile':return httpx.Response(self.profile_status,json={'data':{'_id':self.profile_owner}})
+        if path=='/profile':return httpx.Response(self.profile_status,json={'data':{'_id':self.profile_owner,'bio':self.owner_bio}})
         if path=='/v2/matches':return httpx.Response(200,json={'data':{'matches':[
             {'_id':'match-a','person':{'_id':PERSON,'name':'Fictional Test Contact'}},
             {'_id':'match-b','person':{'_id':'person-b','name':'Empty fictional match'}}] if self.matches_visible else []}})
@@ -383,3 +383,44 @@ async def test_owner_sends_edited_draft_without_autopilot_consent(source,monkeyp
     with pytest.raises(__import__('fastapi').HTTPException):await application.approve(d['id'],_json_request({'body':''}))
     out=await application.approve(d['id'],_json_request({'body':'  poprawione przeze mnie  '}))
     assert source.posts and source.posts[-1]['message']=='poprawione przeze mnie', out
+
+
+def test_bio_disclosure_needs_ai_and_messaging_words():
+    assert tinder.bio_discloses_ai('Czasem odpisuje za mnie asystent AI 🤖')
+    assert tinder.bio_discloses_ai('Heads up: an AI helps me reply to messages')
+    assert not tinder.bio_discloses_ai('używam AI jak coś') and not tinder.bio_discloses_ai('Lubię góry i kawę')
+    assert not tinder.bio_discloses_ai('Mieszkam w Kaiserslautern, piszę wiersze')  # "ai" inside a word does not count
+
+
+def _bio_mode(on=True):
+    with s.connect() as db:
+        v=json.loads(db.execute('SELECT value FROM connections WHERE id=?',(CID,)).fetchone()['value'])
+        v.update({'bio_mode':on,'auto_send':True});db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(v),CID))
+
+
+async def test_bio_disclosure_enables_autopilot_everywhere_and_stops_when_removed(source,monkeypatch):
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    t=await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
+    assert rt.auto_consent(t) and rt.auto_allowed(service.thread_by_id(TID))
+    model_stub(monkeypatch)
+    while (job:=rt.claim()):await service.process_job(job)
+    assert source.posts and source.posts[-1]['message']=='hey :)'  # sent without a click
+    source.owner_bio='Lubię góry';await tinder.sync_connection(CID)
+    assert not rt.auto_allowed(service.thread_by_id(TID))
+
+
+async def test_mentioning_ai_hands_conversation_back_to_owner(source):
+    source.owner_bio='Odpowiada za mnie czasem AI'
+    source.messages[0]['message']='czy to pisze bot?'
+    t=await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
+    assert not rt.auto_consent(service.thread_by_id(TID))
+    g=s.rows('SELECT * FROM grants WHERE thread_id=?',(TID,))[0]
+    assert (g['enabled'],g['participant_consent'],g['disclosed'])==(0,0,0)
+    assert rt.eligible(service.thread_by_id(TID))  # drafts for the owner still work
+
+
+async def test_owner_can_switch_off_one_conversation_in_bio_mode(source):
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID)
+    with s.connect() as db:db.execute('INSERT OR REPLACE INTO grants VALUES(?,?,?,?)',(TID,0,0,0))
+    assert not rt.auto_allowed(service.thread_by_id(TID))

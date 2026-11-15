@@ -266,6 +266,11 @@ def grant(thread_id:str,body:Grant):
     with s.connect() as db:db.execute('INSERT OR REPLACE INTO grants VALUES(?,?,?,?)',(thread_id,int(body.enabled),int(body.participant_consent),int(body.disclosed)))
     with s.connect() as db:db.execute("UPDATE jobs SET status='queued',available=0 WHERE thread_id=? AND status IN ('done','cancelled','blocked') AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')",(thread_id,))
     rt.audit(thread_id,'permission_changed','Owner changed automation consent/disclosure grant');return {'ok':True}
+@app.delete('/api/threads/{thread_id}/grant')
+def grant_reset(thread_id:str):
+    """Back to the account default (e.g. the bio disclosure) for this conversation."""
+    with s.connect() as db:db.execute('DELETE FROM grants WHERE thread_id=?',(thread_id,))
+    rt.audit(thread_id,'permission_changed','Owner reset this conversation to the account automation default');return {'ok':True}
 @app.post('/api/connections/{connection_id}/revoke')
 def revoke(connection_id:str):
     with s.connect() as db:
@@ -403,7 +408,8 @@ def static_script(name:str):
 
 class TinderAutomation(BaseModel):
     model_config=ConfigDict(extra='forbid')
-    enabled:bool
+    enabled:bool|None=None
+    bio_mode:bool|None=None
 
 @app.put('/api/tinder/connections/{connection_id}/automation')
 def tinder_automation(connection_id:str,body:TinderAutomation):
@@ -411,12 +417,14 @@ def tinder_automation(connection_id:str,body:TinderAutomation):
         db.execute('BEGIN IMMEDIATE')
         row=db.execute("SELECT value FROM connections WHERE id=? AND id LIKE 'tinder:%'",(connection_id,)).fetchone()
         if not row:raise HTTPException(404,'Tinder connection not found')
-        value=json.loads(row['value']);value['auto_send']=body.enabled
+        value=json.loads(row['value'])
+        if body.enabled is not None:value['auto_send']=body.enabled
+        if body.bio_mode is not None:value['bio_mode']=body.bio_mode
         db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),connection_id))
-        if body.enabled:
+        if value.get('auto_send'):
             db.execute("UPDATE jobs SET status='queued',available=0 WHERE status IN ('done','blocked','cancelled') AND thread_id IN (SELECT id FROM threads WHERE connection_id=?) AND anchor IN (SELECT anchor_message_id FROM drafts WHERE status='pending')",(connection_id,))
     rt.audit(None,'tinder_automation_changed','Owner changed account automatic sending')
-    return {'ok':True,'automatic_sending':body.enabled}
+    return {'ok':True,'automatic_sending':bool(value.get('auto_send')),'bio_mode':bool(value.get('bio_mode'))}
 
 # Outermost boundary also covers login, errors and unauthenticated requests.
 app.add_middleware(SecurityBoundary)
