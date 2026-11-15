@@ -69,10 +69,14 @@ async def process_job(job):
         examples=style.select_examples(hist,language=cfg['language'],exclude_thread=t['id'])
         incoming=[m['body'] for m in hist if m['sender']=='them'][-1:]
         lang=cfg['language'] if cfg['language'] in ('pl','en') else style.language_of(incoming[0] if incoming else '')
-        decision,generator=await asyncio.to_thread(generate,hist,cfg['profile'],memory,
+        from agent import strategy
+        outcome_rows=s.rows('SELECT value FROM outcome_state WHERE thread_id=?',(t['id'],))
+        plan=strategy.analyze(hist,cfg,json.loads(outcome_rows[0]['value']) if outcome_rows else [])
+        profile={**cfg['profile'],**strategy.planning_facts(cfg)}
+        decision,generator=await asyncio.to_thread(generate,hist,profile,memory,
              {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
              {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},
-             examples,style.style_stats(),style.canon_text(lang))
+             examples,style.style_stats(),style.canon_text(lang),plan)
         if t['platform']!='simulator' and generator=='demo_rule (not AI)':
             decision.action='requires_user';decision.reply='';decision.note='Configure a model for live replies';generator='demo_placeholder'
         if existing:

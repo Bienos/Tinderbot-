@@ -8,7 +8,9 @@ from uuid import uuid4
 from agent import storage as s
 
 DEFAULTS = {'mode':'supervised','paused':False,'language':'auto','style':'short, casual; no forced questions or emoji',
-            'profile':{},'feedback':[], 'email':False,'retention_days':30}
+            'profile':{},'feedback':[], 'email':False,'retention_days':30,
+            'goal':'date','allow_instagram':True,'pace':'normal',
+            'availability':'zwykle wieczory w tygodniu, w weekend elastycznie','date_ideas':[]}
 
 def init():
     s.init_db()
@@ -64,7 +66,7 @@ def recover():
         db.execute("UPDATE jobs SET status='queued' WHERE status='processing'")
         db.execute("UPDATE outbox SET status='uncertain' WHERE status='sending'")
 
-def settings(): return json.loads(s.rows('SELECT value FROM settings WHERE id=1')[0]['value'])
+def settings(): return {**DEFAULTS,**json.loads(s.rows('SELECT value FROM settings WHERE id=1')[0]['value'])}
 def save_settings(value):
     with s.connect() as db: db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(value,ensure_ascii=False),))
     audit(None,'settings_changed','Owner updated configuration')
@@ -182,7 +184,7 @@ def expire():
 
 def settings_hash(cfg=None):
     cfg=settings() if cfg is None else cfg
-    value={k:cfg[k] for k in ('profile','style','language','feedback')}
+    value={k:cfg.get(k) for k in ('profile','style','language','feedback','goal','allow_instagram','pace','availability','date_ideas')}
     return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 

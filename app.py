@@ -140,7 +140,14 @@ def build_stats(threads,hist,outcomes):
     try:
         req={'minute':s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?',(now-60,))[0]['n'],'hour':s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?',(now-3600,))[0]['n']}
     except Exception:req=None
-    return {'with_photos':sum(1 for t in threads if (t.get('profile') or {}).get('photos')),'matches':len(threads),'by_state':dict(by_state),'messages_you':mine,'messages_them':theirs,
+    moves=[t.get('plan') or {} for t in threads]
+    kinds_by=[{o['kind'] for o in outcomes.get(t['id'],[])} for t in threads]
+    funnel={'matches':len(threads),'conversations':sum(1 for t in threads if t.get('message_count')),
+            'invite_window':sum(1 for m in moves if m.get('move')=='invite'),
+            'invited':sum(1 for m,k in zip(moves,kinds_by) if m.get('stage') in ('awaiting_answer','logistics','date_set','cooldown') or k&{'date_suggested','date_tentative','date_confirmed'}),
+            'agreed':sum(1 for m,k in zip(moves,kinds_by) if m.get('stage') in ('logistics','date_set') or k&{'date_tentative','date_confirmed'}),
+            'confirmed':sum(1 for k in kinds_by if 'date_confirmed' in k),'instagram':sum(1 for k in kinds_by if 'instagram_shared' in k)}
+    return {'funnel':funnel,'with_photos':sum(1 for t in threads if (t.get('profile') or {}).get('photos')),'matches':len(threads),'by_state':dict(by_state),'messages_you':mine,'messages_them':theirs,
             'conversations_two_way':both,'we_wrote':wrote,'they_replied':replied,
             'drafts':{r['status']:r['n'] for r in s.rows('SELECT status,COUNT(*) n FROM drafts GROUP BY status')},
             'actions':s.rows('SELECT status,automatic,COUNT(*) n FROM actions GROUP BY status,automatic'),
@@ -150,6 +157,8 @@ def build_stats(threads,hist,outcomes):
 def state():
     drafts=s.all_drafts();notes=s.notifications();rows=s.threads();hist={t['id']:s.messages(t['id']) for t in rows}
     outcomes={r['thread_id']:json.loads(r['value']) for r in s.rows('SELECT * FROM outcome_state')}
+    from agent import strategy
+    cfg=rt.settings()
     profiles={}
     for r in s.rows('SELECT thread_id,value FROM tinder_threads'):
         try:profiles[r['thread_id']]=json.loads(r['value']).get('profile')
@@ -157,7 +166,7 @@ def state():
     threads=[]
     for t in rows:
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
-        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');threads.append(p)
+        p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:rt.memory(t['id']) for t in rows},'outcome_details':outcomes,
@@ -212,6 +221,11 @@ class Settings(BaseModel):
     feedback:list[str]=Field(default_factory=list,max_length=20)
     email:bool=False
     retention_days:int=Field(default=30,ge=1,le=365)
+    goal:__import__('typing').Literal['date','date_or_instagram','instagram','chat']='date'
+    allow_instagram:bool=True
+    pace:__import__('typing').Literal['slow','normal','fast']='normal'
+    availability:str=Field(default='zwykle wieczory w tygodniu, w weekend elastycznie',max_length=300)
+    date_ideas:list[str]=Field(default_factory=list,max_length=12)
 @app.put('/api/settings')
 def settings(body:Settings):
     if any(len(v)>1000 or len(k)>100 for k,v in body.profile.items()) or any(len(f)>500 for f in body.feedback):raise HTTPException(422,'Setting too long')
