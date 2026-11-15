@@ -48,7 +48,9 @@ jobs:
         name: Also tag as latest
         run: |
           flyctl auth docker
-          docker pull "$IMAGE"
+          # The registry can take a moment to show a just-pushed image.
+          for i in $(seq 1 18); do docker pull -q "$IMAGE" && break; echo "not visible yet, retrying"; sleep 10; done
+          docker image inspect "$IMAGE" > /dev/null
           docker tag "$IMAGE" "registry.fly.io/$APP:latest"
           docker push "registry.fly.io/$APP:latest"
       - if: steps.ready.outputs.ok == 'true'
