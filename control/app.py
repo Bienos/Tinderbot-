@@ -298,7 +298,6 @@ def _period_facts(plan: dict, per: dict) -> dict:
     longer = per['months'] > 1
     return {'per': _zl(total / per['months']), 'was': _zl(plan['price']) if longer else '', 'total': total, 'regular': regular,
             'save': regular - total, 'months': per['months'], 'free': per['free'],
-            'sub': f'{_zl(total)} za {per["months"]} miesięcy' if longer else '',
             'badge': '' if not per['free'] else f'{_free_label(per["free"])} · −{_zl(regular - total)}'}
 
 
@@ -323,7 +322,7 @@ def tiers_html() -> str:
             f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p>'
             f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p><ul>{items}</ul>'
             f'<a class="btn{"" if p.get("popular") else " ghost"} js-cta" href="/rejestracja?plan={p["slug"]}&amp;period={default["key"]}">'
-            f'<span>Wybieram {p["name"]}</span><small class="cta-sub js-sub"{"" if cur["sub"] else " hidden"}>{cur["sub"]}</small></a></article>')
+            f'Wybieram {p["name"]}</a></article>')
     switch = ''
     if longer:
         tabs = ''.join(f'<button type="button" data-period="{q["key"]}" class="{"on" if q["key"] == default["key"] else ""}" aria-pressed="{"true" if q["key"] == default["key"] else "false"}">'
