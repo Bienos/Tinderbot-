@@ -75,6 +75,7 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut, a ta strona odświeży się sama.':'Stawiamy Twój osobny serwer. Ta strona odświeży się sama, a gdy panel będzie gotowy, napiszemy też mailem.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s);watch(me)}
  if(me.withdrawn){const w=document.createElement('p');w.className='muted';w.textContent='Odstąpiłeś od umowy. Zwrot jest w drodze.';card.append(w)}
  if(me.can_withdraw)withdrawBox();
- if(me.can_manage_billing)card.append(btn('Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
+ if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';w.textContent='Twój pakiet: '+cur.name+' ('+cur.price+' zł / mies., do '+cur.conversations+' aktywnych rozmów).';card.append(w)}}
+ if(me.can_manage_billing)card.append(btn(me.plans&&me.plans.length?'Zmień pakiet lub zarządzaj subskrypcją':'Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));

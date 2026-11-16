@@ -819,6 +819,15 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
     elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
         status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
         # A withdrawn contract stays withdrawn until the owner cancels it in Stripe; only a fresh checkout reopens it.
+        # The customer switched plan in the Stripe portal (or someone changed it in Stripe): the plan follows the price.
+        items = ((obj.get('items') or {}).get('data') or [{}])
+        new_plan = None if event['type'] == 'customer.subscription.deleted' else catalog.plan_for_price(((items[0] or {}).get('price') or {}).get('id'))
+        if new_plan:
+            for acc_ in q('SELECT id, plan, render_service_id FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True):
+                if acc_.get('plan') != new_plan:
+                    q('UPDATE accounts SET plan=?, plan_choice=? WHERE id=?', (new_plan, new_plan, acc_['id']))
+                    if acc_.get('render_service_id'):
+                        tasks.add_task(_apply_plan, acc_['render_service_id'], new_plan)
         before = q('SELECT email, plan_status FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True)
         q('UPDATE accounts SET plan_status=? WHERE stripe_customer=? AND withdrawn_at IS NULL', (status[:30], obj.get('customer')))
         for row in before:  # one mail per change of state: Stripe repeats these events

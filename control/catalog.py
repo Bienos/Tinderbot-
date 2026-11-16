@@ -28,6 +28,17 @@ def link_for(slug: str) -> str:
     return os.getenv(f'STRIPE_LINK_{slug.upper()}', '').strip()
 
 
+def price_id_for(slug: str) -> str:
+    return os.getenv(f'STRIPE_PRICE_{slug.upper()}', '').strip()
+
+
+def plan_for_price(price_id: str | None) -> str | None:
+    """Which plan a Stripe price belongs to (STRIPE_PRICE_WINQ / _FLIRT / _CASANOVA hold the price ids)."""
+    if not price_id:
+        return None
+    return next((p['slug'] for p in PLANS if price_id_for(p['slug']) == price_id), None)
+
+
 def enabled() -> bool:
     return all(link_for(p['slug']).startswith('https://') for p in PLANS)
 
