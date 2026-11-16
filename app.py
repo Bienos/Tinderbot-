@@ -513,12 +513,15 @@ async def tinder_token_delete():
 @app.post('/api/tinder/connections/{connection_id}/check-bio')
 async def tinder_check_bio(connection_id:str):
     """Reads the owner's own bio now, so the AI-disclosure step answers at once instead of at the next sync."""
-    from agent.tinder import check_bio,status_update,TinderAuthError,TinderRateLimited,TinderRestriction,TinderError
+    from agent.tinder import check_bio,status_update,is_local_limit,TinderAuthError,TinderRateLimited,TinderRestriction,TinderError
     try:return await check_bio(connection_id)
     except TinderRestriction:
         status_update(connection_id,error='restriction_requires_manual_review',disable=True)
         raise HTTPException(409,'Tinder chce, żebyś sprawdził konto w oficjalnej aplikacji. Połączenie wstrzymane.')
-    except TinderRateLimited:raise HTTPException(429,'Tinder poprosił o przerwę. Spróbuj za kilka minut.')
+    except TinderRateLimited as exc:
+        # Our own request budget is not Tinder asking for a pause: say which one it is.
+        if is_local_limit(exc):raise HTTPException(429,'Winq robi teraz dużo zapytań do Tindera i chwilowo wstrzymał sprawdzanie. Spróbuj za minutę.')
+        raise HTTPException(429,'Tinder poprosił o przerwę. Spróbuj za kilka minut.')
     except TinderAuthError:raise HTTPException(409,'Połączenie z Tinderem wygasło. Wklej nowy token w Ustawienia → Tinder.')
     except TinderError:raise HTTPException(502,'Nie udało się teraz odczytać bio z Tindera. Spróbuj za chwilę.')
 

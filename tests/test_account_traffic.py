@@ -166,3 +166,29 @@ def test_import_budget_only_until_first_full_import(store,monkeypatch):
     assert not traffic.import_phase() and traffic.caps()==[(60,30),(3600,300)]
     clear_local_budget_block()
     assert traffic.import_phase()
+
+
+async def test_owner_bio_check_is_not_blocked_by_our_own_local_budget(source):
+    """The 'Sprawdź ponownie' button must work while the sync has used up the local budget; Tinder's own cooldown still wins."""
+    await tinder.connect()
+    tinder.status_update(CID,error='local_request_budget',delay=1800)
+    source.owner_bio='Używam AI czasami'
+    assert (await tinder.check_bio(CID))['found'] is True
+    tinder.status_update(CID,error='rate_limited',delay=7200)
+    before=len(source.requests)
+    with pytest.raises(tinder.TinderRateLimited) as e:await tinder.check_bio(CID)
+    assert not tinder.is_local_limit(e.value) and len(source.requests)==before
+
+async def test_blocked_sync_reports_that_the_limit_is_local(source):
+    await tinder.connect()
+    tinder.status_update(CID,error='local_request_budget',delay=1800)
+    with pytest.raises(tinder.TinderRateLimited) as e:await tinder.TinderAdapter().snapshot(setup_thread_stub())
+    assert tinder.is_local_limit(e.value)
+
+def setup_thread_stub():
+    return {'connection_id':CID,'id':TID,'chat_id':'x'}
+
+async def test_owner_checks_have_their_own_small_cap(store,monkeypatch):
+    monkeypatch.setattr(traffic,'_OWNER_CHECKS',[])
+    for _ in range(6):traffic.claim_request(owner=True)
+    with pytest.raises(traffic.TrafficBudget):traffic.claim_request(owner=True)
