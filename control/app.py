@@ -1353,11 +1353,12 @@ async def admin_rollout_run(request: Request):
     already on the newest version. A real run goes on in the background (check GET /admin/rollout)."""
     _admin(request)
     body = await _json(request)
+    only = body.get('only') if body.get('only') in ('fly', 'render') else None  # e.g. just the customers' Fly bots, not the Render ones
     if body.get('dry_run') is True:
-        return await asyncio.to_thread(run_rollout, dry_run=True)
+        return await asyncio.to_thread(run_rollout, dry_run=True, only=only)
     if _ROLLOUT_LOCK.locked():
         raise HTTPException(409, 'A rollout is already running.')
-    task = asyncio.create_task(asyncio.to_thread(run_rollout, force=body.get('force') is True))
+    task = asyncio.create_task(asyncio.to_thread(run_rollout, force=body.get('force') is True, only=only))
     _TASKS.add(task)
     task.add_done_callback(_TASKS.discard)
     return {'started': True}

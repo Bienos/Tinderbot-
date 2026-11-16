@@ -152,3 +152,8 @@ def test_the_machine_image_is_pinned_by_digest_for_rollbacks(monkeypatch):
     monkeypatch.setenv('FLY_API_TOKEN','FlyV1 x');monkeypatch.setattr(fly,'TRANSPORT',httpx.MockTransport(lambda r:httpx.Response(200,json=ms)))
     assert fly.current_image('winq-b-aaaa1111')=='registry.fly.io/imgapp@sha256:abc'
     ms[0]['image_ref']={};assert fly.current_image('winq-b-aaaa1111')=='registry.fly.io/imgapp:latest'
+
+def test_a_run_can_be_limited_to_one_provider(c,world):
+    bot(c,1,'fly:winq-b-aaaa1111');bot(c,2,'srv-cust1')
+    out,_=go(c,world,only='fly');assert results(out)==[('fly:winq-b-aaaa1111','updated')] and [e[0] for e in world.log]==['fly']   # Render bots are not even listed
+    out,_=go(c,world,only='render');assert results(out)==[('srv-cust1','updated'),('srv-owner','updated')]

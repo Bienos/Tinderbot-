@@ -152,8 +152,9 @@ def _roll_render(service_id: str, *, sleep) -> str:
 
 
 def run(q, *, has_access, base_for, owner_service_id: str = '', alert=None, force: bool = False, dry_run: bool = False,
-        sleep=time.sleep, health=default_health) -> dict:
-    """One pass over all bots. force re-rolls bots that are already on the target; dry_run only lists what would be done."""
+        only: str | None = None, sleep=time.sleep, health=default_health) -> dict:
+    """One pass over all bots. force re-rolls bots that are already on the target; dry_run only lists what would be done;
+    only='fly' or 'render' limits the run to that provider (the others are left out of the result)."""
     from control import provision
     target = latest_build()
     if not target:
@@ -163,6 +164,8 @@ def run(q, *, has_access, base_for, owner_service_id: str = '', alert=None, forc
     for item in candidates(q, owner_service_id):
         sid, acc = item['service_id'], item['acc']
         row = {'service_id': sid, 'provider': 'fly' if sid.startswith('fly:') else 'render', 'owner': item['owner']}
+        if only and row['provider'] != only:
+            continue
         if not force and state.get(sid, {}).get('target') == target['sha'] and state[sid].get('status') == 'ok':
             items.append({**row, 'result': 'up to date'})
             continue
