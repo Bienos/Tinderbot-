@@ -507,6 +507,9 @@ async def sync_connection(connection_id: str):
             try:return 0 if f"tinder:{owner}:{ident(m.get('_id') or m.get('id'))}" in convo else 1
             except Exception:return 1
         for match in sorted(page.items, key=_order):
+            # The work for one match is plain synchronous database work. With hundreds of matches that blocked the whole server for
+            # seconds (a /health answer took 17 s on a small machine), so hand control back to the event loop between matches.
+            await asyncio.sleep(0)
             # Check account revocation after each network await, before retaining data.
             connection(connection_id)
             match_id = ident(match.get('_id') or match.get('id')); person = match.get('person')
@@ -526,7 +529,7 @@ async def sync_connection(connection_id: str):
             if not cached.get('read_failed'):
                 # Listed by Tinder again: it is there. A one-off gap in an earlier listing must not hide it for good.
                 s.set_thread_flags(tid, visibility='available')
-            thread = next(t for t in s.threads() if t['id'] == tid)
+            thread = s.rows('SELECT * FROM threads WHERE id=?', (tid,))[0]
             if deferred or not traffic.should_read(thread,cached,activity_key):continue
             previous_hash=rt.history_hash(s.source_for_thread(tid))
             try:
