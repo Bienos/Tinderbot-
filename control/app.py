@@ -271,6 +271,30 @@ def structured_data(html: str, origin: str, price: str) -> str:
     return '<script type="application/ld+json">' + body + '</script>'
 
 
+def trial_days() -> int:
+    """Free days at the start of a subscription (TRIAL_DAYS). 0 means none. The Stripe payment link must carry the same number."""
+    try:
+        return max(0, min(30, int(os.getenv('TRIAL_DAYS', '0') or 0)))
+    except ValueError:
+        return 0
+
+
+def _days(n: int) -> str:
+    return f'{n} dzień' if n == 1 else f'{n} dni'
+
+
+def trial_texts() -> dict[str, str]:
+    n = trial_days()
+    if not n:
+        return {'{{TRIAL}}': '', '{{TRIAL_NOTE}}': '', '{{TRIAL_TERMS}}': ''}
+    d = _days(n)
+    return {'{{TRIAL}}': f'Pierwsze {d} za darmo, potem ',
+            '{{TRIAL_NOTE}}': f' Pierwsze {d} są bezpłatne: kartę podajesz od razu, a jeśli anulujesz przed ich końcem, nic nie zapłacisz.',
+            '{{TRIAL_TERMS}}': (f'<li>Okres próbny: pierwsze {d} Subskrypcji są bezpłatne, a umowa zostaje zawarta z chwilą jego rozpoczęcia. '
+                                'Do rozpoczęcia okresu próbnego wymagamy podania metody płatności. Jeżeli nie anulujesz Subskrypcji przed jego końcem, '
+                                'pierwsza opłata zostanie pobrana automatycznie po jego zakończeniu. Anulowanie w okresie próbnym oznacza, że nic nie zapłacisz.</li>')}
+
+
 def page(name: str) -> HTMLResponse:
     origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     path = PATHS.get(name, '/')
@@ -284,6 +308,8 @@ def page(name: str) -> HTMLResponse:
     html = html.replace('</head>', extra + '</head>', 1)
     for key, fallback in LEGAL_FIELDS.items():
         html = html.replace('{{' + key + '}}', os.getenv(key, '').strip() or fallback)
+    for token_, text_ in trial_texts().items():
+        html = html.replace(token_, text_)
     html = html.replace('{{ORIGIN}}', origin).replace('{{PATH}}', path).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND)
     if name == 'index.html' and origin:
         html = html.replace('</head>', structured_data(html, origin, price) + '</head>', 1)
@@ -556,7 +582,7 @@ def me(request: Request):
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
             'provision_state': acc.get('provision_state') or '', 'can_withdraw': can_withdraw(acc),
             'withdrawn': bool(acc.get('withdrawn_at')),
-            'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
+            'trial_days': trial_days(), 'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
             'setup': setup_progress(acc)}
 
 
@@ -665,7 +691,7 @@ async def billing_checkout(request: Request):
     params = dict(mode='subscription', line_items=[{'price': os.environ['STRIPE_PRICE_ID'], 'quantity': 1}],
                   client_reference_id=str(acc['id']), success_url=_origin(request) + '/konto?platnosc=ok',
                   cancel_url=_origin(request) + '/konto', allow_promotion_codes=True, locale='pl',
-                  metadata={'account_id': str(acc['id'])}, subscription_data={'metadata': {'account_id': str(acc['id'])}},
+                  metadata={'account_id': str(acc['id'])}, subscription_data={'metadata': {'account_id': str(acc['id'])}, **({'trial_period_days': trial_days()} if trial_days() else {})},
                   custom_text={'submit': {'message': 'Zamawiając, prosisz o rozpoczęcie usługi przed upływem 14 dni na odstąpienie od umowy.'}})
     if acc.get('stripe_customer'):
         params['customer'] = acc['stripe_customer']
