@@ -1,5 +1,6 @@
 const OUTCOME_NAMES={instagram_shared:'Instagram podany',phone_shared:'Telefon podany',date_suggested:'Propozycja spotkania',date_tentative:'Spotkanie wstępne',date_confirmed:'Spotkanie potwierdzone',date_rescheduled:'Spotkanie przełożone',date_cancelled:'Spotkanie odwołane',outcome_uncertain:'Niepewny wynik'};
 
+const OPENER='__opener__';  // anchor of a first-message draft (the conversation is still empty)
 let data=null, selected=null, filter='all', DEEP=location.hash==='#stats';  // #stats: the weekly e-mail opens the panel on the statistics tab
 const statuses={not_synced:'Jeszcze nie sprawdzono',new_match:'Nowy match',needs_reply:'Odpowiedź oczekuje',waiting:'Czekasz na odpowiedź',paused:'Wstrzymana',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia'};
 function el(tag,cls,text){let x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=String(text);return x}
@@ -78,12 +79,12 @@ for(let t of items){let b=el('button','thread'+(selected===t.id?' selected':''))
 document.getElementById('totals').textContent=data.threads.filter(isConv).length+' rozmów • '+data.threads.filter(t=>t.state==='needs_reply').length+' do odpowiedzi';
 let t=threadById();renderProfile(t);if(!t){document.getElementById('title').textContent='Wybierz rozmowę';return}
 document.getElementById('title').textContent=t.display_name+(t.profile?.age?', '+t.profile.age:'');document.getElementById('chatmeta').textContent=(t.profile?.bio||'').slice(0,70)||(t.platform==='tinder'?'Tinder':t.state_reason);document.getElementById('chatavatar').replaceChildren(avatarFor(t,'head'));document.getElementById('chatstatus').textContent=statuses[t.state]||t.state;
-let messages=document.getElementById('messages');let keepScroll=messages.scrollTop;messages.replaceChildren();let history=data.messages[t.id]||[];if(!history.length){let hero=el('div','matchhero');let u=safeImg(t.profile?.photos?.[0]);if(u){hero.append(cachedImg('hero:'+t.id,u,'',t.display_name))}else hero.append(avatarFor(t,'hero'));hero.append(el('b','','Dopasowaliście się z '+t.display_name+(t.matched_at?' '+fmtDate(t.matched_at):'')),el('div','','Napisz pierwszą wiadomość. Agent nie wymyśla otwarcia za Ciebie: zacznij od czegoś z jej profilu.'));messages.append(hero)}else if(t.matched_at)messages.append(el('div','matchline','Dopasowaliście się '+fmtDate(t.matched_at)));
+let messages=document.getElementById('messages');let keepScroll=messages.scrollTop;messages.replaceChildren();let history=data.messages[t.id]||[];if(!history.length){let hero=el('div','matchhero');let u=safeImg(t.profile?.photos?.[0]);if(u){hero.append(cachedImg('hero:'+t.id,u,'',t.display_name))}else hero.append(avatarFor(t,'hero'));hero.append(el('b','','Dopasowaliście się z '+t.display_name+(t.matched_at?' '+fmtDate(t.matched_at):'')),el('div','','Napisz pierwszą wiadomość sam albo poproś agenta o szkic. Najlepiej zacząć od czegoś z jej opisu.'));messages.append(hero)}else if(t.matched_at)messages.append(el('div','matchline','Dopasowaliście się '+fmtDate(t.matched_at)));
 history.forEach((m,i)=>{let b=el('div','bubble'+(m.sender==='you'?' you':''));b.title=m.created_at?new Date(m.created_at).toLocaleString():'';b.append(el('div','',m.body));messages.append(b);if(i===history.length-1&&m.sender==='you')messages.append(el('div','sent','Wysłano'))});if(scrollKey!==t.id+':'+history.length){messages.scrollTop=messages.scrollHeight;scrollKey=t.id+':'+history.length}else messages.scrollTop=keepScroll;
-let composer=document.getElementById('composer');composer.replaceChildren();if(t.queued)composer.append(el('div','callout warn','Ta rozmowa czeka w kolejce: pakiet '+data.plan.label+' obsługuje naraz '+data.plan.limit+' aktywnych rozmów. Gdy któraś ucichnie (po '+data.plan.active_days+' dniach bez wiadomości) albo ulepszysz pakiet, Winq napisze tu szkic.'));let curr=data.drafts.find(d=>d.thread_id===t.id&&d.status==='pending'&&d.anchor_message_id===t.latest_message_id);
+let composer=document.getElementById('composer');composer.replaceChildren();if(t.queued)composer.append(el('div','callout warn','Ta rozmowa czeka w kolejce: pakiet '+data.plan.label+' obsługuje naraz '+data.plan.limit+' aktywnych rozmów. Gdy któraś ucichnie (po '+data.plan.active_days+' dniach bez wiadomości) albo ulepszysz pakiet, Winq napisze tu szkic.'));let curr=data.drafts.find(d=>d.thread_id===t.id&&d.status==='pending'&&d.anchor_message_id===(t.latest_message_id||OPENER));
 let cerr=el('p','cerr');cerr.hidden=true;const fail=e=>{cerr.hidden=false;cerr.textContent=ERR_PL[e.message]||e.message};
 const send=async(path,payload,btn)=>{if(btn)btn.disabled=true;cerr.hidden=true;try{await api(path,'POST',payload);await refresh()}catch(e){fail(e);if(btn)btn.disabled=false}};
-if(t.state==='needs_reply'&&curr){let head=el('div','dhead');head.append(el('b','',t.automatic_sending?'Autopilot wyśle tę odpowiedź sam':'Szkic odpowiedzi'),el('span','muted','Możesz poprawić tekst przed wysłaniem'));composer.append(head);
+if((t.state==='needs_reply'||t.state==='new_match')&&curr){let head=el('div','dhead');head.append(el('b','',t.state==='new_match'?'Szkic pierwszej wiadomości':t.automatic_sending?'Autopilot wyśle tę odpowiedź sam':'Szkic odpowiedzi'),el('span','muted','Możesz poprawić tekst przed wysłaniem'));composer.append(head);
  if(!['demo_placeholder','model_error'].includes(curr.generator)){let ta=el('textarea','draftedit');ta.id='draft-edit';ta.value=DRAFT_EDITS.get(curr.id)??curr.body;ta.rows=Math.min(6,Math.max(2,Math.ceil(ta.value.length/60)));ta.maxLength=1000;ta.oninput=()=>DRAFT_EDITS.set(curr.id,ta.value);
   ta.onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();yes.click()}};composer.append(ta);
   let row=el('div','controls');let yes=el('button','primary','Wyślij');yes.title='Ctrl/Cmd + Enter';yes.onclick=()=>{let body=ta.value.trim();if(!body)return fail({message:'Wiadomość jest pusta.'});send('/api/drafts/'+curr.id+'/approve',body!==curr.body?{body}:undefined,yes).then(()=>DRAFT_EDITS.delete(curr.id))};
@@ -94,7 +95,7 @@ else if(t.state==='needs_reply'){let rg=data.drafts.find(d=>d.thread_id===t.id&&
  let failed=data.drafts.some(d=>d.thread_id===t.id&&d.anchor_message_id===t.latest_message_id&&['needs_user','no_reply'].includes(d.status));
  if(!data.llm_enabled)composer.append(el('p','','Podłącz model AI, żeby powstawały szkice.'));
  else if(!failed){let w=el('div','working');w.setAttribute('role','status');w.append(el('span','dots'),el('span','',rg?'Piszę nową wersję. Zwykle kilka sekund.':'Szkic się przygotowuje. Pojawi się tu za chwilę.'));composer.append(w)}}
-else if(t.state==='new_match'){composer.append(el('p','', 'Nowe dopasowanie. Pierwszą wiadomość napisz sam w Tinderze, najlepiej nawiązując do czegoś z jej profilu. Od jej odpowiedzi szkice przygotuje Winq.'))}
+else if(t.state==='new_match'){openerBox(composer,t,send)}
 else if(t.state==='waiting'){composer.append(el('p','', 'Ostatnia wiadomość jest Twoja. Czekamy na odpowiedź, bez dopisywania kolejnych.'))}
 else composer.append(el('p','',t.state_reason));
 composer.append(cerr);
@@ -112,7 +113,7 @@ async function flags(thread_id,fields){try{await api('/api/threads/'+thread_id+'
 async function act(path){try{let r=await api(path,'POST');document.getElementById('status').textContent=JSON.stringify(r);await refresh()}catch(e){document.getElementById('status').textContent=e.message}}
 let lastSig='',scrollKey='';
 const msgSig=m=>Object.keys(m).map(k=>k+':'+m[k].length+':'+(m[k].length?(m[k][m[k].length-1].id??m[k][m[k].length-1].source_id):'')).join('|');  // messages only ever get appended
-function dataSig(d){return JSON.stringify([d.plan,d.threads,msgSig(d.messages),d.drafts,d.grants,msgSig(d.memory),d.settings,d.llm_enabled,d.connections,d.tinder.configured,d.tinder.connections.map(c=>[c.id,c.enabled,c.error,c.auto_send,c.bio_mode,c.bio_disclosure,c.last_sync]),{...d.stats,tinder_requests:null}])}
+function dataSig(d){return JSON.stringify([d.plan,d.campaign,d.threads,msgSig(d.messages),d.drafts,d.grants,msgSig(d.memory),d.settings,d.llm_enabled,d.connections,d.tinder.configured,d.tinder.connections.map(c=>[c.id,c.enabled,c.error,c.auto_send,c.bio_mode,c.bio_disclosure,c.last_sync]),{...d.stats,tinder_requests:null}])}
 function updateSystem(){updateAutopilotButton();let s=document.getElementById('system');if(s&&data)s.textContent='Tryb: '+data.settings.mode+' • Worker: '+(data.worker.running?'działa':'wyłączony')+' • LLM: '+(data.llm_enabled?'skonfigurowany':'brak')+(data.worker.error?' • '+data.worker.error:'')}
 async function refresh(){let next=await api('/api/state');let sig=dataSig(next);data=next;if(!selected||!data.threads.some(t=>t.id===selected)){let c=data.threads.filter(isConv).sort((a,b)=>tsOf(b)-tsOf(a))[0];selected=c?c.id:null}
 if(sig===lastSig||document.activeElement?.id==='draft-edit'){updateSystem();return}lastSig=sig;let side=document.getElementById('threads').parentElement,top=side.scrollTop,rost=document.getElementById('roster').scrollLeft;render();side.scrollTop=top;document.getElementById('roster').scrollLeft=rost}
@@ -287,10 +288,10 @@ old=old||{};p.append(el('p','','Autopilot wysyła odpowiedzi bez Twojego klikni�
 let fields={};for(let [k,lab] of [['disclosed','Ta osoba wie, że odpowiedzi pisze lub pomaga pisać AI'],['participant_consent','Nie ma nic przeciwko'],['enabled','Włącz autopilota w tej rozmowie']]){let[w,i]=field(lab,old[k],'checkbox');fields[k]=i;p.append(w)}
 if(t.platform==='tinder'&&!conn.auto_send)p.append(el('div','callout warn','Automatyczne wysyłanie jest wyłączone dla całego konta (Ustawienia → Tinder).'));
 let save=el('button','primary','Zapisz');save.onclick=async()=>{await api('/api/threads/'+encodeURIComponent(t.id)+'/grant','PUT',Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.checked])));await refresh();document.getElementById('panel').close()};p.append(save)}
-function pendingQueue(){if(!data)return[];return data.threads.filter(t=>t.state==='needs_reply').map(t=>[t,data.drafts.find(d=>d.thread_id===t.id&&d.status==='pending'&&d.anchor_message_id===t.latest_message_id&&!['demo_placeholder','model_error'].includes(d.generator))]).filter(x=>x[1]).sort((a,b)=>tsOf(b[0])-tsOf(a[0]))}
+function pendingQueue(){if(!data)return[];return data.threads.filter(t=>t.state==='needs_reply'||t.state==='new_match').map(t=>[t,data.drafts.find(d=>d.thread_id===t.id&&d.status==='pending'&&d.anchor_message_id===(t.latest_message_id||OPENER)&&!['demo_placeholder','model_error'].includes(d.generator))]).filter(x=>x[1]).sort((a,b)=>tsOf(b[0])-tsOf(a[0]))}
 function showQueue(skip=new Set()){let q=pendingQueue().filter(([t])=>!skip.has(t.id));let p=panel(q.length?'Odpisz po kolei · zostało '+q.length:'Wszystko odpisane');if(!q.length){p.append(el('p','','Nie ma więcej szkiców do wysłania. Nowe pojawią się, gdy ktoś odpisze.'));return}
 let [t,d]=q[0];let who=el('div','qwho');who.append(avatarFor(t,'queue'),el('b','',t.display_name+(t.profile?.age?', '+t.profile.age:'')));p.append(who);
-let hist=el('div','qhist');for(let m of (data.messages[t.id]||[]).slice(-4))hist.append(el('div','bubble'+(m.sender==='you'?' you':''),m.body));p.append(hist);
+let hist=el('div','qhist');for(let m of (data.messages[t.id]||[]).slice(-4))hist.append(el('div','bubble'+(m.sender==='you'?' you':''),m.body));if(!hist.children.length)hist.append(el('div','muted',t.profile?.bio?'Jej opis: '+t.profile.bio:'Pierwsza wiadomość. Ta osoba nie ma opisu.'));p.append(hist);
 let ta=el('textarea','draftedit');ta.value=d.body;ta.rows=3;ta.maxLength=1000;p.append(ta);let err=el('p','cerr');err.hidden=true;
 let row=el('div','controls');let yes=el('button','primary','Wyślij i dalej');let next=el('button','secondary','Pomiń');let again=el('button','secondary','Napisz inaczej');
 yes.onclick=async()=>{let body=ta.value.trim();if(!body)return;yes.disabled=true;try{await api('/api/drafts/'+d.id+'/approve','POST',body!==d.body?{body}:undefined);await refresh();showQueue(skip)}catch(e){err.hidden=false;err.textContent=ERR_PL[e.message]||e.message;yes.disabled=false}};
@@ -301,7 +302,7 @@ function showActivity(){let p=panel('Activity & reliability');p.append(el('p',''
 function connBanner(on,text){let b=document.getElementById('conn-banner');if(!b){b=el('div','connbanner');b.id='conn-banner';b.setAttribute('role','status');document.body.prepend(b)}b.hidden=!on;if(text)b.textContent=text}
 let failures=0;
 let fastTimer=null,fastSince=0;
-function writing(){let t=data&&data.threads.find(x=>x.id===selected);return !!t&&data.llm_enabled&&t.state==='needs_reply'&&!data.drafts.some(d=>d.thread_id===t.id&&d.anchor_message_id===t.latest_message_id&&['pending','needs_user','no_reply'].includes(d.status))}
+function writing(){let t=data&&data.threads.find(x=>x.id===selected);if(t&&t.state==='new_match'&&data.campaign?.items?.[t.id]?.status==='queued'&&!data.drafts.some(d=>d.thread_id===t.id&&d.anchor_message_id===OPENER&&d.status==='pending'))return true;return !!t&&data.llm_enabled&&t.state==='needs_reply'&&!data.drafts.some(d=>d.thread_id===t.id&&d.anchor_message_id===t.latest_message_id&&['pending','needs_user','no_reply'].includes(d.status))}
 function fastPoll(){if(!writing()){fastSince=0;return}if(!fastSince)fastSince=Date.now();if(Date.now()-fastSince>90000||fastTimer)return;fastTimer=setTimeout(()=>{fastTimer=null;if(!document.getElementById('panel').open)safeRefresh()},1500)}
 async function safeRefresh(){try{await refresh();if(failures)connBanner(false);failures=0;fastPoll()}catch(e){failures++;
  if(e.status===401){location.reload();return}
@@ -319,11 +320,12 @@ async function logoutNow(){try{await api('/auth/logout','POST')}catch(e){}locati
 function renderRoster(){let box=document.getElementById('roster');box.replaceChildren();if(!data)return;
 let todo=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a)),reply=data.threads.filter(t=>t.state==='needs_reply').sort((a,b)=>tsOf(b)-tsOf(a));
 document.getElementById('roster-title').textContent='Do napisania · '+todo.length+' nowych'+(reply.length?' · '+reply.length+' czeka na Twoją odpowiedź':'');
+let cb=document.getElementById('campaign-btn');if(cb){let run=!!data.campaign?.running;cb.hidden=!todo.length&&!run;cb.textContent=run?'Kampania · trwa':'Kampania';cb.onclick=showCampaign}
 let qn=pendingQueue().length,qb=document.getElementById('queue-btn');if(qb){qb.hidden=!qn;qb.textContent='Odpisz po kolei ('+qn+')'}
 if(!todo.length&&!reply.length){box.append(el('div','roster-empty','Wszystko odpisane. Nowe dopasowania pojawią się tutaj.'));return}
 for(let t of [...todo,...reply]){let b=el('button','rost'+(selected===t.id?' sel':''));let u=safeImg(t.profile?.photos?.[0]);
 if(u){b.append(cachedImg('roster:'+t.id,u,'rimg',t.display_name))}else b.append(el('div','rinit',(t.display_name||'?').slice(0,1).toUpperCase()));
-b.append(el('span','rtag'+(t.state==='needs_reply'?' wait':''),t.state==='needs_reply'?'ODPISZ':'NOWY'),el('div','rover',t.display_name+(t.profile?.age?', '+t.profile.age:'')));
+let ci=data.campaign?.items?.[t.id]?.status;b.append(el('span','rtag'+(t.state==='needs_reply'||ci==='queued'||ci==='review'?' wait':''),t.state==='needs_reply'?'ODPISZ':ci==='queued'?'W KOLEJCE':ci==='review'?'SZKIC':'NOWY'),el('div','rover',t.display_name+(t.profile?.age?', '+t.profile.age:'')));
 b.onclick=()=>{setView('chats');choose(t.id)};box.append(b)}}
 function tile(big,cap){let t=el('div','tile');t.append(el('div','big',big),el('div','cap',cap));return t}
 function kv(k,v){let r=el('div','kv');r.append(el('span','',k),el('b','',v));return r}
@@ -544,3 +546,80 @@ function renderOnboarding(){const box=document.getElementById('onboard');if(!box
  const card=el('div','ob');card.append(el('h2','','Uruchom autopilota'),el('p','','4 proste kroki, ok. 3 minuty. Potem Winq sam odpisuje w Twoich rozmowach na Tinderze.'));
  const close=el('button','ob-close','Ukryj');close.onclick=()=>{try{localStorage.setItem('winq-start-hidden','1')}catch(e){}box.hidden=true};card.append(close);
  card.append(startGuide(()=>renderOnboarding()));box.append(card)}
+
+/* ---------- Kampania: agent pisze pierwszą wiadomość do wybranych nowych dopasowań ---------- */
+const CAMPAIGN={mode:null,sel:null,msg:null};
+const CMP_STATUS={queued:'w kolejce',sent:'wysłano',review:'szkic czeka na Ciebie',started:'rozmowa ruszyła',skipped:'pominięto',failed:'nie udało się'};
+function fmtDur(sec){let m=Math.round(sec/60);if(m<2)return 'kilka minut';if(m<90)return m+' min';let h=Math.round(m/6)/10;return h+' godz.'}
+function autoLive(){return apLive(tinderConn())&&(!data.plan||data.plan.autopilot)}
+function autoWhy(){if(data.plan&&!data.plan.autopilot)return 'Pakiet '+data.plan.label+' pisze tylko szkice. Wysyłanie samo jest od pakietu Flirt.';return 'Żeby agent wysyłał sam, włącz autopilota (informacja o AI w Twoim bio). Do tego czasu przygotuje szkice.'}
+function openerBox(box,t,send){
+ let it=data.campaign?.items?.[t.id],c=data.campaign||{};
+ if(it&&it.status==='queued'){let w=el('div','working');w.setAttribute('role','status');w.append(el('span','dots'),el('span','',it.mode==='auto'?'Agent pisze pierwszą wiadomość i wyśle ją za chwilę, w kolejce kampanii.':'Agent pisze szkic pierwszej wiadomości. Zwykle kilka sekund.'));box.append(w);return}
+ if(!data.llm_enabled){box.append(el('p','','Podłącz model AI w ustawieniach serwera, żeby agent mógł pisać pierwsze wiadomości. Możesz też napisać sam w Tinderze.'));return}
+ if(it&&(it.status==='skipped'||it.status==='failed')&&it.note)box.append(el('div','callout warn',it.note));
+ box.append(el('p','','Nowe dopasowanie. Napisz pierwszą wiadomość sam w Tinderze albo poproś agenta: nawiąże do jej opisu, a Ty zdecydujesz, czy ją wysłać.'));
+ let row=el('div','controls');let ask=el('button','primary','Napisz szkic pierwszej wiadomości');ask.onclick=()=>send('/api/threads/'+encodeURIComponent(t.id)+'/opener',{mode:'draft'},ask);row.append(ask);
+ if(autoLive()){let go=el('button','secondary','Napisz i wyślij sam');go.onclick=()=>send('/api/threads/'+encodeURIComponent(t.id)+'/opener',{mode:'auto'},go);row.append(go)}
+ box.append(row);
+ if(c.free_slots===0)box.append(el('div','callout warn','Wszystkie miejsca w pakiecie '+data.plan.label+' są zajęte. Pierwsza wiadomość zajmie jedno z nich.'))}
+const CMP_TITLE='Kampania: pierwsze wiadomości';let CMP_TIMER=null;
+function showCampaign(){CAMPAIGN.msg=null;CAMPAIGN.sel=null;let p=panel(CMP_TITLE);fillCampaign(p);campaignWatch(p)}
+/* The page behind a panel does not refresh itself, so while this panel is open it follows the campaign: new numbers show up without a click. */
+function campaignWatch(p){clearInterval(CMP_TIMER);let last=JSON.stringify(data.campaign);
+ CMP_TIMER=setInterval(async()=>{if(!document.getElementById('panel').open||document.getElementById('panel-title').textContent!==CMP_TITLE){clearInterval(CMP_TIMER);return}
+  try{await refresh()}catch(e){return}
+  let now=JSON.stringify(data.campaign);if(now===last)return;last=now;
+  if(document.activeElement&&p.contains(document.activeElement)&&document.activeElement.matches('input'))return;  // do not pull the list from under a click
+  fillCampaign(p)},3000)}
+function fillCampaign(p){p.replaceChildren();
+ const cs=data.campaign||{items:{},counts:{},gap_seconds:240},counts=cs.counts||{},live=autoLive();
+ const waiting=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a));
+ const free=cs.free_slots==null?Infinity:cs.free_slots;
+ const eligible=waiting.filter(t=>!['queued'].includes(cs.items?.[t.id]?.status));
+ if(CAMPAIGN.mode===null||(CAMPAIGN.mode==='auto'&&!live))CAMPAIGN.mode=live?'auto':'draft';
+ if(CAMPAIGN.sel===null){CAMPAIGN.sel=new Set(eligible.filter(t=>!cs.items?.[t.id]).slice(0,Math.min(free,eligible.length)).map(t=>t.id))}
+ CAMPAIGN.sel=new Set([...CAMPAIGN.sel].filter(id=>eligible.some(t=>t.id===id)));
+ p.append(el('p','','Agent napisze pierwszą wiadomość do wybranych nowych dopasowań, nawiązując do tego, co mają w opisie. Zaznacz osoby, wybierz tryb i kliknij Start. Do osób, które już coś napisały, nic nie wysyła.'));
+ if(CAMPAIGN.msg)p.append(el('div','callout ok',CAMPAIGN.msg));
+ /* trwa / wynik */
+ const done=Object.values(counts).reduce((a,b)=>a+b,0);
+ if(done){let box=el('div','scard');box.append(el('div','glabel',cs.running?'Kampania trwa':'Ostatnia kampania'));
+  let parts=[['sent','Wysłano'],['review','Szkice do wysłania'],['queued','W kolejce'],['started','Rozmowy rozpoczęte'],['skipped','Pominięto'],['failed','Nie udało się']].filter(([k])=>counts[k]).map(([k,l])=>l+': '+counts[k]);
+  box.append(el('div','gdesc',parts.join(' · ')));
+  let notes=Object.entries(cs.items||{}).filter(([,v])=>['skipped','failed'].includes(v.status)&&v.note);
+  for(let [id,v] of notes.slice(0,6)){let th=data.threads.find(x=>x.id===id);box.append(el('div','gdesc',(th?th.display_name:'?')+': '+v.note))}
+  let row=el('div','btnrow');
+  if(counts.review){let q=el('button','primary','Przejrzyj szkice po kolei ('+counts.review+')');q.onclick=()=>{closePanel();showQueue()};row.append(q)}
+  if(cs.running){let st=el('button','secondary danger','Zatrzymaj kampanię');st.onclick=async()=>{if(!confirm('Zatrzymać kampanię? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;st.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();fillCampaign(p)}catch(e){st.disabled=false}};row.append(st)}
+  if(row.children.length)box.append(row);p.append(box)}
+ if(!data.llm_enabled){p.append(el('div','callout warn','Podłącz model AI w ustawieniach serwera, żeby agent mógł pisać pierwsze wiadomości.'));return}
+ if(!eligible.length){p.append(el('div','roster-empty','Nie ma teraz nowych dopasowań bez wiadomości. Gdy pojawią się nowe, wrócisz tu i klikniesz Start.'));return}
+ /* tryb */
+ let modes=el('div','presets');
+ const modeBtn=(key,label,off)=>{let b=el('button','chipbtn'+(CAMPAIGN.mode===key?' on':''),label);b.type='button';b.disabled=!!off;b.onclick=()=>{CAMPAIGN.mode=key;fillCampaign(p)};return b};
+ modes.append(modeBtn('auto','Wysyłaj sam',!live),modeBtn('draft','Tylko szkice, ja klikam Wyślij'));
+ p.append(group('Kto pisze pierwszy?',CAMPAIGN.mode==='auto'?'Agent napisze i wyśle sam, po jednej wiadomości, w odstępach.':'Agent przygotuje szkice. Nic nie wyjdzie bez Twojego kliknięcia.',modes));
+ if(!live){let w=el('div','callout warn',autoWhy());if(!(data.plan&&!data.plan.autopilot)){let b=el('button','linkish','Włącz autopilota →');b.onclick=()=>{closePanel();showAutopilot()};w.append(document.createTextNode(' '),b)}p.append(w)}
+ /* lista */
+ let head=el('div','row');let all=el('label','switchrow');let cap=Math.min(free,eligible.length);
+ let allIn=el('input','');allIn.type='checkbox';allIn.checked=CAMPAIGN.sel.size>0&&CAMPAIGN.sel.size>=cap;
+ allIn.onchange=()=>{CAMPAIGN.sel=allIn.checked?new Set(eligible.slice(0,cap).map(t=>t.id)):new Set();fillCampaign(p)};
+ let lab=el('span','glabel','Zaznacz wszystkich ('+cap+')');all.append(allIn,lab);all.style.justifyContent='flex-start';all.style.gap='10px';allIn.style.cssText='position:static;opacity:1;pointer-events:auto;width:18px;height:18px';
+ head.append(all,el('span','gdesc','Wybrano '+CAMPAIGN.sel.size+' z '+eligible.length+(cs.free_slots!=null?' · wolnych miejsc w pakiecie: '+cs.free_slots:'')));p.append(head);
+ let list=el('div','cmplist');
+ for(let t of eligible){let it=cs.items?.[t.id];let r=el('label','cmprow');let cb=el('input','');cb.type='checkbox';cb.checked=CAMPAIGN.sel.has(t.id);
+  cb.onchange=()=>{if(cb.checked&&CAMPAIGN.sel.size>=free){cb.checked=false;note.textContent='Pakiet '+data.plan.label+' ma wolnych miejsc: '+cs.free_slots+'.';return}cb.checked?CAMPAIGN.sel.add(t.id):CAMPAIGN.sel.delete(t.id);fillCampaign(p)};
+  let who=el('div','cmpwho');who.append(el('b','',t.display_name+(t.profile?.age?', '+t.profile.age:'')),el('span','muted',t.profile?.bio?t.profile.bio.slice(0,90):'brak opisu: otwarcie będzie ogólne'));
+  r.append(cb,avatarFor(t,'queue'),who);if(it)r.append(el('span','qchip',CMP_STATUS[it.status]||it.status));list.append(r)}
+ p.append(list);let note=el('div','mresult');p.append(note);
+ /* tempo */
+ let n=CAMPAIGN.sel.size;
+ p.append(el('div','gdesc',CAMPAIGN.mode==='auto'?'Wysyłka jest rozłożona w czasie: jedna wiadomość co ok. '+fmtDur(cs.gap_seconds)+', a część limitu Tindera zostaje na odpowiedzi. '+(n?n+' wiadomości potrwa ok. '+fmtDur(n*cs.gap_seconds)+'.':''):'Szkice powstaną w kilka minut. Wyślesz je po kolei jednym przyciskiem.'));
+ /* start */
+ let go=el('button','primary','Start · '+n+' '+pl(n,'osoba','osoby','osób'));go.disabled=!n;
+ go.onclick=async()=>{go.disabled=true;note.className='mresult';note.textContent='Uruchamiam…';
+  try{let r=await api('/api/campaigns','POST',{thread_ids:[...CAMPAIGN.sel],mode:CAMPAIGN.mode});CAMPAIGN.sel=null;let rej=Object.values(r.rejected||{});
+   CAMPAIGN.msg='Ruszyło: '+r.accepted.length+(rej.length?'. Pominięto '+rej.length+': '+rej[0]:'.');await refresh();fillCampaign(p)}
+  catch(e){note.className='mresult err';note.textContent=ERR_PL[e.message]||e.message;go.disabled=false}};
+ let foot=el('div','mfoot');foot.append(go);p.append(foot)}

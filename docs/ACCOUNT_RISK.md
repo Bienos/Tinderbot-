@@ -24,6 +24,10 @@ Primary sources were fetched directly; URLs, access outcomes and hashes are in `
 | Failure circuit breaker | Three consecutive unsuccessful synchronization attempts open the circuit and pause the connection. A complete successful synchronization resets the ordinary failure count. |
 | Quiet uncertainty recovery | A concrete but unobserved receipt is checked at most once per poll interval. A missing receipt is never inferred from similar text, and message POSTs still execute once. |
 
+## Campaigns (first messages)
+
+Writing first to many new matches is more visible to a platform than answering people who wrote to you, and the sources above give no safe volume for it. Campaigns therefore add their own conservative limits on top of the send budgets above: automatic openers are sent one at a time `CAMPAIGN_GAP_SECONDS` apart (default 240, a fixed interval, not simulated human timing), at most `CAMPAIGN_OPENERS_PER_DAY` per day (default 30), and the last `CAMPAIGN_REPLY_RESERVE` sends of the hourly Tinder budget (default 5) and of the daily budget stay free for replies. Drafts for the owner's own click are not spaced because nothing is sent. Pause, revocation, a rejected or uncertain delivery and restriction signals stop openers like any other send. These numbers are not verified thresholds; fewer and slower is safer, and a platform-approved channel remains the only way to remove the authorization risk.
+
 ## Defaults and configuration
 
 The values are listed in `.env.example`. An existing `.env` is not overwritten; change its values deliberately if adopting this profile. The owner can inspect `next_poll`, `blocked_until`, error/review state and recent activity in the dashboard. Automatic Tinder replies remain on by default for a connected, consented/disclosed account, with the existing on/off, global pause and revoke controls.

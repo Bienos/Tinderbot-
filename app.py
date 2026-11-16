@@ -7,7 +7,7 @@ load_dotenv()
 from fastapi import FastAPI,HTTPException,Request
 from fastapi.responses import FileResponse,JSONResponse,HTMLResponse
 from pydantic import BaseModel,Field,ConfigDict
-from agent import storage as s,runtime as rt,service,tinder as tinder_integration
+from agent import storage as s,runtime as rt,service,campaigns,tinder as tinder_integration
 from agent.auth import token,same_secret,create_session,session_valid,revoke_session
 from agent.http_security import SecurityBoundary,internal_request,public_origin
 from agent.dispatch import DispatchDenied
@@ -287,7 +287,7 @@ def state():
         waiting=set(plan['queued'])
         for p_ in threads:p_['queued']=p_['id'] in waiting
         plan['queued']=len(waiting)
-    return {'plan':plan,'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
+    return {'plan':plan,'campaign':campaigns.status(hist),'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:mem.get(t['id'],[]) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
@@ -425,7 +425,11 @@ async def regenerate(thread_id:str):
         t=service.thread_by_id(thread_id)
         if not t:raise HTTPException(404,'Thread not found')
         hist=s.messages(thread_id)
-        if not hist or hist[-1]['sender']!='them':raise HTTPException(409,'No incoming turn to answer')
+        if not hist:  # nothing written yet: a new first message
+            r=campaigns.launch([thread_id],'draft')
+            if thread_id in r['rejected']:raise HTTPException(409,r['rejected'][thread_id])
+            service.WAKE.set();return {'ok':True}
+        if hist[-1]['sender']!='them':raise HTTPException(409,'No incoming turn to answer')
         with s.connect() as db:
             d=db.execute('SELECT * FROM drafts WHERE thread_id=? AND anchor_message_id=?',(thread_id,hist[-1]['id'])).fetchone()
             if d:
@@ -437,6 +441,31 @@ async def regenerate(thread_id:str):
     except service.Busy as e:raise HTTPException(409,str(e))
     service.WAKE.set()
     return {'ok':True}
+
+class Launch(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    thread_ids:list[str]=Field(min_length=1,max_length=100)
+    mode:__import__('typing').Literal['auto','draft']='draft'
+@app.post('/api/campaigns')
+def campaign_launch(body:Launch):
+    """Start a campaign: the agent writes the first message to the chosen new matches (and sends it in 'auto' mode)."""
+    if not model_configured():raise HTTPException(409,'Podłącz model AI, żeby agent mógł pisać pierwsze wiadomości.')
+    r=campaigns.launch(body.thread_ids,body.mode)
+    if not r['accepted']:raise HTTPException(409,next(iter(r['rejected'].values()),'Nie ma czego uruchomić.'))
+    service.WAKE.set();return r
+@app.post('/api/campaigns/stop')
+def campaign_stop():
+    return {'stopped':campaigns.stop()}
+class OpenerMode(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    mode:__import__('typing').Literal['auto','draft']='draft'
+@app.post('/api/threads/{thread_id}/opener')
+def thread_opener(thread_id:str,body:OpenerMode=OpenerMode()):
+    """One conversation: the agent writes the first message and leaves it as a draft (or sends it, in 'auto' mode)."""
+    if not model_configured():raise HTTPException(409,'Podłącz model AI, żeby agent mógł pisać pierwsze wiadomości.')
+    r=campaigns.launch([thread_id],body.mode)
+    if thread_id in r['rejected']:raise HTTPException(409,r['rejected'][thread_id])
+    service.WAKE.set();return r
 
 class TinderConnect(BaseModel):
     model_config=ConfigDict(extra='forbid')

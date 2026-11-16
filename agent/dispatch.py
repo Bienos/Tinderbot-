@@ -13,7 +13,7 @@ def guard(thread_id,action_id,text,anchor,history):
     if a['status']!='sending' or a['draft_status']!='sending' or a['body']!=text or a['anchor']!=anchor:
         raise DispatchDenied('Action or draft no longer dispatchable')
     if not rt.eligible(t) or a['settings_hash']!=rt.settings_hash():raise DispatchDenied('Paused, revoked or changed profile')
-    if not history or history[-1]['id']!=anchor or a['history_hash']!=rt.history_hash(history):raise DispatchDenied('Source content changed')
+    if s.anchor_of(history)!=anchor or a['history_hash']!=rt.history_hash(history):raise DispatchDenied('Source content changed')
     if t['platform']!='simulator':
         grants=s.rows('SELECT * FROM grants WHERE thread_id=?',(thread_id,))
         con=s.rows('SELECT * FROM connections WHERE id=?',(t['connection_id'],))

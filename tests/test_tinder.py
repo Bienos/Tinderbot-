@@ -109,6 +109,7 @@ class Source:
     def __init__(self):
         self.messages=[raw_message()];self.requests=[];self.posts=[];self.behavior='ok'
         self.profile_owner=OWNER;self.owner_bio='';self.matches_visible=True;self.hide_sent=False;self.profile_status=200;self.new_id=0
+        self.b_messages=[];self.b_posts=[]  # the empty match: opener target
     def handle(self,req):
         self.requests.append(req)
         assert req.url.host=='api.gotinder.com' and req.headers.get('X-Auth-Token')==TOKEN
@@ -123,7 +124,12 @@ class Source:
         if path=='/v2/matches/match-a/messages':
             rows=[m for m in self.messages if not self.hide_sent or m['from']!=OWNER]
             return httpx.Response(200,json={'data':{'messages':list(reversed(rows))}})
-        if path=='/v2/matches/match-b/messages':return httpx.Response(200,json={'data':{'messages':[]}})
+        if path=='/v2/matches/match-b/messages':return httpx.Response(200,json={'data':{'messages':list(reversed(self.b_messages))}})
+        if path=='/user/matches/match-b' and req.method=='POST':
+            self.b_posts.append(json.loads(req.content));mid=f'b-out-{len(self.b_posts)}'
+            if self.behavior=='b_reject':return httpx.Response(400,json={'error':'invalid'})
+            sent=raw_message(mid,self.b_posts[-1]['message'],OWNER);sent['match_id']='match-b';sent['to']='person-b'
+            self.b_messages.append(sent);return httpx.Response(200,json=sent)
         if path=='/user/matches/match-a' and req.method=='POST':
             self.posts.append(json.loads(req.content));self.new_id+=1;text=self.posts[-1]['message'];mid=f'out-{self.new_id}'
             if self.behavior=='reject':return httpx.Response(400,json={'error':'invalid'})
@@ -473,3 +479,94 @@ async def test_bio_missing_from_profile_falls_back_and_never_switches_autopilot_
     assert (await tinder.check_bio(CID))=={'found':True,'bio':'pomaga mi AI'}
     await tinder.sync_connection(CID)
     assert tinder.public_status()['connections'][0]['bio_disclosure'] is True
+
+
+# ---- campaigns on the real Tinder path (HTTP mocked): the first message of an empty match -------------------
+TID_B='tinder:owner-a:match-b'
+OPENER='hej, widzę że lubisz góry. gdzie ostatnio byłaś?'
+def opener_stub(monkeypatch,reply=OPENER,generator='LLM-reviewed:offline-test'):
+    from agent import engine
+    monkeypatch.setattr(engine,'generate_opener',lambda *a,**k:(Decision(action='reply',reply=reply,note='stub',claims=[]),generator))
+async def drain():
+    for _ in range(5):await service.run_campaigns()
+def campaign_item(tid=TID_B):return s.rows('SELECT * FROM campaign_items WHERE thread_id=?',(tid,))[0]
+
+async def test_campaign_auto_sends_the_first_message_once_with_verified_receipt(source,monkeypatch):
+    from agent import campaigns
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    await setup_thread(source,grant=False);_bio_mode();await tinder.sync_connection(CID);opener_stub(monkeypatch)
+    assert campaigns.launch([TID_B],'auto')['accepted']==[TID_B]
+    await drain()
+    assert source.b_posts==[{'message':OPENER}] and not source.posts
+    assert campaign_item()['status']=='sent'
+    a=s.rows('SELECT * FROM actions WHERE thread_id=?',(TID_B,))[0]
+    assert a['status']=='sent' and a['automatic']==1 and a['receipt']==TID_B+':b-out-1'
+    assert [m['body'] for m in s.messages(TID_B)]==[OPENER]
+    await drain();await service.tick();await tinder.sync_connection(CID);await service.tick()
+    assert len(source.b_posts)==1                                  # never a second opener, no follow-up while she is silent
+
+async def test_campaign_without_disclosure_leaves_a_draft_and_the_owner_sends_it(source,monkeypatch):
+    from agent import campaigns
+    await setup_thread(source,grant=False);_bio_mode();opener_stub(monkeypatch)   # the bio does not mention AI
+    campaigns.launch([TID_B],'auto')
+    await drain()
+    assert not source.b_posts and campaign_item()['status']=='review'
+    d=[r for r in s.all_drafts() if r['thread_id']==TID_B][0];assert d['status']=='pending' and d['anchor_message_id']==s.OPENER_ANCHOR
+    assert (await service.execute(d['id']))['status']=='sent'        # the owner is the sender: no consent grant needed
+    assert source.b_posts==[{'message':OPENER}] and campaigns.status()['items'][TID_B]['status']=='started'
+
+async def test_campaign_stops_when_the_account_is_paused_or_revoked(source,monkeypatch):
+    from agent import campaigns
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    await setup_thread(source,grant=False);_bio_mode();opener_stub(monkeypatch)
+    campaigns.launch([TID_B],'auto')
+    s_ = rt.settings();rt.save_settings({**s_,'paused':True});await drain()
+    assert not source.b_posts and campaign_item()['status']=='queued'
+    rt.save_settings({**s_,'paused':False})
+    with s.connect() as db:db.execute('UPDATE connections SET enabled=0 WHERE id=?',(CID,))
+    await drain()
+    assert not source.b_posts and campaign_item()['status']=='skipped'  # connection revoked: dropped, nothing sent
+
+async def test_message_arriving_before_the_opener_wins(source,monkeypatch):
+    """She (or the owner) wrote first: the final refresh sees a non-empty chat and the opener is not sent."""
+    from agent import campaigns
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    await setup_thread(source,grant=False);_bio_mode();opener_stub(monkeypatch)
+    original=tinder.TinderAdapter.send
+    async def she_writes_first(self,thread,text,action_id,anchor):
+        m=raw_message('b-in','hej!',sender='person-b');m['match_id']='match-b';m['to']=OWNER;source.b_messages.append(m)
+        return await original(self,thread,text,action_id,anchor)
+    monkeypatch.setattr(tinder.TinderAdapter,'send',she_writes_first)
+    campaigns.launch([TID_B],'auto');await drain()
+    assert not source.b_posts and campaign_item()['status']=='failed'
+    assert s.rows('SELECT status FROM actions WHERE thread_id=?',(TID_B,))[0]['status'] in ('stale','rejected')
+
+async def test_rejected_opener_is_not_retried_and_blocks_a_relaunch(source,monkeypatch):
+    from agent import campaigns
+    source.owner_bio='Czasem odpisuje za mnie asystent AI';source.behavior='b_reject'
+    await setup_thread(source,grant=False);_bio_mode();opener_stub(monkeypatch)
+    campaigns.launch([TID_B],'auto');await drain();await drain()
+    assert len(source.b_posts)==1 and campaign_item()['status']=='failed'
+    assert 'Napisz' in campaigns.launch([TID_B],'auto')['rejected'][TID_B]   # the attempt is on record: write it yourself
+
+async def test_uncertain_opener_blocks_everything_in_that_chat(source,monkeypatch):
+    from agent import campaigns
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    await setup_thread(source,grant=False);_bio_mode();opener_stub(monkeypatch)
+    real=source.handle
+    def lost(req):
+        if req.url.path=='/user/matches/match-b' and req.method=='POST':
+            real(req);raise httpx.ReadTimeout('lost response',request=req)
+        return real(req)
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(lost)))
+    campaigns.launch([TID_B],'auto');await drain()
+    assert len(source.b_posts)==1 and campaign_item()['status']=='failed' and 'Sprawdź' in campaign_item()['note']
+    assert s.rows('SELECT status FROM actions WHERE thread_id=?',(TID_B,))[0]['status']=='uncertain'
+    assert 'nie jest potwierdzona' in campaigns.launch([TID_B],'auto')['rejected'][TID_B]
+    await drain();assert len(source.b_posts)==1
+
+async def test_launch_refuses_a_match_that_already_has_messages(source,monkeypatch):
+    from agent import campaigns
+    await setup_thread(source,grant=False)
+    r=campaigns.launch([TID,TID_B],'draft')
+    assert r['accepted']==[TID_B] and 'już się zaczęła' in r['rejected'][TID]

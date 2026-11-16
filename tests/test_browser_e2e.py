@@ -96,3 +96,17 @@ async def test_real_browser_send_verified_in_dom(server):
     result=await send_mock_approved('t6','test reply without model','direct-browser-action',before)
     assert result['message_id']
     assert sum(m['id']==result['message_id'] for m in server.get('/api/mock/source').json()['messages']['t6'])==1
+
+async def test_real_browser_first_message_into_an_empty_conversation(server):
+    """A first message has no incoming message to anchor to: the simulator accepts it only while the chat is empty."""
+    from agent.browser import send_mock_approved
+    from agent.adapters import StaleAction
+    from agent.storage import OPENER_ANCHOR
+    assert (await asyncio.to_thread(server.get,'/api/mock/source')).json()['messages']['t4']==[]
+    result=await send_mock_approved('t4','cześć, widzę że lubisz planszówki','opener-action',OPENER_ANCHOR)
+    assert result['message_id']
+    sent=server.get('/api/mock/source').json()['messages']['t4']
+    assert [m['body'] for m in sent]==['cześć, widzę że lubisz planszówki'] and sent[0]['sender']=='you'
+    # The conversation is no longer empty: a second "first message" is refused by the source itself.
+    with pytest.raises(StaleAction):await send_mock_approved('t4','druga pierwsza','opener-action-2',OPENER_ANCHOR)
+    assert len(server.get('/api/mock/source').json()['messages']['t4'])==1

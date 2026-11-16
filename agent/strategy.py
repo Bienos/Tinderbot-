@@ -119,7 +119,7 @@ def analyze(history, settings: dict | None = None, outcomes: list | None = None)
     if hers and STOP_SIGNAL.search(hers[-1]['body']):
         return out('closed', 'stop', 'Wyraźnie zamknęła temat. Nie piszemy.')
     if not hist:
-        return out('opening', 'opener_by_owner', 'Brak wiadomości. Pierwsze zdanie napisz sam, z czegoś z jej profilu.')
+        return out('opening', 'opener_by_owner', 'Brak wiadomości. Napisz pierwsze zdanie sam albo poproś agenta; najlepiej z czegoś z jej profilu.')
     if kinds & {'date_confirmed'}:
         return out('date_set', 'confirm_lightly', 'Spotkanie potwierdzone. Tylko luźna rozmowa i ewentualne szczegóły.')
     if 'date_cancelled' in kinds and not kinds & {'date_confirmed'}:

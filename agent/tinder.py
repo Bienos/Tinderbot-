@@ -635,7 +635,7 @@ class TinderAdapter:
             if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
             fresh = await _history(api, thread, owner)
             ingest(thread, fresh)
-            if not fresh or fresh[-1]['id'] != anchor or rt.history_hash(fresh) != action['history_hash']:
+            if s.anchor_of(fresh) != anchor or rt.history_hash(fresh) != action['history_hash']:
                 raise StaleAction('New or edited Tinder message invalidates draft')
             # Navigation/network awaits can allow pause, mode changes, grant revocation or deletion.
             current = next((t for t in s.threads() if t['id'] == thread['id']), None)

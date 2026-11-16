@@ -50,6 +50,10 @@ def init():
         CREATE TABLE IF NOT EXISTS tinder_threads (thread_id TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS tinder_receipts (action_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, message_id TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS leases (name TEXT PRIMARY KEY, owner TEXT NOT NULL, expires REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS campaigns (id TEXT PRIMARY KEY, created TEXT NOT NULL, mode TEXT NOT NULL, stopped INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS campaign_items (thread_id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, mode TEXT NOT NULL,
+            status TEXT NOT NULL, note TEXT, position INTEGER NOT NULL, available REAL NOT NULL DEFAULT 0, updated REAL NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0);
         ''')
         db.execute('INSERT OR IGNORE INTO settings VALUES(1,?)',(json.dumps(DEFAULTS),))
         actioncols={r[1] for r in db.execute('PRAGMA table_info(actions)')}
@@ -69,6 +73,7 @@ def recover():
         db.execute("UPDATE drafts SET status='uncertain' WHERE id IN (SELECT draft_id FROM actions WHERE status='sending')")
         db.execute("UPDATE actions SET status='uncertain' WHERE status='sending'")
         db.execute("UPDATE jobs SET status='queued' WHERE status='processing'")
+        db.execute("UPDATE campaign_items SET status='queued' WHERE status='working'")
         db.execute("UPDATE outbox SET status='uncertain' WHERE status='sending'")
 
 def settings():
@@ -233,7 +238,7 @@ def delete_thread(thread):
         db.execute('BEGIN IMMEDIATE')
         db.execute('INSERT OR IGNORE INTO tombstones VALUES(?)',(thread,))
         db.execute('DELETE FROM outbox WHERE notification_id IN (SELECT id FROM notifications WHERE thread_id=?)',(thread,))
-        for table in ('messages','source_messages','drafts','notifications','jobs','actions','memory','outcome_state','grants','activity','tinder_threads','tinder_receipts'):
+        for table in ('messages','source_messages','drafts','notifications','jobs','actions','memory','outcome_state','grants','activity','tinder_threads','tinder_receipts','campaign_items'):
             db.execute(f'DELETE FROM {table} WHERE thread_id=?',(thread,))
         db.execute('DELETE FROM draft_context WHERE draft_id NOT IN (SELECT id FROM drafts)')
         db.execute('DELETE FROM sim_receipts WHERE message_id NOT IN (SELECT id FROM source_messages)')

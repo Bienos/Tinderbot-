@@ -7,6 +7,8 @@ This module never operates a third-party service.
 from __future__ import annotations
 from typing import Sequence
 
+from agent.storage import OPENER_ANCHOR
+
 
 def project(thread: dict, messages: Sequence[dict], drafts: Sequence[dict],
             notifications: Sequence[dict]) -> dict:
@@ -15,7 +17,8 @@ def project(thread: dict, messages: Sequence[dict], drafts: Sequence[dict],
     user_archived = bool(thread.get('user_archived', 0))
     visibility = thread.get('source_visibility', 'available')
     pending = [d for d in drafts if d['status'] == 'pending']
-    pending_current = bool(latest and any(d['anchor_message_id'] == latest['id'] for d in pending))
+    # A first message has no incoming message to answer: its draft is anchored to the still-empty conversation.
+    pending_current = any(d['anchor_message_id'] == (latest['id'] if latest else OPENER_ANCHOR) for d in pending)
     kinds = sorted(set(n['kind'] for n in notifications))
 
     # Separate factual conversation lifecycle from social outcomes.
@@ -36,12 +39,12 @@ def project(thread: dict, messages: Sequence[dict], drafts: Sequence[dict],
     else:
         state, reason = 'needs_review', 'Nieznany nadawca ostatniej wiadomości.'
 
-    if pending_current and state == 'needs_reply':
+    if pending_current and state in ('needs_reply', 'new_match'):
         next_action = 'review_draft'
     elif state == 'needs_reply':
         next_action = 'prepare_draft'
     elif state == 'new_match':
-        next_action = 'inspect_profile'  # cannot fabricate an opener from no profile context
+        next_action = 'inspect_profile'  # no opener yet: the owner writes it or asks the agent for one
     else:
         next_action = 'no_action'
 

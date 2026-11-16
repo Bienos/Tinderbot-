@@ -31,3 +31,10 @@ def check_send_budget(db,thread_id):
         for seconds,name,default in ((3600,'TINDER_SENDS_PER_HOUR',20),(86400,'TINDER_SENDS_PER_DAY',100)):
             count=db.execute("SELECT COUNT(*) FROM actions a JOIN threads t ON t.id=a.thread_id WHERE t.platform='tinder' AND "+active,(now-seconds,)).fetchone()[0]
             if count>=integer(name,default):raise BudgetExceeded('Tinder account send budget reached')
+
+
+def tinder_sends_since(seconds):
+    """Verified or possibly delivered Tinder sends in the last N seconds (the same count the send budgets use)."""
+    with s.connect() as db:
+        return db.execute("SELECT COUNT(*) FROM actions a JOIN threads t ON t.id=a.thread_id WHERE t.platform='tinder' "
+                          "AND a.status IN ('sending','sent','uncertain') AND a.updated>?",(time.time()-seconds,)).fetchone()[0]

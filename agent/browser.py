@@ -57,7 +57,8 @@ async def send_mock_approved(thread_id,text,action_id=None,anchor=None):
         await page.locator('[data-thread-button]').evaluate_all('(els,id)=>els.find(e=>e.dataset.threadButton===id).click()',thread_id)
         await page.wait_for_function('(id)=>document.querySelector("#messages").dataset.threadId===id',arg=thread_id)
         actual=await page.locator('[data-message-id]').evaluate_all('els=>els.length?els[els.length-1].dataset.messageId:""')
-        if anchor is not None and actual!=anchor:
+        from agent.storage import OPENER_ANCHOR
+        if anchor is not None and actual!=('' if anchor==OPENER_ANCHOR else anchor):
             from agent.adapters import StaleAction
             raise StaleAction('Browser found a newer message')
         await page.locator('[data-chat-input]').fill(text)

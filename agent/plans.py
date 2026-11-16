@@ -83,6 +83,10 @@ def _holds_slot(db, thread_id: str) -> bool:
     if _date_stage(db, thread_id):
         return True
     last = db.execute('SELECT MAX(created_at) AS m FROM messages WHERE thread_id=?', (thread_id,)).fetchone()['m']
+    if last is None:
+        # Nothing written yet (a first message is on its way): the slot counts from the day it was taken.
+        row = db.execute('SELECT admitted FROM plan_slots WHERE thread_id=?', (thread_id,)).fetchone()
+        return bool(row) and _recent(row['admitted'])
     return _recent(last)
 
 
@@ -106,6 +110,22 @@ def admit(thread: dict) -> bool:
             db.execute('INSERT OR REPLACE INTO plan_slots(thread_id, admitted) VALUES(?,?)', (thread['id'], s.utcnow()))
             return True
         return False
+
+
+def release_if_empty(thread_id: str) -> None:
+    """A first message that never went out gives its slot back at once instead of holding it for two weeks."""
+    with s.connect() as db:
+        ensure(db)
+        if not db.execute('SELECT 1 FROM messages WHERE thread_id=?', (thread_id,)).fetchone():
+            db.execute('DELETE FROM plan_slots WHERE thread_id=?', (thread_id,))
+
+
+def free_slots() -> int | None:
+    """How many more conversations the plan can take right now (None: no plan, no limit)."""
+    if not limited():
+        return None
+    st = status()
+    return max(0, st['limit'] - st['used'])
 
 
 def status(threads: list[dict] | None = None, hist: dict | None = None) -> dict | None:

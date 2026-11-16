@@ -1,7 +1,7 @@
 """Event ingestion, isolated generation, guarded execution and background orchestration."""
 import asyncio,contextlib,json,os,time
 from uuid import uuid4
-from agent import storage as s,runtime as rt,plans
+from agent import storage as s,runtime as rt,plans,campaigns
 from agent.adapters import adapter,StaleAction
 from agent.engine import generate,should_draft
 from agent.llm import configured as model_configured
@@ -118,6 +118,63 @@ async def process_job(job):
     if d['status']=='pending' and t and rt.auto_allowed(t):await execute(d['id'],automatic=True)
     rt.job_end(job,'done');rt.metric('jobs_completed')
 
+def _opener_text(note):
+    return {'demo_placeholder':'Agent nie ma jeszcze podłączonego modelu AI. Napisz tę wiadomość sam.',
+            'model_error':'Model AI jest chwilowo niedostępny. Spróbuj ponownie za chwilę.'}.get(note,
+            'Agent nie miał od czego zacząć (brak konkretu w jej opisie albo kontrola odrzuciła szkic). Napisz sam.')
+
+async def process_opener(item):
+    """Write (and, in automatic mode, send) the first message of one conversation. Everything a reply must pass applies."""
+    tid=item['thread_id'];t=thread_by_id(tid);hist=s.messages(tid) if t else []
+    why=campaigns.blocker(t,hist,queued=False)
+    if why:campaigns.finish(tid,'skipped',why);return
+    existing=s.rows('SELECT * FROM drafts WHERE thread_id=? AND anchor_message_id=?',(tid,s.OPENER_ANCHOR))
+    cfg=rt.settings()
+    if not existing or existing[0]['status']!='pending' or s.rows('SELECT 1 FROM draft_context WHERE draft_id=? AND settings_hash!=?',(existing[0]['id'],rt.settings_hash(cfg))):
+        from agent import engine,style,strategy
+        value=json.loads((s.rows('SELECT value FROM tinder_threads WHERE thread_id=?',(tid,)) or [{'value':'{}'}])[0]['value'])
+        match=engine.match_card(value.get('profile'),t['display_name'])
+        lang=cfg['language'] if cfg['language'] in ('pl','en') else style.language_of(match['bio'])
+        profile={**cfg['profile'],**strategy.planning_facts(cfg)}
+        decision,generator=await asyncio.to_thread(engine.generate_opener,match,profile,
+            {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
+            {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},
+            [],style.style_stats(),style.canon_text(lang))
+        body=decision.reply or decision.note
+        if existing:
+            with s.connect() as db:db.execute("UPDATE drafts SET body=?,generator=?,status='pending',created_at=? WHERE id=?",(body,generator,s.utcnow(),existing[0]['id']))
+        else:s.upsert_draft(tid,s.OPENER_ANCHOR,body,generator)
+        d=s.rows('SELECT * FROM drafts WHERE thread_id=? AND anchor_message_id=?',(tid,s.OPENER_ANCHOR))[0]
+        with s.connect() as db:db.execute('INSERT OR REPLACE INTO draft_context VALUES(?,?,?)',(d['id'],rt.settings_hash(cfg),rt.history_hash([])))
+        if decision.action!='reply':
+            s.set_draft_status(d['id'],'no_reply' if decision.action=='no_reply' else 'needs_user')
+            rt.audit(tid,'opener_'+decision.action,'First message not written; details remain in the draft')
+            campaigns.finish(tid,'failed' if generator=='model_error' else 'skipped',_opener_text(generator));return
+        rt.audit(tid,'opener_drafted','First message written for the owner or for automatic sending')
+    d=s.rows('SELECT * FROM drafts WHERE thread_id=? AND anchor_message_id=?',(tid,s.OPENER_ANCHOR))[0]
+    t=thread_by_id(tid)
+    if item['mode']=='auto' and t and rt.auto_allowed(t):
+        try:result=await execute(d['id'],automatic=True)
+        except BudgetExceeded:campaigns.requeue(tid,900,'Limit wysyłek Tindera. Wznowię, gdy się zwolni.');return
+        except (DispatchDenied,PermissionError) as exc:campaigns.finish(tid,'failed',str(exc));return
+        if result['status']=='sent':campaigns.finish(tid,'sent');rt.metric('openers_sent')
+        elif result['status']=='rejected':campaigns.finish(tid,'failed','Tinder odrzucił wiadomość. Napisz ją sam.')
+        else:campaigns.finish(tid,'failed','Nie wiadomo, czy wiadomość dotarła. Sprawdź rozmowę w Tinderze; nic nie zostanie wysłane ponownie.')
+    else:
+        campaigns.finish(tid,'review','Autopilot nie jest włączony dla tej rozmowy. Szkic czeka na Twoje kliknięcie „Wyślij”.' if item['mode']=='auto' else 'Szkic czeka na Twoje kliknięcie „Wyślij”.')
+
+async def run_campaigns():
+    """One first message per call (so replies and the owner's clicks are never starved); the worker calls it every cycle."""
+    if SHUTTING_DOWN:return
+    async with LOCK:
+        item=campaigns.claim_next()
+        if not item:return
+        try:await process_opener(item)
+        except Exception:
+            rt.metric('job_failures')
+            if item['attempts']>=3:campaigns.finish(item['thread_id'],'failed','Nie udało się przygotować wiadomości. Spróbuj ponownie później.')
+            else:campaigns.requeue(item['thread_id'],300,'Błąd przetwarzania. Spróbuję ponownie.')
+
 async def execute(draft_id,automatic=False):
     d=s.draft_by_id(draft_id)
     if not d or d['status']!='pending':raise StaleAction('Draft already resolved or unavailable')
@@ -133,7 +190,7 @@ async def execute(draft_id,automatic=False):
         if not d['generator'].startswith('LLM-reviewed:'):raise PermissionError('Live replies require a reviewed model response')
         if automatic and not rt.auto_consent(t):raise PermissionError('Consent, disclosure and owner grant required')
     a=adapter(t);fresh=await a.snapshot(t);ingest(t,fresh)
-    if not fresh or fresh[-1]['id']!=d['anchor_message_id']:
+    if s.anchor_of(fresh)!=d['anchor_message_id']:
         s.set_draft_status(d['id'],'stale');rt.metric('stale_drafts');raise StaleAction('New message invalidates draft')
     if context[0].get('history_hash')!=rt.history_hash(s.messages(t['id'])):
         s.set_draft_status(d['id'],'stale');raise StaleAction('Conversation content changed; regenerate draft')
@@ -223,6 +280,7 @@ async def tick():
         async with LOCK:await reconcile()
         await sync_once()
         await run_jobs()
+        await run_campaigns()
         await housekeeping()
 
 def _worker_failed(exc):
@@ -249,6 +307,7 @@ async def worker():
                 if not SHUTTING_DOWN:
                     async with LOCK:await reconcile()
                     await run_jobs()
+                    await run_campaigns()
                     if sync_task is None or sync_task.done():sync_task=asyncio.create_task(background_sync())
                     await housekeeping()
             except asyncio.CancelledError:raise

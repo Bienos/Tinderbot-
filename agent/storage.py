@@ -7,6 +7,15 @@ from datetime import datetime, timezone, timedelta
 
 DB_PATH = Path(os.getenv('AGENT_DB_PATH', str(Path(__file__).resolve().parent.parent / 'runtime' / 'agent.db')))
 
+# A first message has no incoming message to answer, so its draft is anchored to "the conversation is still empty".
+OPENER_ANCHOR = '__opener__'
+
+
+def anchor_of(history) -> str:
+    """The anchor a draft must carry to still be current: the newest message, or OPENER_ANCHOR for an empty chat."""
+    return history[-1]['id'] if history else OPENER_ANCHOR
+
+
 def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 

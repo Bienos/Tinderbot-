@@ -34,7 +34,7 @@ def sim_send(thread,text,action,anchor):
         reserved=db.execute('SELECT automatic FROM actions WHERE id=?',(action,)).fetchone()
         if reserved and reserved['automatic'] and cfg['mode']!='simulation':raise PermissionError('Autonomous simulation permission revoked')
         latest=db.execute('SELECT id FROM source_messages WHERE thread_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1',(thread,)).fetchone()
-        if (latest['id'] if latest else '')!=anchor:raise StaleAction('New message invalidates draft')
+        if (latest['id'] if latest else s.OPENER_ANCHOR)!=anchor:raise StaleAction('New message invalidates draft')
         ident='sim-'+uuid4().hex
         db.execute('INSERT INTO source_messages VALUES(?,?,?,?,?)',(ident,thread,'you',text,s.utcnow()))
         db.execute('INSERT INTO sim_receipts VALUES(?,?)',(action,ident))
