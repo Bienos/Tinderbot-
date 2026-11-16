@@ -114,13 +114,24 @@ def create_instance(account_id: int, plan: str | None = None) -> dict:
     return render_create_instance(account_id, plan)
 
 
-def set_plan(service_id: str, plan: str) -> None:
-    """Give a running bot another plan (its PLAN setting decides how many conversations it handles)."""
+def set_plan(service_id: str, plan: str, conversations: str | None = None) -> None:
+    """Give a running bot another plan (its PLAN setting decides how many conversations it handles).
+    `conversations` sets PLAN_CONVERSATIONS in the same restart: a number overrides the plan's limit (the retention bonus),
+    an empty string removes the override, None leaves it alone."""
     if service_id.startswith('fly:'):
         from control import fly
-        return fly.set_env(service_id[4:], {'PLAN': plan})
+        values = {'PLAN': plan}
+        if conversations is not None:
+            values['PLAN_CONVERSATIONS'] = conversations  # the bot treats an empty value as "use the plan's own limit"
+        return fly.set_env(service_id[4:], values)
     with _client() as c:
         c.put(f'/services/{service_id}/env-vars/PLAN', json={'value': plan}).raise_for_status()
+        if conversations:
+            c.put(f'/services/{service_id}/env-vars/PLAN_CONVERSATIONS', json={'value': conversations}).raise_for_status()
+        elif conversations == '':
+            r = c.delete(f'/services/{service_id}/env-vars/PLAN_CONVERSATIONS')
+            if r.status_code not in (200, 202, 204, 404):
+                r.raise_for_status()
         c.post(f'/services/{service_id}/deploys', json={}).raise_for_status()
 
 

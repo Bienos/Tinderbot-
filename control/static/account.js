@@ -82,9 +82,45 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';const pp=(cur.periods||[]).find(x=>x.key===(me.plan_period||'1'));w.textContent='Twój pakiet to '+cur.name+(pp&&pp.months>1?' ('+pp.label.toLowerCase()+')':'')+', do '+cur.conversations+' aktywnych rozmów.';card.append(w)}}
  if(me.panel_ready){const lab=document.createElement('label');lab.className='muted weekly-pref';const cb=document.createElement('input');cb.type='checkbox';cb.checked=me.weekly_summary!==false;cb.addEventListener('change',()=>{cb.disabled=true;post('/api/account/weekly',{enabled:cb.checked}).catch(()=>{cb.checked=!cb.checked}).finally(()=>{cb.disabled=false})});lab.append(cb,document.createTextNode(' Cotygodniowe podsumowanie e-mailem (status i liczby, bez treści rozmów)'));card.append(lab)}
  if(me.can_manage_billing)card.append(btn(me.plans&&me.plans.length?'Zmień pakiet lub zarządzaj subskrypcją':'Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
+ if(me.can_manage_billing&&me.has_access&&me.cancel_reasons)card.append(btn('Chcę zrezygnować','linkbtn cancel-link',()=>cancelFlow(me)));
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));
 
 // Withdrawal from the contract lives with the other account actions (Zaawansowane ustawienia konta), not on the status page.
 const withdrawZone=document.getElementById('withdraw-zone');
 if(withdrawZone)fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{if(me.can_withdraw)withdrawBox(withdrawZone)}).catch(()=>{});
+
+// ---- Cancelling: a short survey, then one offer to stay. Declining goes on to Stripe, where the subscription is actually ended.
+function cancelFlow(me){
+ const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n};
+ const err=el('p','err');err.setAttribute('role','alert');
+ const fail=e=>{err.textContent=e.message||'Coś poszło nie tak. Spróbuj za chwilę.'};
+ const back=()=>location.reload();
+ card.replaceChildren();
+ const h=el('h1','','Szkoda, że chcesz odejść');card.append(h,el('p','','Dwa krótkie pytania, to 20 sekund. Dzięki nim Winq będzie lepszy.'));
+ const sat={v:0},why={v:''};
+ // 1. satisfaction 1-5
+ const q1=el('fieldset','cf-q');q1.append(el('legend','','Jak oceniasz Winq do tej pory?'));
+ const scale=el('div','cf-scale');
+ for(let i=1;i<=5;i++){const l=el('label','cf-n');const r=el('input');r.type='radio';r.name='sat';r.value=i;r.onchange=()=>{sat.v=i;ready()};l.append(r,el('span','',String(i)));scale.append(l)}
+ const ends=el('div','cf-ends');ends.append(el('span','','Słabo'),el('span','','Świetnie'));q1.append(scale,ends);
+ // 2. reason
+ const q2=el('fieldset','cf-q');q2.append(el('legend','','Dlaczego chcesz zrezygnować?'));
+ for(const r of me.cancel_reasons){const l=el('label','cf-r');const i=el('input');i.type='radio';i.name='why';i.value=r.key;i.onchange=()=>{why.v=r.key;note.hidden=false;ready()};l.append(i,document.createTextNode(' '+r.label));q2.append(l)}
+ const note=el('textarea','cf-note');note.maxLength=500;note.rows=3;note.placeholder='Chcesz coś dodać? (opcjonalnie)';note.hidden=true;q2.append(note);
+ const next=btn('Dalej','btn',async()=>{next.disabled=true;err.textContent='';
+  try{const r=await post('/api/cancel/feedback',{satisfaction:sat.v,reason:why.v,note:note.value});
+   if(r.offer)offerStep(r.offer);else toStripe()}catch(e){fail(e);next.disabled=false}});
+ next.disabled=true;
+ const ready=()=>{next.disabled=!(sat.v&&why.v)};
+ const toStripe=async()=>{try{const r=await post('/api/cancel/offer',{accept:false});location.href=r.url}catch(e){fail(e)}};
+ const offerStep=o=>{card.replaceChildren();card.append(el('h1','','Zanim odejdziesz'),el('p','','Zostań z Winq, a damy Ci:'));
+  const ul=el('ul','cf-perks');ul.append(el('li','','+'+o.bonus+' aktywnych rozmów w Twoim pakiecie ('+o.from+' → '+o.to+'), od razu'));
+  if(o.discount)ul.append(el('li','',o.discount+'% zniżki na następną płatność'));card.append(ul);
+  const small=el('p','muted','Oferta jednorazowa.'+(o.discount?' Zniżka dotyczy najbliższej płatności i naliczy się automatycznie.':'')+' Dodatkowe rozmowy działają, dopóki masz ten sam pakiet.');
+  const take=btn('Zostaję i biorę ofertę','btn',async()=>{take.disabled=true;leave.disabled=true;err.textContent='';
+   try{await post('/api/cancel/offer',{accept:true});card.replaceChildren();card.append(el('h1','','Super, zostajesz! 🎉'),el('p','','Dodatkowe rozmowy są już włączane, a potwierdzenie wysłaliśmy mailem.'),btn('Wróć do konta','btn',back))}
+   catch(e){fail(e);take.disabled=false;leave.disabled=false}});
+  const leave=btn('Rezygnuję mimo to','linkbtn',toStripe);card.append(small,take,leave,err)};
+ card.append(q1,q2,next,btn('Wróć','linkbtn',back),err);
+}

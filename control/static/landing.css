@@ -442,3 +442,17 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .tier .btn{box-sizing:border-box;height:60px;padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:center}
 .tier.popular{padding:29px 25px 25px}
 @media(max-width:900px){.tiers{row-gap:22px}}
+
+/* account page: cancelling (survey + offer to stay) */
+.cancel-link{opacity:.8;font-size:13px}
+.cf-q{border:0;padding:0;margin:20px 0 4px}.cf-q legend{font-weight:700;color:var(--ink);margin-bottom:10px;padding:0}
+.cf-scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.cf-n{position:relative;display:block;cursor:pointer}.cf-n input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.cf-n span{display:grid;place-items:center;height:48px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-weight:800;font-size:17px;color:var(--ink)}
+.cf-n input:checked+span{border-color:var(--ember);background:var(--fire);color:#fff}.cf-n input:focus-visible+span{outline:3px solid var(--flame);outline-offset:2px}
+.cf-ends{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
+.cf-r{display:block;padding:11px 14px;margin:0 0 8px;border:1.5px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;font-size:15px;color:var(--text)}
+.cf-r:has(input:checked){border-color:var(--ember);background:rgba(253,38,122,.05);color:var(--ink)}
+.cf-note{width:100%;margin-top:6px;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;resize:vertical}
+.cf-perks{list-style:none;padding:0;margin:14px 0;display:grid;gap:10px}
+.cf-perks li{padding:14px 16px;border-radius:14px;background:linear-gradient(120deg,#fff0f5,#fff3ec);border:1px solid #ffd3e1;font-weight:700;color:var(--ink)}

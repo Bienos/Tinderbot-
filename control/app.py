@@ -24,7 +24,7 @@ from urllib.parse import quote, urlsplit
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
-from control import mailer, provision, catalog, weekly
+from control import mailer, provision, catalog, weekly, retention
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
@@ -52,6 +52,7 @@ async def _weekly_loop():
     while True:
         try:
             await asyncio.to_thread(remove_pending_instances)  # bots of deleted accounts that could not be removed earlier
+            await asyncio.to_thread(reapply_retention_bonuses)  # accepted offers whose bot could not be updated at the time
             if mailer.configured() and mailer.sender_problem() is None:
                 results = await asyncio.to_thread(run_weekly, time.time())
                 sent = sum(1 for r in results if r['result'] == 'sent')
@@ -97,6 +98,9 @@ SCHEMAS = [
     # Bots of deleted accounts that still have to be removed from the hosting provider (retried until it works).
     'CREATE TABLE IF NOT EXISTS instance_removals (service_id TEXT PRIMARY KEY, created DOUBLE PRECISION NOT NULL, '
     'attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT)',
+    # Answers of customers who started cancelling (control/retention.py). Kept without identity once the account is deleted.
+    'CREATE TABLE IF NOT EXISTS cancel_feedback (id {pk}, account_id INTEGER, created DOUBLE PRECISION NOT NULL, '
+    'satisfaction INTEGER NOT NULL, reason TEXT NOT NULL, note TEXT, outcome TEXT NOT NULL)',
 ]
 
 
@@ -108,7 +112,9 @@ MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status
               ('accounts', 'source', 'TEXT'), ('accounts', 'plan', 'TEXT'), ('accounts', 'plan_choice', 'TEXT'),
               ('accounts', 'weekly_summary', 'INTEGER NOT NULL DEFAULT 1'), ('accounts', 'weekly_sent_at', 'DOUBLE PRECISION'),
               ('accounts', 'weekly_claim', 'DOUBLE PRECISION'), ('accounts', 'weekly_note', 'TEXT'), ('accounts', 'unsub_token', 'TEXT'),
-              ('accounts', 'plan_period', 'TEXT'), ('accounts', 'period_choice', 'TEXT')]
+              ('accounts', 'plan_period', 'TEXT'), ('accounts', 'period_choice', 'TEXT'),
+              ('accounts', 'retention_used_at', 'DOUBLE PRECISION'), ('accounts', 'retention_plan', 'TEXT'),
+              ('accounts', 'retention_applied', 'INTEGER NOT NULL DEFAULT 0')]
 WITHDRAWAL_DAYS = 14
 # Optional "Skąd o nas wiesz?" answer on sign-up.
 SIGNUP_SOURCES = ('tiktok', 'instagram', 'friend', 'google', 'other')
@@ -720,7 +726,8 @@ def me(request: Request):
             'withdrawn': bool(acc.get('withdrawn_at')),
             'trial_days': trial_days() if catalog.periods_enabled() else 0, 'trial_period': catalog.TRIAL_PERIOD, 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '', 'plan_period': acc.get('plan_period') or '1',
             'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
-            'weekly_summary': acc.get('weekly_summary') != 0, 'setup': setup_progress(acc)}
+            'weekly_summary': acc.get('weekly_summary') != 0, 'cancel_reasons': [{'key': k, 'label': v} for k, v in retention.REASONS],
+            'setup': setup_progress(acc)}
 
 
 @app.post('/api/account/weekly')
@@ -822,6 +829,7 @@ async def delete_account(request: Request, tasks: BackgroundTasks):
     sid = (acc.get('render_service_id') or '').strip()
     if sid and not is_owner(acc['email']) and sid != os.getenv('OWNER_SERVICE_ID', '').strip():
         q('INSERT INTO instance_removals(service_id,created) VALUES(?,?) ON CONFLICT(service_id) DO NOTHING', (sid, time.time()))
+    q('UPDATE cancel_feedback SET account_id=NULL, note=NULL WHERE account_id=?', (acc['id'],))  # the answers stay as statistics, not as a person
     q('DELETE FROM account_sessions WHERE account_id=?', (acc['id'],))
     q('DELETE FROM accounts WHERE id=?', (acc['id'],))
     tasks.add_task(remove_pending_instances)
@@ -950,6 +958,11 @@ async def billing_portal(request: Request):
     acc = current_account(request)
     if not acc:
         raise HTTPException(401, 'Nie jesteś zalogowany.')
+    return {'url': _portal_url(acc, request)}
+
+
+def _portal_url(acc: dict, request: Request) -> str:
+    """Where the customer manages (or ends) their subscription: Stripe's customer portal."""
     if not billing_enabled() or not acc.get('stripe_customer'):
         raise HTTPException(409, 'Brak subskrypcji do zarządzania.')
     if link_mode():
@@ -957,11 +970,113 @@ async def billing_portal(request: Request):
         if not portal.startswith('https://'):
             raise HTTPException(503, 'Portal płatności nie jest jeszcze skonfigurowany.')
         from urllib.parse import urlencode
-        return {'url': portal + '?' + urlencode({'prefilled_email': acc['email']})}
+        return portal + '?' + urlencode({'prefilled_email': acc['email']})
     import stripe
     session = stripe.billing_portal.Session.create(api_key=os.environ['STRIPE_SECRET_KEY'], customer=acc['stripe_customer'],
                                                    return_url=_origin(request) + '/konto')
-    return {'url': session.url}
+    return session.url
+
+
+# ---- cancelling: a short survey, then one offer to stay (control/retention.py)
+def _retention_offer(acc: dict) -> dict | None:
+    if is_owner(acc['email']) or acc.get('comped') or not billing_enabled() or not has_access(acc) or not acc.get('stripe_customer'):
+        return None
+    return retention.offer(acc, plan=catalog.get(acc.get('plan')))
+
+
+def _finish_feedback(account_id: int, outcome: str) -> None:
+    q("UPDATE cancel_feedback SET outcome=? WHERE account_id=? AND outcome='pending'", (outcome, account_id))
+
+
+@app.post('/api/cancel/feedback')
+async def cancel_feedback(request: Request):
+    """Step 1: how satisfied, why leaving. Answers with the offer (or none), the page then shows it."""
+    _same_origin(request)
+    acc = current_account(request)
+    if not acc:
+        raise HTTPException(401, 'Nie jesteś zalogowany.')
+    if _limited('cancel:' + _client_ip(request), 30):
+        raise HTTPException(429, 'Za dużo prób. Spróbuj później.')
+    body = await _json(request)
+    sat, reason = body.get('satisfaction'), body.get('reason')
+    if not isinstance(sat, int) or isinstance(sat, bool) or not 1 <= sat <= 5:
+        raise HTTPException(422, 'Oceń Winq w skali od 1 do 5.')
+    if reason not in retention.REASON_KEYS:
+        raise HTTPException(422, 'Wybierz powód.')
+    note = str(body.get('note') or '').strip()[:500]
+    q("DELETE FROM cancel_feedback WHERE account_id=? AND outcome='pending'", (acc['id'],))
+    q('INSERT INTO cancel_feedback(account_id,created,satisfaction,reason,note,outcome) VALUES(?,?,?,?,?,?)',
+      (acc['id'], time.time(), sat, reason, note or None, 'pending'))
+    return {'offer': _retention_offer(acc)}
+
+
+@app.post('/api/cancel/offer')
+async def cancel_offer(request: Request, tasks: BackgroundTasks):
+    """Step 2: take the offer (extra conversations now, discount on the next payment) or go on to Stripe to cancel."""
+    _same_origin(request)
+    acc = current_account(request)
+    if not acc:
+        raise HTTPException(401, 'Nie jesteś zalogowany.')
+    body = await _json(request)
+    if body.get('accept') is not True:
+        url = _portal_url(acc, request)
+        _finish_feedback(acc['id'], 'declined')
+        return {'url': url}
+    offer = _retention_offer(acc)
+    if not offer:
+        raise HTTPException(409, 'Ta oferta nie jest już dostępna.')
+    claim = time.time() + secrets.randbelow(10 ** 6) / 1e9  # once per account, even on a double click
+    q('UPDATE accounts SET retention_used_at=?, retention_plan=? WHERE id=? AND retention_used_at IS NULL', (claim, acc.get('plan'), acc['id']))
+    if q('SELECT retention_used_at FROM accounts WHERE id=?', (acc['id'],), fetch=True)[0]['retention_used_at'] != claim:
+        raise HTTPException(409, 'Ta oferta została już wykorzystana.')
+    try:
+        if offer['discount']:
+            await asyncio.to_thread(retention.apply_stay_discount, acc['stripe_customer'])
+    except Exception as exc:  # nothing is granted unless everything promised is delivered
+        q('UPDATE accounts SET retention_used_at=NULL, retention_plan=NULL WHERE id=?', (acc['id'],))
+        log.warning('retention discount failed for account %s: %s: %s', acc['id'], type(exc).__name__, str(exc)[:160])
+        raise HTTPException(502, 'Nie udało się teraz zastosować zniżki. Spróbuj za chwilę.')
+    _finish_feedback(acc['id'], 'accepted')
+    tasks.add_task(sync_conversation_limit, acc['id'])
+    tasks.add_task(mailer.retention_accepted, acc['email'], _origin(request), offer['bonus'], offer['discount'])
+    return {'accepted': True, **offer}
+
+
+def sync_conversation_limit(account_id: int) -> None:
+    """Puts the account's conversation limit (plan + retention bonus) on its bot. A failure is retried by the half-hour loop."""
+    rows = q('SELECT * FROM accounts WHERE id=?', (account_id,), fetch=True)
+    if not rows:
+        return
+    acc = rows[0]
+    plan, sid = catalog.get(acc.get('plan')), acc.get('render_service_id')
+    if not plan or not sid or not provision.can_query(sid):
+        return
+    try:
+        provision.set_plan(sid, acc['plan'], retention.conversations_value(acc, plan))
+    except Exception as exc:
+        log.warning('conversation limit for account %s not applied yet: %s: %s', account_id, type(exc).__name__, str(exc)[:160])
+        return
+    q('UPDATE accounts SET retention_applied=1 WHERE id=?', (account_id,))
+
+
+def reapply_retention_bonuses() -> None:
+    for row in q('SELECT id FROM accounts WHERE retention_used_at IS NOT NULL AND retention_applied=0', fetch=True):
+        sync_conversation_limit(row['id'])
+
+
+@app.get('/admin/cancel-feedback')
+def admin_cancel_feedback(request: Request):
+    """Why customers leave: counts per reason, the average rating and what they decided. Items show who answered (until they delete the account)."""
+    _admin(request)
+    rows = q('SELECT f.id, f.created, f.satisfaction, f.reason, f.note, f.outcome, a.email FROM cancel_feedback f '
+             'LEFT JOIN accounts a ON a.id=f.account_id ORDER BY f.created DESC', fetch=True)
+    done = [r for r in rows if r['outcome'] != 'pending']
+    by_reason: dict[str, int] = {}
+    for r in done:
+        by_reason[r['reason']] = by_reason.get(r['reason'], 0) + 1
+    return {'count': len(done), 'accepted': sum(1 for r in done if r['outcome'] == 'accepted'), 'declined': sum(1 for r in done if r['outcome'] == 'declined'),
+            'average_satisfaction': round(sum(r['satisfaction'] for r in done) / len(done), 2) if done else None,
+            'by_reason': dict(sorted(by_reason.items(), key=lambda kv: -kv[1])), 'items': rows}
 
 
 @app.post('/stripe/webhook')
@@ -1071,7 +1186,10 @@ def link_owner(acc: dict) -> str:
 
 def _apply_plan(service_id: str, plan: str) -> None:
     try:
-        provision.set_plan(service_id, plan)
+        rows = q('SELECT * FROM accounts WHERE render_service_id=?', (service_id,), fetch=True)
+        # A retention bonus belongs to the plan it was taken on: with another plan the override is removed, otherwise untouched.
+        conversations = retention.conversations_value({**rows[0], 'plan': plan}, catalog.get(plan)) if rows and rows[0].get('retention_used_at') else None
+        provision.set_plan(service_id, plan, conversations)
     except Exception:
         pass
 

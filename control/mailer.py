@@ -338,6 +338,17 @@ def withdrawal_confirmed(to: str, origin: str) -> None:
                'button': ('Przejdź do konta', f'{origin}/konto')})
 
 
+def retention_accepted(to: str, origin: str, bonus: int, discount: int) -> None:
+    perks = [f'+{bonus} aktywnych rozmów w Twoim pakiecie, od teraz']
+    if discount:
+        perks.append(f'{discount}% zniżki na następną płatność (Stripe nałoży ją sam)')
+    _safe(to, {'subject': 'Zostajesz z Winq, dziękujemy', 'preheader': 'Oto, co dostajesz.', 'heading': 'Super, że zostajesz 🎉',
+               'paragraphs': ['Dziękujemy za odpowiedzi i za zaufanie. Zgodnie z ofertą:'],
+               'steps': [(p, '') for p in perks],
+               'callout': ('ok', 'Oferta jest jednorazowa. Dodatkowe rozmowy działają, dopóki masz ten sam pakiet. Gdybyś zmienił lub zmieniła pakiet, wrócisz do jego zwykłego limitu.'),
+               'button': ('Przejdź do konta', f'{origin}/konto')})
+
+
 def account_deleted(to: str) -> None:
     _safe(to, {'subject': 'Twoje konto zostało usunięte', 'preheader': 'Potwierdzenie usunięcia konta.',
                'heading': 'Konto usunięte',
