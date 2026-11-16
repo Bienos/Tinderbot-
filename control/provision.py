@@ -106,20 +106,32 @@ def service_body(name: str, sso_secret: str, extra_env: dict | None = None) -> d
     }
 
 
-def create_instance(account_id: int) -> dict:
+def create_instance(account_id: int, plan: str | None = None) -> dict:
     if backend() == 'fly':
         from control import fly
-        return fly.create_instance(account_id)
-    return render_create_instance(account_id)
+        return fly.create_instance(account_id, plan)
+    return render_create_instance(account_id, plan)
 
 
-def render_create_instance(account_id: int) -> dict:
+def set_plan(service_id: str, plan: str) -> None:
+    """Give a running bot another plan (its PLAN setting decides how many conversations it handles)."""
+    if service_id.startswith('fly:'):
+        from control import fly
+        return fly.set_env(service_id[4:], {'PLAN': plan})
+    with _client() as c:
+        c.put(f'/services/{service_id}/env-vars/PLAN', json={'value': plan}).raise_for_status()
+        c.post(f'/services/{service_id}/deploys', json={}).raise_for_status()
+
+
+def render_create_instance(account_id: int, plan: str | None = None) -> dict:
     """Create the service, link the shared env group and redeploy so the group's variables are loaded."""
     sso_secret = secrets.token_urlsafe(32)
     name = f'iskra-u{account_id}-{secrets.token_hex(2)}'
     group = os.getenv('RENDER_ENV_GROUP_ID')
     with _client() as c:
         extra = None if group else template_env(c)
+        if plan:
+            extra = {**(extra or {}), 'PLAN': plan}
         r = c.post('/services', json=service_body(name, sso_secret, extra))
         r.raise_for_status()
         service = r.json()['service']

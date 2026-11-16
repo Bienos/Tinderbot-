@@ -99,7 +99,7 @@ def machine_config(image: str, env: dict, volume_id: str, account_id: int, host:
     }
 
 
-def create_instance(account_id: int) -> dict:
+def create_instance(account_id: int, plan: str | None = None) -> dict:
     """App, public address, secrets, volume, Machine. On any failure the half-made app is removed again."""
     from control import provision
     brand = re.sub(r'[^a-z0-9]', '', os.getenv('BRAND_NAME', 'winq').lower()) or 'bot'
@@ -115,7 +115,7 @@ def create_instance(account_id: int) -> dict:
     region = os.getenv('FLY_REGION', 'fra').strip() or 'fra'
     origin = f'https://{host}'
     sso_secret = secrets.token_urlsafe(32)
-    env = provision.instance_env(sso_secret, provision.model_env())
+    env = provision.instance_env(sso_secret, {**provision.model_env(), **({'PLAN': plan} if plan else {})})
     hidden = {k: v for k, v in env.items() if k in SECRET_KEYS}
     public = {k: v for k, v in env.items() if k not in SECRET_KEYS}
     public.update({'PUBLIC_ORIGIN': origin, 'PORT': str(PORT)})
@@ -212,6 +212,17 @@ def update_image(app: str, image: str) -> str:
         if config.get('image') == image and m.get('image_ref', {}).get('tag') not in (None, 'latest'):
             return 'unchanged'
         config['image'] = image
+        _check(c.post(f"/apps/{app}/machines/{m['id']}", json={'config': config, 'current_version': m.get('version')}),
+               'update machine')
+    return 'updated'
+
+
+def set_env(app: str, values: dict) -> str:
+    """Change plain (non-secret) settings of one bot; the Machine restarts, the volume stays."""
+    with _client() as c:
+        m = _machine(c, app)
+        config = m['config']
+        config['env'] = {**config.get('env', {}), **values}
         _check(c.post(f"/apps/{app}/machines/{m['id']}", json={'config': config, 'current_version': m.get('version')}),
                'update machine')
     return 'updated'

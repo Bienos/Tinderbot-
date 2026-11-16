@@ -191,7 +191,7 @@
       <li><span class="dot">3</span><b>Połącz Tinder</b><small>w panelu, około 2 minut</small></li>
     </ol>
   </div>
-  <div class="ticket" role="group" aria-label="Cennik">
+  <!--TICKET--><div class="ticket" role="group" aria-label="Cennik">
     <div class="ticket-main">
       <div class="ticket-top"><span class="ticket-brand">{{BRAND}}</span><span class="ticket-kind">dostęp miesięczny</span></div>
       <p class="ticket-price">{{TRIAL}}{{PRICE}}</p>
@@ -210,6 +210,8 @@
       <small>Anulujesz w każdej chwili. Masz konto? <a href="/zaloguj">Zaloguj się</a></small>
     </div>
   </div>
+  <!--/TICKET-->
+  {{TIERS}}
 </section>
 
 <section id="pytania" class="faq">
@@ -223,7 +225,7 @@
   <details><summary>Co napisać na Tinderze, gdy nie wiem, jak odpowiedzieć?</summary><p>{{BRAND}} proponuje szkic, który nawiązuje do konkretnej rzeczy, którą napisała druga osoba, w Twoim stylu, krótko, bez wymuszonych pytań i komplementów na siłę. Możesz go poprawić albo kliknąć „Napisz inaczej”.</p></details>
   <details><summary>Kiedy najlepiej zaprosić na randkę?</summary><p>Zwykle po kilku wymianach, gdy druga osoba dopytuje, żartuje i odpisuje szybko. {{BRAND}} obserwuje te sygnały i proponuje lekkie, konkretne zaproszenie tylko wtedy, gdy jest na to moment. Tempo (spokojne, normalne albo szybkie) ustawiasz w ustawieniach.</p></details>
   <details><summary>Dla kogo jest {{BRAND}}?</summary><p>Dla każdej pełnoletniej osoby, która korzysta z Tindera, niezależnie od tego, kogo szukasz i ile masz dopasowań. Przyda się, gdy brakuje Ci czasu na czaty, rozmowy gasną albo po prostu wolisz od razu przejść do spotkania. {{BRAND}} pisze po polsku i po angielsku, a kolejne kraje europejskie dodamy wkrótce.</p></details>
-  <details><summary>Ile to kosztuje i jak anulować?</summary><p>Jeden plan w subskrypcji, {{PRICE}}.{{TRIAL_NOTE}} Cenę widzisz też przed płatnością na stronie Stripe. Anulujesz w każdej chwili w „Zarządzaj subskrypcją” na swoim koncie, a dostęp działa do końca opłaconego okresu.</p></details>
+  <details><summary>Ile to kosztuje i jak anulować?</summary><p>{{PRICE_FAQ}}{{TRIAL_NOTE}} Cenę widzisz też przed płatnością na stronie Stripe. Anulujesz w każdej chwili w „Zarządzaj subskrypcją” na swoim koncie, a dostęp działa do końca opłaconego okresu.</p></details>
   <details><summary>Czy mogę usunąć swoje dane?</summary><p>Tak. Możesz usunąć token, pojedyncze rozmowy albo całe konto. Szczegóły w polityce prywatności.</p></details>
   <div class="final">
     <div class="final-copy">

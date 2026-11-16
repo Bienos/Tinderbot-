@@ -1,7 +1,7 @@
 """Event ingestion, isolated generation, guarded execution and background orchestration."""
 import asyncio,contextlib,json,os,time
 from uuid import uuid4
-from agent import storage as s,runtime as rt
+from agent import storage as s,runtime as rt,plans
 from agent.adapters import adapter,StaleAction
 from agent.engine import generate,should_draft
 from agent.llm import configured as model_configured
@@ -45,7 +45,7 @@ def ingest(thread,items):
             # Default deterministic temporal baseline; semantic mode explicitly enabled, with evidence checks.
             # Live semantic calls occur in process_job to keep sync nonblocking.
             rt.record_outcomes(thread['id'],hist[-1]['id'],outcomes)
-        if should_draft(hist) and rt.eligible(thread):rt.enqueue(thread['id'],hist[-1]['id'])
+        if should_draft(hist) and rt.eligible(thread) and plans.admit(thread):rt.enqueue(thread['id'],hist[-1]['id'])
     return hist
 
 async def sync_all():
@@ -198,9 +198,22 @@ async def run_jobs():
 async def sync_once():
     async with SYNC:await sync_all()
 
+_PROMOTED=0.0
+def promote_waiting(force=False):
+    """Conversations that waited for a free slot (plan limit) get their draft as soon as one opens up."""
+    global _PROMOTED
+    if not plans.limited() or (not force and time.time()-_PROMOTED<30):return 0
+    _PROMOTED=time.time();n=0;by_thread=s.messages_by_thread()
+    for t in s.threads():
+        h=by_thread.get(t['id']) or []
+        if h and should_draft(h) and rt.eligible(t) and plans.admit(t):
+            rt.enqueue(t['id'],h[-1]['id']);n+=1
+    return n
+
 async def housekeeping():
     from agent.notify import deliver_outbox
     await asyncio.to_thread(deliver_outbox)
+    await asyncio.to_thread(promote_waiting)
     rt.expire();WORKER['last_tick']=s.utcnow();WORKER['error']=None
 
 async def tick():

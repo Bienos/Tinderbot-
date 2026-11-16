@@ -1,3 +1,4 @@
+const _wp=new URLSearchParams(location.search).get('plan');if(_wp)try{sessionStorage.setItem('winq-plan',_wp)}catch(e){}
 async function post(url,payload){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload||{})});const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.detail||'Coś poszło nie tak. Spróbuj ponownie.');return b}
 function bind(id,url,build,done){const f=document.getElementById(id);if(!f)return;const out=f.querySelector('[role=status]');
 f.addEventListener('submit',async e=>{e.preventDefault();const btn=f.querySelector('button[type=submit]');btn.disabled=true;out.className='';out.textContent='Chwila...';
@@ -11,8 +12,15 @@ const logout=document.getElementById('logout');if(logout)logout.addEventListener
 const card=document.getElementById('status-card');
 function btn(text,cls,onclick,href){const b=document.createElement(href?'a':'button');b.className=cls;b.textContent=text;if(href)b.href=href;else{b.type='button';b.onclick=onclick}return b}
 async function go(url,payload){try{const r=await post(url,payload);location.href=r.url}catch(e){const p=document.createElement('p');p.className='err';p.textContent=e.message;card.append(p)}}
-function buy(label){const l=document.createElement('label');l.className='check consent';const c=document.createElement('input');c.type='checkbox';
+function buy(label,plans){const l=document.createElement('label');l.className='check consent';const c=document.createElement('input');c.type='checkbox';
  l.append(c,document.createTextNode(' Akceptuję regulamin i proszę o rozpoczęcie usługi od razu, przed upływem 14 dni na odstąpienie. Jeśli odstąpię, zapłacę tylko za dni korzystania.'));
+ if(plans&&plans.length){const want=(()=>{try{return sessionStorage.getItem('winq-plan')||''}catch(e){return ''}})(),box=document.createElement('div');box.className='plans';
+  const start=(slug)=>{if(!c.checked){l.classList.add('need');l.scrollIntoView({block:'center'});return}go('/api/billing/checkout',{start_now:true,plan:slug})};
+  plans.forEach(p=>{const o=document.createElement('div');o.className='plan-opt'+((want?want===p.slug:p.popular)?' pick':'');
+   const h=document.createElement('h3');h.textContent=p.name;const pr=document.createElement('small');pr.textContent=p.price+' zł / mies.';h.append(pr);
+   const d=document.createElement('p');d.textContent=p.tagline+'. '+(p.autopilot?'Autopilot, ':'Szkice, ')+'do '+p.conversations+' aktywnych rozmów naraz.';
+   o.append(h,d,btn('Wybieram '+p.name,p.popular||want===p.slug?'btn':'btn ghost',()=>start(p.slug)));box.append(o)});
+  card.append(box,l);return}
  const b=btn(label,'btn',()=>{if(!c.checked){l.classList.add('need');return}go('/api/billing/checkout',{start_now:true})});card.append(l,b)}
 function withdrawBox(){const d=document.createElement('details');d.className='withdraw';const s=document.createElement('summary');s.textContent='Odstąp od umowy';
  const t=document.createElement('p');t.textContent='Masz 14 dni od zakupu. Nie musisz podawać powodu. Zwrócimy pieniądze pomniejszone o dni korzystania, w ciągu 14 dni.';
@@ -61,7 +69,7 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  else if(me.billing_enabled&&!me.has_access&&!paidNow){mark(1);
   if(me.plan_status==='canceled'){h.textContent='Subskrypcja jest anulowana';p.textContent='Wznów, żeby wrócić do panelu. Twoje ustawienia czekają.';buy('Wznów subskrypcję')}
   else if(me.plan_status==='past_due'||me.plan_status==='unpaid'){h.textContent='Płatność się nie powiodła';p.textContent='Zaktualizuj kartę, żeby nie stracić dostępu.';card.append(btn('Zaktualizuj płatność','btn',()=>go('/api/billing/portal')))}
-  else{h.textContent='Jeszcze jeden krok';const tr=me.trial_days||0,td=tr===1?'1 dzień':tr+' dni';p.textContent=tr?'Zacznij '+td+' za darmo, a my przygotujemy Twój osobny serwer. Kartę podajesz od razu, ale jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. Płatność obsługuje Stripe.':'Wykup dostęp, a my przygotujemy Twój osobny serwer. Płatność obsługuje Stripe, anulujesz w każdej chwili.';buy(tr?'Zacznij '+td+' za darmo':'Wykup dostęp')}}
+  else{h.textContent='Jeszcze jeden krok';const tr=me.trial_days||0,td=tr===1?'1 dzień':tr+' dni';p.textContent=(me.plans&&me.plans.length)?(tr?'Pierwsze '+td+' w każdym pakiecie za darmo. ':'')+'Wybierz pakiet, a my przygotujemy Twój osobny serwer. Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. Płatność obsługuje Stripe.':tr?'Zacznij '+td+' za darmo, a my przygotujemy Twój osobny serwer. Kartę podajesz od razu, ale jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. Płatność obsługuje Stripe.':'Wykup dostęp, a my przygotujemy Twój osobny serwer. Płatność obsługuje Stripe, anulujesz w każdej chwili.';buy(tr?'Zacznij '+td+' za darmo':'Wykup dostęp',me.plans)}}
  else if(me.has_access||paidNow){mark(2);progress(me,paidNow)}
  else if(me.provision_state==='failed'){mark(2);h.textContent='Stawianie serwera się przedłuża';p.textContent='Coś poszło nie tak przy przygotowaniu Twojego serwera. Już nad tym pracujemy i napiszemy, gdy będzie gotowy.'}
  else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut, a ta strona odświeży się sama.':'Stawiamy Twój osobny serwer. Ta strona odświeży się sama, a gdy panel będzie gotowy, napiszemy też mailem.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s);watch(me)}
