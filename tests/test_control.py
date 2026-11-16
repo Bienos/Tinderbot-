@@ -456,7 +456,7 @@ def test_robots_sitemap_and_llms_txt(client,monkeypatch):
     sm=client.get('/sitemap.xml');assert sm.headers['content-type'].startswith('application/xml')
     assert sm.text.count('<url>')==3 and '<loc>https://iskra.example/</loc>' in sm.text and 'zaloguj' not in sm.text
     llms=client.get('/llms.txt').text
-    assert llms.startswith('# Winq') and '49 zł / mies.' in llms and 'nie jest powiązany z żadną aplikacją randkową' in llms
+    assert llms.startswith('# Winq') and '49 zł / mies.' in llms and 'nie jest jeszcze powiązany z żadną aplikacją randkową' in llms
 
 
 def test_fonts_are_served_from_here_with_long_cache_and_unknown_names_404(client):
