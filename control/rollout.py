@@ -1,4 +1,4 @@
-"""Nightly rollout of new bot versions to every customer's bot (and the owner's), one at a time, with a health check each.
+"""Rollout of new bot versions (nightly, and right after a build when ROLLOUT_IMMEDIATE=true) to every customer's bot (and the owner's), one at a time, with a health check each.
 
 What "newest" means: the last successful run of the "Fly bot image" workflow on main (the repository is public, so GitHub's API
 needs no secret). Its commit is the target; the Fly image for it is registry.fly.io/<image app>:git-<12 chars of the commit>.
@@ -67,6 +67,29 @@ def due(q, now: float) -> bool:
         return False
     rows = q("SELECT value FROM rollout_meta WHERE key='last_run_day'", fetch=True)
     return not rows or rows[0]['value'] != local.date().isoformat()
+
+
+IMMEDIATE_MIN_GAP = 600  # seconds between two immediate rollouts, so a burst of pushes restarts the bots once, not five times
+
+
+def immediate_due(q, now: float) -> bool:
+    """ROLLOUT_IMMEDIATE: a newer build than the one we last acted on is ready, and the last immediate run was at least ten minutes ago.
+    The build is claimed BEFORE the run, so a failing rollout is not repeated every few minutes (the owner is mailed; the next
+    build, the nightly run or /admin/rollout/run tries again). Costs one GitHub API call per check, so check rarely."""
+    build = latest_build()
+    if not build:
+        return False
+    meta = {r['key']: r['value'] for r in q("SELECT key,value FROM rollout_meta WHERE key IN ('immediate_target','immediate_at')", fetch=True)}
+    if meta.get('immediate_target') == build['sha']:
+        return False
+    try:
+        if now - float(meta.get('immediate_at') or 0) < IMMEDIATE_MIN_GAP:
+            return False
+    except ValueError:
+        pass
+    for key, value in (('immediate_target', build['sha']), ('immediate_at', str(now))):
+        q("INSERT INTO rollout_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+    return True
 
 
 def claim_today(q, now: float) -> None:

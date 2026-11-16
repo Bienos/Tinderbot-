@@ -63,6 +63,14 @@ obraz Fly (`:latest` dla nowych klientów), a istniejące boty przesuwasz `POST 
 `autoDeployTrigger: off`, więc trzeba je wdrożyć ręcznie. Do tego czasu `/admin/fleet` pokaże je jako nieosiągalne, a podsumowanie
 dla ich właścicieli się nie wyśle (bez błędu dla klienta).
 
+## Rollout od razu po zbudowaniu obrazu (ROLLOUT_IMMEDIATE)
+
+Ustaw na serwisie kontrolnym `ROLLOUT_IMMEDIATE=true`, a boty na Fly przechodzą na nową wersję **kilka minut po zbudowaniu obrazu**, bez czekania do nocy.
+Serwis sprawdza co 3 minuty, czy jest nowszy udany build (jedno zapytanie do GitHuba, limit bez logowania to 60 na godzinę), i uruchamia ten sam
+bezpieczny rollout co w nocy: po jednym bocie, ze sprawdzeniem zdrowia, z cofnięciem i zatrzymaniem przy pierwszej awarii oraz mailem do właściciela.
+Dwie zmiany nie wywołają dwóch rolloutów w ciągu 10 minut. Dany build jest brany **raz**, nawet jeśli rollout się nie powiódł (kolejna próba: następny build,
+nocny przebieg albo `POST /admin/rollout/run`). Boty na Renderze nadal dostają nową wersję w nocy. Bez tej zmiennej nic się nie zmienia.
+
 ## Automatyczny rollout nowych wersji botów (co noc o 3:00)
 
 Serwis kontrolny sam przestawia boty na najnowszą zbudowaną wersję. Nie trzeba już ręcznie wołać `/admin/fly/update-image`.

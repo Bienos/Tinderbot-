@@ -166,3 +166,20 @@ def test_admin_posts_from_curl_work_with_an_origin_configured_but_sessions_stay_
     cl.post('/api/register',json=REG,headers={'Origin':'https://winq.example'})
     assert cl.post('/api/account/weekly',json={'enabled':False}).status_code==403                          # a cookie session still needs the right Origin
     assert cl.post('/api/account/weekly',json={'enabled':False},headers={'Origin':'https://winq.example'}).status_code==200
+
+
+def test_immediate_mode_claims_each_new_build_once_and_not_more_often_than_every_ten_minutes(c,world):
+    from control import rollout
+    q=c.q;now=1_800_000_000.0
+    assert rollout.immediate_due(q,now) is True                      # a build nobody has acted on yet
+    assert rollout.immediate_due(q,now+60) is False                  # same build: already claimed (even if the run failed)
+    world.sha=SHA2
+    assert rollout.immediate_due(q,now+120) is False                 # new build, but the last immediate run was two minutes ago
+    assert rollout.immediate_due(q,now+rollout.IMMEDIATE_MIN_GAP+1) is True
+    assert rollout.immediate_due(q,now+rollout.IMMEDIATE_MIN_GAP+2) is False
+
+
+def test_immediate_mode_does_nothing_when_github_cannot_say(c,monkeypatch):
+    from control import rollout
+    monkeypatch.setattr(rollout,'latest_build',lambda:None)
+    assert rollout.immediate_due(c.q,1_800_000_000.0) is False

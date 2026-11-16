@@ -95,18 +95,39 @@ async def _weekly_loop():
         await asyncio.sleep(1800)
 
 
+async def _rollout_watch_loop():
+    """ROLLOUT_IMMEDIATE=true: as soon as a new bot image is built, move the Fly bots onto it (one at a time, health-checked,
+    rolled back on the first failure; see control/rollout.py). Render bots and everything else still follow at night.
+    Checks every three minutes; GitHub's unauthenticated API allows 60 calls an hour, so this stays well under it."""
+    await asyncio.sleep(150)
+    while True:
+        try:
+            if (os.getenv('ROLLOUT', 'true').strip().lower() != 'false' and os.getenv('ROLLOUT_IMMEDIATE', 'false').strip().lower() == 'true'
+                    and not _ROLLOUT_LOCK.locked() and await asyncio.to_thread(rollout.immediate_due, q, time.time())):
+                task = asyncio.create_task(asyncio.to_thread(run_rollout, only='fly'))
+                _TASKS.add(task)
+                task.add_done_callback(_TASKS.discard)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.error('immediate rollout check failed: %s: %s', type(exc).__name__, str(exc)[:200])
+        await asyncio.sleep(180)
+
+
 @asynccontextmanager
 async def lifespan(_app):
     task = asyncio.create_task(_weekly_loop()) if os.getenv('WEEKLY_SUMMARY', 'true').strip().lower() != 'false' else None
+    watch = asyncio.create_task(_rollout_watch_loop())
     try:
         yield
     finally:
-        if task:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+        for t_ in (task, watch):
+            if t_:
+                t_.cancel()
+                try:
+                    await t_
+                except asyncio.CancelledError:
+                    pass
 
 
 app = FastAPI(title=f'{BRAND} control', docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
