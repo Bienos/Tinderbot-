@@ -355,6 +355,15 @@ def test_owner_account_links_existing_bot_for_free(client,monkeypatch):
     assert puts['/v1/services/srv-owner/env-vars/CONTROL_ORIGIN']=={'value':'http://testserver'}
     assert ('POST','/v1/services/srv-owner/deploys',{}) in calls and not any(c[1]=='/v1/services' for c in calls)
     assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://owner-bot.onrender.com/auth/sso?t=')
+    # OWNER_PANEL_URL puts the owner's panel on the brand's domain, and the sign-in token is issued for that address
+    import base64,json as _j
+    monkeypatch.setenv('OWNER_PANEL_URL','https://panel.example.com/')
+    loc=client.get('/konto/panel',follow_redirects=False).headers['location']
+    assert loc.startswith('https://panel.example.com/auth/sso?t=')
+    payload=_j.loads(base64.urlsafe_b64decode(loc.split('t=',1)[1].split('.')[0]+'=='))
+    assert payload['aud']=='https://panel.example.com'
+    monkeypatch.setenv('OWNER_PANEL_URL','http://insecure.example.com')   # only https is accepted
+    assert client.get('/konto/panel',follow_redirects=False).headers['location'].startswith('https://owner-bot.onrender.com/')
 
 
 def test_owner_registered_before_render_key_is_linked_on_next_login(client,monkeypatch):
