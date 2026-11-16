@@ -637,7 +637,8 @@ class TinderAdapter:
             status_update(thread['connection_id'],error='inbox_access_denied' if str(exc)=='inbox_access_denied' else 'session_expired_or_account_changed',disable=True)
             raise
         except TinderRateLimited as exc:
-            if not exc.existing:status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)
+            # Tinder asked for a pause: remember it. Our OWN budget running out is not a state of the connection: the caller just waits.
+            if not exc.existing and not is_local_limit(exc):status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)
             raise
 
     async def reconcile(self, thread, action_id):
@@ -692,7 +693,7 @@ class TinderAdapter:
                 status_update(thread['connection_id'], error='session_expired_or_access_denied', disable=True)
                 raise TinderRejected('session_expired_or_access_denied') from None
             except TinderRateLimited as exc:
-                if not exc.existing:status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)
+                if not exc.existing and not is_local_limit(exc):status_update(thread['connection_id'],error=exc.reason,delay=exc.delay)
                 raise TinderRejected(exc.reason) from None
             mid = f'{thread["id"]}:{ident(result.get("_id") or result.get("id"))}'
             if any(m['id']==mid for m in fresh):raise TinderUncertain('send_receipt_reuses_existing_message')

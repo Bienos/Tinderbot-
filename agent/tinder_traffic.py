@@ -56,7 +56,8 @@ def claim_request(owner=False,reserve=0):
         for window,cap in caps_now:
             rows=db.execute('SELECT ts FROM tinder_requests WHERE ts>? ORDER BY ts',(now-window,)).fetchall()
             # Reads (synchronization) never use the last `reserve` requests of the HOUR: those stay free for sending. A send passes 0.
-            limit=max(1,cap-reserve) if window>=3600 else cap
+            # The same for the minute window, in proportion: a quarter of it, so a draft or a send can always get a fresh read in.
+            limit=max(1,cap-(reserve if window>=3600 else min(reserve,cap//4)))
             if len(rows)>=limit:raise TrafficBudget(max(15,math.ceil(rows[len(rows)-limit]['ts']+window-now)))
         db.execute('INSERT INTO tinder_requests(ts) VALUES(?)',(now,))
 

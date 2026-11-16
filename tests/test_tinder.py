@@ -637,3 +637,25 @@ async def test_hitting_the_read_budget_before_listing_waits_without_an_error(sou
     await tinder.poll()
     v=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
     assert v.get('error') is None and not v.get('blocked_until') and v.get('next_poll',0)>__import__('time').time()
+
+
+async def test_our_own_budget_running_out_at_send_time_does_not_block_the_connection(source,monkeypatch):
+    """A draft or send that cannot get a fresh read because of OUR budget just fails; it must not put the whole connection into a block."""
+    import time
+    from agent import tinder_traffic as traffic
+    t=await setup_thread(source)
+    monkeypatch.setattr(traffic,'caps',lambda:[(60,1000),(3600,5)])
+    with s.connect() as db:
+        db.execute('DELETE FROM tinder_requests');db.executemany('INSERT INTO tinder_requests(ts) VALUES(?)',[(time.time()-i,) for i in range(5)])
+    with pytest.raises(tinder.TinderRateLimited):await tinder.TinderAdapter().snapshot(t)
+    v=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
+    assert v.get('error') is None and not v.get('blocked_until') and tinder.paused_for(CID)==0
+
+
+def test_part_of_the_minute_budget_stays_free_for_sends(store,monkeypatch):
+    import time
+    from agent import tinder_traffic as traffic
+    monkeypatch.setattr(traffic,'caps',lambda:[(60,30),(3600,1000)])
+    with s.connect() as db:db.executemany('INSERT INTO tinder_requests(ts) VALUES(?)',[(time.time()-i*0.1,) for i in range(23)])
+    with pytest.raises(traffic.TrafficBudget):traffic.claim_request(reserve=40)    # reads: 30 - 7 = 23 a minute
+    traffic.claim_request()                                                         # a send still fits
