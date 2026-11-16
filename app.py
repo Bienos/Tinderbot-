@@ -498,7 +498,15 @@ async def tinder_token_save(request:Request):
         rt.audit(None,'tinder_token_saved','Encrypted Tinder token saved by owner; explicit art. 9 GDPR consent given')
         try:cid=await connect()
         except TinderError as exc:raise HTTPException(503,str(exc))
-    return {'connected':True,'connection_id':cid}
+    # Right after connecting, copy the owner's own Tinder interests into the empty "zainteresowania" fact.
+    # Best effort: a failure here (limit, Tinder hiccup) must never break connecting; the settings button still works.
+    interests=[]
+    try:
+        from agent.tinder import sync_profile
+        r=await sync_profile(cid);interests=r['interests']
+        if r['filled']:_regenerate_in_background()
+    except Exception:pass
+    return {'connected':True,'connection_id':cid,'interests':interests}
 
 @app.delete('/api/tinder/token')
 async def tinder_token_delete():
@@ -509,6 +517,13 @@ async def tinder_token_delete():
         with s.connect() as db:db.execute("UPDATE connections SET enabled=0 WHERE id LIKE 'tinder:%'")
     rt.audit(None,'tinder_token_deleted','Owner removed the stored Tinder token; connection disabled')
     return {'deleted':True}
+
+def _regenerate_in_background():
+    """Facts changed: waiting drafts are rewritten once the bot is free."""
+    async def follow_up():
+        async with service.LOCK:rt.regenerate_pending()
+        service.WAKE.set()
+    task=asyncio.create_task(follow_up());_BACKGROUND.add(task);task.add_done_callback(_BACKGROUND.discard)
 
 async def _owner_read(connection_id:str,read):
     """Owner-clicked reads of their own Tinder profile: one place that turns Tinder errors into plain Polish."""
@@ -535,11 +550,7 @@ async def tinder_sync_profile(connection_id:str):
     """Separate from the inbox sync: reads the owner's own profile (interests) and fills the empty "zainteresowania" fact."""
     from agent.tinder import sync_profile
     r=await _owner_read(connection_id,sync_profile)
-    if r['filled']:
-        async def follow_up():
-            async with service.LOCK:rt.regenerate_pending()
-            service.WAKE.set()
-        task=asyncio.create_task(follow_up());_BACKGROUND.add(task);task.add_done_callback(_BACKGROUND.discard)
+    if r['filled']:_regenerate_in_background()
     return r
 
 @app.post('/api/tinder/sync')
