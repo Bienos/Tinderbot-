@@ -748,3 +748,24 @@ def test_mail_never_leaves_from_a_private_or_foreign_address(monkeypatch):
 
 def test_email_logo_is_served_for_mails(client):
     r=client.get('/assets/email-logo.png');assert r.status_code==200 and r.headers['content-type']=='image/png'
+
+
+def test_free_trial_wording_follows_trial_days(client,monkeypatch):
+    from control import mailer
+    monkeypatch.delenv('TRIAL_DAYS',raising=False);monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
+    plain=client.get('/').text
+    assert 'za darmo, potem' not in plain and '{{TRIAL' not in plain
+    monkeypatch.setenv('TRIAL_DAYS','3')
+    page=client.get('/').text
+    assert 'Pierwsze 3 dni za darmo, potem 49 zł / mies.' in page and '{{TRIAL' not in page and 'nic nie zapłacisz' in page
+    terms=client.get('/regulamin').text
+    assert 'Okres próbny: pierwsze 3 dni' in terms and '{{TRIAL' not in terms
+    assert client.get('/rejestracja').status_code==200
+    client.post('/api/register',json=REG)
+    assert client.get('/api/me').json()['trial_days']==3
+    mailer.SENT.clear();o='https://winq.site'
+    mailer.payment_ok('a@b.pl',o);mailer.welcome('a@b.pl',o)
+    assert mailer.SENT[0]['subject']=='Okres próbny rozpoczęty' and '3 dni za darmo' in mailer.SENT[0]['text'] and 'nic z niej nie pobraliśmy' in mailer.SENT[0]['text']
+    assert 'Zacznij 3 dni za darmo' in mailer.SENT[1]['text']
+    monkeypatch.setenv('TRIAL_DAYS','0');mailer.SENT.clear();mailer.payment_ok('a@b.pl',o)
+    assert mailer.SENT[0]['subject']=='Płatność przyjęta'

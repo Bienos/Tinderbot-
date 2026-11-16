@@ -36,6 +36,17 @@ def configured() -> bool:
     return bool(os.getenv('SMTP_HOST')) and (not os.getenv('SMTP_USERNAME') or bool(os.getenv('SMTP_PASSWORD')))
 
 
+def _trial() -> int:
+    try:
+        return max(0, min(30, int(os.getenv('TRIAL_DAYS', '0') or 0)))
+    except ValueError:
+        return 0
+
+
+def _days(n: int) -> str:
+    return f'{n} dzień' if n == 1 else f'{n} dni'
+
+
 def _brand() -> str:
     return os.getenv('BRAND_NAME', 'Winq')
 
@@ -223,13 +234,21 @@ def welcome(to: str, origin: str) -> None:
                'heading': 'Witaj w Winq! 👋',
                'paragraphs': ['Twoje konto jest gotowe. Winq to Twój asystent do rozmów na Tinderze: pisze szkice odpowiedzi w Twoim stylu, '
                               'a gdy zechcesz, odpisuje sam.', 'Tak zaczniesz:'],
-               'steps': [('Wykup dostęp', 'Na stronie konta. Anulujesz w każdej chwili.'),
+               'steps': [(f'Zacznij {_days(_trial())} za darmo' if _trial() else 'Wykup dostęp', 'Na stronie konta. Anulujesz w każdej chwili.'),
                          ('Przygotujemy Twój osobny serwer', 'Zwykle w kilka minut. Napiszemy, gdy będzie gotowy.'),
                          ('Połącz Tinder i włącz autopilota', 'Panel poprowadzi Cię krok po kroku.')],
                'button': ('Przejdź do konta', f'{origin}/konto')})
 
 
 def payment_ok(to: str, origin: str) -> None:
+    n = _trial()
+    if n:
+        _safe(to, {'subject': 'Okres próbny rozpoczęty', 'preheader': f'Masz {_days(n)} za darmo. Dziś nic nie pobraliśmy.',
+                   'heading': f'Masz {_days(n)} za darmo 🎉',
+                   'paragraphs': ['Zapisaliśmy Twoją kartę, ale dziś nic z niej nie pobraliśmy. Przygotowujemy Twój osobny serwer. To zwykle kilka minut, a gdy panel będzie gotowy, napiszemy do Ciebie.'],
+                   'callout': ('ok', f'Pierwsza opłata nastąpi po {_days(n)}. Jeśli zrezygnujesz wcześniej na stronie konta („Zarządzaj subskrypcją”), nic nie zapłacisz.'),
+                   'button': ('Otwórz konto', f'{origin}/konto')})
+        return
     _safe(to, {'subject': 'Płatność przyjęta', 'preheader': 'Dziękujemy! Przygotowujemy Twój serwer.',
                'heading': 'Dziękujemy za płatność 🎉',
                'paragraphs': ['Przygotowujemy Twój osobny serwer. To zwykle kilka minut, a gdy panel będzie gotowy, napiszemy do Ciebie.',
