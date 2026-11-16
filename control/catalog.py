@@ -15,13 +15,13 @@ PLANS = [
                   'Podstawowe statystyki', 'Własny serwer i szyfrowany token']},
     {'slug': 'flirt', 'name': 'Flirt', 'price': 69, 'conversations': 10, 'autopilot': True, 'popular': True,
      'tagline': 'Niech Winq pisze za Ciebie', 'pitch': 'Autopilot odpisuje, gdy ktoś Ci napisze, i proponuje spotkanie we właściwym momencie.',
-     'features': ['Autopilot: odpisuje sam w Twoim stylu', 'Do 10 aktywnych rozmów naraz',
+     'features': ['Autopilot odpisuje sam w Twoim stylu', 'Do 10 aktywnych rozmów naraz',
                   'Zaproszenie na randkę, gdy rozmowa jest gotowa', 'Powiadomienie, gdy randka jest umówiona',
-                  'Podstawowe statystyki: rozmowy, odpowiedzi, wiadomości']},
+                  'Podstawowe statystyki rozmów, odpowiedzi i wiadomości']},
     {'slug': 'casanova', 'name': 'Casanova', 'price': 169, 'conversations': 30, 'autopilot': True,
      'tagline': 'Dla tych, którzy mają dużo rozmów', 'pitch': 'Wszystko z Flirta, dla większej liczby rozmów naraz.',
      'features': ['Wszystko, co w Flircie', 'Do 30 aktywnych rozmów naraz',
-                  'Zaawansowane statystyki: lejek od dopasowania do randki, aktywność dzień po dniu, zweryfikowane rezultaty',
+                  'Zaawansowane statystyki z lejkiem od dopasowania do randki, aktywnością dzień po dniu i zweryfikowanymi rezultatami',
                   'Priorytet we wsparciu']},
 ]
 

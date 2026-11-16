@@ -348,8 +348,8 @@ def trial_texts() -> dict[str, str]:
         return {'{{TRIAL}}': '', '{{TRIAL_NOTE}}': '', '{{TRIAL_TERMS}}': ''}
     d = _days(n)
     return {'{{TRIAL}}': f'Pierwsze {d} za darmo, potem ',
-            '{{TRIAL_NOTE}}': f' Pierwsze {d} są bezpłatne: kartę podajesz od razu, a jeśli anulujesz przed ich końcem, nic nie zapłacisz.',
-            '{{TRIAL_TERMS}}': (f'<li>Okres próbny: pierwsze {d} Subskrypcji są bezpłatne, a umowa zostaje zawarta z chwilą jego rozpoczęcia. '
+            '{{TRIAL_NOTE}}': f' Pierwsze {d} są bezpłatne. Kartę podajesz od razu, a jeśli anulujesz przed ich końcem, nic nie zapłacisz.',
+            '{{TRIAL_TERMS}}': (f'<li>Pierwsze {d} Subskrypcji są bezpłatne (okres próbny), a umowa zostaje zawarta z chwilą jego rozpoczęcia. '
                                 'Do rozpoczęcia okresu próbnego wymagamy podania metody płatności. Jeżeli nie anulujesz Subskrypcji przed jego końcem, '
                                 'pierwsza opłata zostanie pobrana automatycznie po jego zakończeniu. Anulowanie w okresie próbnym oznacza, że nic nie zapłacisz.</li>')}
 

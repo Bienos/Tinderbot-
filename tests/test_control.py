@@ -759,7 +759,7 @@ def test_free_trial_wording_follows_trial_days(client,monkeypatch):
     page=client.get('/').text
     assert 'Pierwsze 3 dni za darmo, potem 49 zł / mies.' in page and '{{TRIAL' not in page and 'nic nie zapłacisz' in page
     terms=client.get('/regulamin').text
-    assert 'Okres próbny: pierwsze 3 dni' in terms and '{{TRIAL' not in terms
+    assert 'Pierwsze 3 dni Subskrypcji są bezpłatne (okres próbny)' in terms and '{{TRIAL' not in terms
     assert client.get('/rejestracja').status_code==200
     client.post('/api/register',json=REG)
     assert client.get('/api/me').json()['trial_days']==3
