@@ -291,7 +291,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document
 document.getElementById('tab-settings').addEventListener('click',()=>showSettings());document.getElementById('queue-btn')?.addEventListener('click',()=>showQueue());document.getElementById('logout').addEventListener('click',logoutNow);document.getElementById('open-activity').addEventListener('click',showActivity);document.getElementById('autopilot-btn').addEventListener('click',showAutopilot);document.getElementById('pause-all').addEventListener('click',pauseAll);document.getElementById('close-panel').addEventListener('click',()=>document.getElementById('panel').close());
 
 let view='chats';
-function setView(v){view=v;for(let [id,name] of [['tab-chats','chats'],['tab-stats','stats'],['tab-settings','settings']])document.getElementById(id).classList.toggle('active',v===name);document.querySelector('main').hidden=v!=='chats';document.getElementById('roster-wrap').hidden=v!=='chats';renderOnboarding();document.getElementById('stats-view').hidden=v!=='stats';document.getElementById('settings-view').hidden=v!=='settings';if(v==='stats')renderStats()}
+function setView(v){view=v;for(let [id,name] of [['tab-chats','chats'],['tab-stats','stats'],['tab-settings','settings']])document.getElementById(id).classList.toggle('active',v===name);document.querySelector('main').hidden=v!=='chats';document.getElementById('roster-wrap').hidden=v!=='chats';renderOnboarding();document.getElementById('stats-view').hidden=v!=='stats';document.getElementById('settings-view').hidden=v!=='settings';if(v==='stats'){S.anim=true;renderStats()}}
 async function logoutNow(){try{await api('/auth/logout','POST')}catch(e){}location.href=data&&data.account_url?data.account_url+'/zaloguj':'/'}
 function renderRoster(){let box=document.getElementById('roster');box.replaceChildren();if(!data)return;
 let todo=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a)),reply=data.threads.filter(t=>t.state==='needs_reply').sort((a,b)=>tsOf(b)-tsOf(a));
@@ -304,19 +304,195 @@ b.append(el('span','rtag'+(t.state==='needs_reply'?' wait':''),t.state==='needs_
 b.onclick=()=>{setView('chats');choose(t.id)};box.append(b)}}
 function tile(big,cap){let t=el('div','tile');t.append(el('div','big',big),el('div','cap',cap));return t}
 function kv(k,v){let r=el('div','kv');r.append(el('span','',k),el('b','',v));return r}
+/* ---------- Statystyki: liczone w przeglądarce z danych synchronizacji (wiadomości, profile, plan rozmowy) ---------- */
+const SD=864e5,SH=36e5,SM=6e4,SNS='http://www.w3.org/2000/svg',DAYS_PL=['Pn','Wt','Śr','Cz','Pt','Sb','Nd'],DAYS_LONG=['poniedziałki','wtorki','środy','czwartki','piątki','soboty','niedziele'];
+const S={range:30,anim:true};
+const REDUCED=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function sv(tag,attrs,parent,text){let n=document.createElementNS(SNS,tag);for(let k in attrs||{})n.setAttribute(k,attrs[k]);if(text!==undefined)n.textContent=text;if(parent)parent.append(n);return n}
+function med(a){if(!a.length)return null;let s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function pl(n,a,b,c){let m=n%100,d=n%10;return n===1?a:(d>=2&&d<=4&&!(m>=12&&m<=14))?b:c}
+function n1(x){return String(Math.round(x*10)/10).replace('.',',')}
+function dur(ms){if(ms==null)return '—';let m=ms/SM;if(m<1)return '<1 min';if(m<60)return Math.round(m)+' min';let h=m/60;if(h<24)return n1(h)+' godz.';return n1(h/24)+' dn.'}
+function names(list,max=3){let n=list.slice(0,max).map(t=>t.display_name);return n.join(', ')+(list.length>max?' i '+(list.length-max)+' '+pl(list.length-max,'inna','inne','innych'):'')}
+function rangeLabel(r){return r===7?'ostatnie 7 dni':r===30?'ostatnie 30 dni':'cały okres'}
+
+/* Jedna rozmowa = lista wiadomości + "serie" (kolejne wiadomości tej samej osoby). Odpowiedź = następna seria jest od drugiej strony. */
+function statsThreads(){return data.threads.map(t=>{let h=(data.messages[t.id]||[]).map(m=>({sender:m.sender==='you'?'you':'them',body:m.body||'',ts:Date.parse(m.created_at)||0})).filter(m=>m.ts).sort((a,b)=>a.ts-b.ts);
+ let runs=[];for(let m of h){let r=runs[runs.length-1];if(r&&r.sender===m.sender){r.last=m;r.n++}else runs.push({sender:m.sender,first:m,last:m,n:1})}
+ return {t,h,runs,matched:Date.parse(t.matched_at)||h[0]?.ts||0}})}
+/* Czy nasza seria "dostała szansę" na odpowiedź: odpowiedź jest, albo minęło >6 h (świeże ciszy nie liczymy jako braku odpowiedzi). */
+function askedRun(x,i,now){let run=x.runs[i];if(run.sender!=='you')return null;let nx=x.runs[i+1];if(nx)return {answered:true,delay:nx.first.ts-run.last.ts};return now-run.last.ts>6*SH?{answered:false}:null}
+function winMetrics(th,lo,hi,now){let r={matches:0,theirs:0,yours:0,asked:0,answered:0,theirDelays:[],yourDelays:[]};
+ for(let x of th){if(x.matched>=lo&&x.matched<hi)r.matches++;
+  for(let m of x.h)if(m.ts>=lo&&m.ts<hi)m.sender==='you'?r.yours++:r.theirs++;
+  x.runs.forEach((run,i)=>{let a=askedRun(x,i,now);if(a&&run.last.ts>=lo&&run.last.ts<hi){r.asked++;if(a.answered){r.answered++;r.theirDelays.push(a.delay)}}
+   let nx=x.runs[i+1];if(run.sender==='them'&&nx&&nx.first.ts>=lo&&nx.first.ts<hi)r.yourDelays.push(nx.first.ts-run.last.ts)})}
+ r.rate=r.asked>=5?Math.round(100*r.answered/r.asked):null;r.theirMed=med(r.theirDelays);r.yourMed=med(r.yourDelays);return r}
+function dailySeries(th,days,now,pick){let a=new Array(days).fill(0);for(let x of th)for(let ts of pick(x)){let i=Math.floor((now-ts)/SD);if(i>=0&&i<days)a[days-1-i]++}return a}
+function rate(a,b){return b?Math.round(100*a/b):null}
+function bucketStats(samples,defs){return defs.map(d=>{let s=samples.filter(d.test);let ans=s.filter(x=>x.answered).length;return {label:d.label,n:s.length,rate:s.length>=5?rate(ans,s.length):null}})}
+
+function computeStats(range){let now=Date.now(),th=statsThreads(),span=range*SD,from=range?now-span:0;
+ let cur=winMetrics(th,from,now+1,now),prev=range?winMetrics(th,from-span,from,now):null;
+ let sd=Math.min(range||30,30);
+ let spark={matches:dailySeries(th,sd,now,x=>[x.matched]),theirs:dailySeries(th,sd,now,x=>x.h.filter(m=>m.sender==='them').map(m=>m.ts)),rate:[]};
+ for(let d=0;d<sd;d++){let end=now-(sd-1-d)*SD;spark.rate.push(winMetrics(th,end-7*SD,end+1,now).rate)}
+ let heat=Array.from({length:7},()=>new Array(24).fill(0)),heatN=0;
+ for(let x of th)for(let m of x.h)if(m.sender==='them'&&m.ts>=from){let d=new Date(m.ts);heat[(d.getDay()+6)%7][d.getHours()]++;heatN++}
+ let parts=[['rano',6,12],['po południu',12,18],['wieczorem',18,24],['w nocy',0,6]].map(([label,a,b])=>({label,a,b,n:heat.reduce((s,row)=>s+row.slice(a,b).reduce((p,v)=>p+v,0),0)}));
+ let dayTot=heat.map(r=>r.reduce((p,v)=>p+v,0));
+ // Cechy naszych wiadomości vs to, czy dostały odpowiedź.
+ let samples=[],opened=0,openedAns=0,ageB={};
+ for(let x of th){x.runs.forEach((run,i)=>{let a=askedRun(x,i,now);if(a&&run.last.ts>=from)samples.push({len:run.last.body.length,q:/\?\s*$/.test(run.last.body.trim()),answered:a.answered})});
+  if(x.h[0]?.sender==='you'&&x.h[0].ts>=from){let ans=x.h.some(m=>m.sender==='them');if(ans||now-x.h[0].ts>6*SH){opened++;if(ans)openedAns++}}
+  let age=x.t.profile?.age;if(age&&x.matched>=from){let asked=x.runs.some((_,i)=>askedRun(x,i,now));if(asked){let g=age<25?'18–24':age<30?'25–29':age<35?'30–34':'35+';ageB[g]=ageB[g]||{n:0,a:0};ageB[g].n++;if(x.runs.some((r,i)=>r.sender==='you'&&x.runs[i+1]))ageB[g].a++}}}
+ let byLen=bucketStats(samples,[{label:'do 30 znaków',test:s=>s.len<30},{label:'30–70 znaków',test:s=>s.len>=30&&s.len<70},{label:'70+ znaków',test:s=>s.len>=70}]);
+ let byQ=bucketStats(samples,[{label:'z pytaniem na końcu',test:s=>s.q},{label:'bez pytania',test:s=>!s.q}]);
+ let byAge=['18–24','25–29','30–34','35+'].map(g=>({label:g+' lat',n:ageB[g]?.n||0,rate:(ageB[g]?.n||0)>=3?rate(ageB[g].a,ageB[g].n):null}));
+ let depth=[['Bez rozmowy',0,0],['1 wymiana',1,1],['2–3',2,3],['4–6',4,6],['7+',7,1e9]].map(([label,a,b])=>({label,n:data.threads.filter(t=>t.state!=='archived'&&(a===0?!t.message_count:t.message_count&&(t.plan?.exchanges||0)>=a&&(t.plan?.exchanges||0)<=b)).length}));
+ let ghosted=th.filter(x=>x.h.length&&x.h[x.h.length-1].sender==='you'&&now-x.h[x.h.length-1].ts>3*SD&&x.t.state!=='archived'&&x.t.plan?.stage!=='date_set').map(x=>x.t);
+ let buckets=[['< 5 min',0,5*SM],['5–30 min',5*SM,30*SM],['30 min – 2 h',30*SM,2*SH],['2–12 h',2*SH,12*SH],['12 h +',12*SH,1e18]].map(([label,a,b])=>({label,n:cur.theirDelays.filter(d=>d>=a&&d<b).length}));
+ return {now,range,th,cur,prev,spark,heat,heatN,parts,dayTot,byLen,byQ,byAge,depth,ghosted,buckets,opened,openedAns,samples:samples.length}}
+
+/* ---------- małe klocki UI ---------- */
+function statsTip(){let t=document.getElementById('stip');if(!t){t=el('div','');t.id='stip';t.setAttribute('role','tooltip');t.hidden=true;document.body.append(t)}return t}
+function hover(node,lines){let t=statsTip();const show=e=>{t.replaceChildren(el('b','',lines[0]));for(let l of lines.slice(1))t.append(el('div','',l));t.hidden=false;let r=node.getBoundingClientRect();let x=e.clientX!==undefined&&e.type!=='focus'?e.clientX:r.left+r.width/2,y=e.clientX!==undefined&&e.type!=='focus'?e.clientY:r.top;let w=t.offsetWidth,h=t.offsetHeight;t.style.left=Math.max(8,Math.min(innerWidth-w-8,x-w/2))+'px';t.style.top=(y-h-12<8?y+18:y-h-12)+'px'};
+ node.addEventListener('mouseenter',show);node.addEventListener('mousemove',show);node.addEventListener('focus',show);for(let ev of ['mouseleave','blur'])node.addEventListener(ev,()=>{t.hidden=true})}
+function countUp(node,val,fmt){fmt=fmt||(v=>String(Math.round(v)));if(!S.anim||REDUCED||typeof val!=='number'){node.textContent=typeof val==='number'?fmt(val):val;return}let t0=performance.now();const step=t=>{let k=Math.min(1,(t-t0)/800);node.textContent=fmt(val*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
+function spark(vals,w=104,h=30){let s=sv('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,class:'spark','aria-hidden':'true'});let pts=vals.map((v,i)=>v==null?null:[i,v]).filter(Boolean);if(pts.length<2)return s;
+ let mx=Math.max(...pts.map(p=>p[1]),1),X=i=>2+i*(w-4)/Math.max(1,vals.length-1),Y=v=>h-4-v/mx*(h-9);let d=pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+ sv('path',{d:d+` L${X(pts[pts.length-1][0])} ${h-2} L${X(pts[0][0])} ${h-2} Z`,class:'sp-area'},s);sv('path',{d,class:'sp-line'},s);let l=pts[pts.length-1];sv('circle',{cx:X(l[0]),cy:Y(l[1]),r:3,class:'sp-dot'},s);return s}
+function deltaPill(cur,prev,unit='',lowerBetter=false){if(prev==null||cur==null)return null;let d=cur-prev;let flat=Math.abs(d)<(unit==='%'?1:0.5);let good=lowerBetter?d<0:d>0;let p=el('span','delta '+(flat?'flat':good?'up':'down'));p.append(el('i','',flat?'→':d>0?'▲':'▼'),document.createTextNode(flat?'bez zmian':(d>0?'+':'−')+Math.abs(Math.round(d))+(unit==='%'?' pp':unit)));return p}
+function timeDelta(cur,prev){let d=cur-prev;if(Math.abs(d)<5*SM)return deltaPill(0,0);let p=el('span','delta '+(d<0?'up':'down'));p.append(el('i','',d<0?'▼':'▲'),document.createTextNode((d<0?'−':'+')+dur(Math.abs(d))));return p}
+function kpi(label,value,fmt,dp,sp,note){let c=el('div','kpi');c.append(el('div','kl',label));let big=el('div','kbig');c.append(big);countUp(big,value,fmt);let foot=el('div','kfoot');if(dp)foot.append(dp);else if(note)foot.append(el('span','knote',note));if(sp)foot.append(sp);c.append(foot);return c}
+function secCard(title,sub,cls){let c=el('section','cardx scard'+(cls?' '+cls:''));let h=el('div','shead');h.append(el('h2','',title));if(sub)h.append(el('p','ssub',sub));c.append(h);return c}
+function barRow(label,val,max,txt,muted){let r=el('div','brow'+(muted?' dim':''));let b=el('div','btrack'),f=el('div','bfill');f.style.width=(muted||!max?0:Math.max(3,100*val/max))+'%';b.append(f);r.append(el('span','blab',label),b,el('b','bval',txt));return r}
+
+/* ---------- sekcje ---------- */
+function heroBlock(m,st,sent){let c=el('section','hero');let L=el('div','hleft'),R=el('div','hright');
+ let r=m.cur.rate,ring=sv('svg',{viewBox:'0 0 180 180',class:'hring',role:'img','aria-label':r==null?'Za mało danych':'Wskaźnik odpowiedzi '+r+'%'});
+ let defs=sv('defs',{},ring),g=sv('linearGradient',{id:'hg',x1:'0',y1:'0',x2:'1',y2:'1'},defs);sv('stop',{offset:'0',class:'g0'},g);sv('stop',{offset:'1',class:'g1'},g);
+ const C=2*Math.PI*74;sv('circle',{cx:90,cy:90,r:74,class:'rtrack'},ring);
+ if(r!=null&&r>0){let arc=sv('circle',{cx:90,cy:90,r:74,class:'rarc',transform:'rotate(-90 90 90)','stroke-dasharray':C.toFixed(1),'stroke-dashoffset':(C*(1-r/100)).toFixed(1)},ring);arc.style.setProperty('--c0',C.toFixed(1));arc.style.setProperty('--c1',(C*(1-r/100)).toFixed(1))}
+ let rw=el('div','hringwrap');rw.append(ring);let mid=el('div','hmid');let big=el('b','',''),cap=el('small','','odpowiedzi');mid.append(big,cap);rw.append(mid);countUp(big,r==null?'—':r,v=>Math.round(v)+'%');L.append(rw);
+ let tx=el('div','htext');tx.append(el('div','heyebrow','Twoja skuteczność · '+rangeLabel(m.range)));
+ let verdict=r==null?'Za mało danych':r>=60?'Rozmowy wyraźnie się kleją':r>=40?'Solidnie, z miejscem na więcej':r>=20?'Jest co poprawić':'Odpowiedzi są rzadkie';
+ tx.append(el('h2','hverdict',verdict));
+ tx.append(el('p','hsub',r==null?'Potrzeba co najmniej 5 Twoich wiadomości z czasem na odpowiedź. Zmień zakres na „Cały okres” albo wróć po kolejnej synchronizacji.':'Na '+m.cur.answered+' z '+m.cur.asked+' '+pl(m.cur.asked,'Twojej wiadomości','Twoich wiadomości','Twoich wiadomości')+' przyszła odpowiedź ('+rangeLabel(m.range)+'). Liczymy tylko wiadomości starsze niż 6 godzin, żeby nie karać świeżych.'));
+ if(sent>0){let h=sent/60;let pill=el('div','hsaved');pill.append(el('b','','≈ '+(h<1?Math.round(sent)+' min':n1(h)+' godz.')),document.createTextNode(' pisania zaoszczędzone przez Winq · '+sent+' '+pl(sent,'wiadomość wysłana','wiadomości wysłane','wiadomości wysłanych')+' (szacunek: 1 min na wiadomość)'));tx.append(pill)}
+ L.append(tx);
+ let f=st.funnel||{},steps=[['Dopasowania',f.matches||0],['Rozmowy',f.conversations||0],['Spotkania',f.confirmed||0]];
+ for(let [i,[lab,v]] of steps.entries()){let s=el('div','hstep');let b=el('b','',''),sm=el('small','',lab);s.append(b,sm);countUp(b,v);if(i)s.append(el('span','hconv',steps[i-1][1]?'↳ '+rate(v,steps[i-1][1])+'%':''));R.append(s)}
+ c.append(L,R);return c}
+
+function kpiRow(m){let row=el('div','kpis'),c=m.cur,p=m.prev,sp=m.range||30;
+ row.append(kpi('Nowe dopasowania',c.matches,null,deltaPill(c.matches,p?.matches),spark(m.spark.matches)),
+  kpi('Wiadomości od nich',c.theirs,null,deltaPill(c.theirs,p?.theirs),spark(m.spark.theirs)),
+  kpi('Wskaźnik odpowiedzi',c.rate==null?'—':c.rate,v=>Math.round(v)+'%',deltaPill(c.rate,p?.rate,'%'),spark(m.spark.rate),c.rate==null?'za mało danych':''),
+  kpi('Typowy czas odpowiedzi',c.theirMed==null?'—':c.theirMed,v=>dur(v),p&&c.theirMed!=null&&p.theirMed!=null?timeDelta(c.theirMed,p.theirMed):null,null,c.theirMed==null?'za mało danych':'mediana ich odpowiedzi'));
+ return row}
+
+function insightsBlock(m,st,sent){let list=[],th=data.threads,c=m.cur;
+ let needs=th.filter(t=>t.state==='needs_reply');
+ if(needs.length)list.push({p:1,i:'💬',tone:'hot',h:needs.length+' '+pl(needs.length,'osoba czeka','osoby czekają','osób czeka')+' na odpowiedź',t:names(needs)+'. Im szybciej odpiszesz, tym większa szansa na ciąg dalszy.'});
+ let inv=th.filter(t=>t.plan?.stage==='invite');if(inv.length)list.push({p:2,i:'🔥',tone:'hot',h:inv.length+' '+pl(inv.length,'rozmowa jest','rozmowy są','rozmów jest')+' w oknie na zaproszenie',t:names(inv)+': sygnały zainteresowania są dobre, warto zaproponować spotkanie.'});
+ if(m.heatN>=8){let best=[...m.parts].sort((a,b)=>b.n-a.n)[0],share=Math.round(100*best.n/m.heatN),bd=m.dayTot.indexOf(Math.max(...m.dayTot));list.push({p:3,i:'🕘',h:share+'% wiadomości od nich przychodzi '+best.label+' ('+best.a+'–'+best.b+')',t:'Najaktywniejsze są '+DAYS_LONG[bd]+'. Wtedy najłatwiej złapać rozmowę „na żywo”.'})}
+ let q=m.byQ;if(q[0].rate!=null&&q[1].rate!=null&&Math.abs(q[0].rate-q[1].rate)>=10){let w=q[0].rate>q[1].rate;list.push({p:4,i:'❓',h:(w?'Pytanie na końcu':'Wiadomość bez pytania')+' dostaje odpowiedź częściej',t:'Z pytaniem: '+q[0].rate+'% (n='+q[0].n+'), bez: '+q[1].rate+'% (n='+q[1].n+').'})}
+ let ls=m.byLen.filter(x=>x.rate!=null);if(ls.length>=2){let b=[...ls].sort((a,b)=>b.rate-a.rate),w=b[b.length-1];if(b[0].rate-w.rate>=12)list.push({p:5,i:'✍️',h:'Najlepiej działają wiadomości: '+b[0].label,t:b[0].rate+'% odpowiedzi wobec '+w.rate+'% dla „'+w.label+'”.'})}
+ if(c.theirMed!=null&&c.theirDelays.length>=3)list.push({p:6,i:'⏱️',h:'Odpowiadają zwykle w ciągu '+dur(c.theirMed),t:c.yourMed!=null?'Ty (z agentem) reagujesz po ok. '+dur(c.yourMed)+'.':'Tak wygląda mediana z ostatnich wymian.'});
+ if(m.ghosted.length)list.push({p:7,i:'👻',tone:'cold',h:m.ghosted.length+' '+pl(m.ghosted.length,'rozmowa ucichła','rozmowy ucichły','rozmów ucichło')+' po Twojej wiadomości (3 dni +)',t:names(m.ghosted)+'. Możesz je odpuścić albo zagadać o czymś nowym.'});
+ let ag=m.byAge.filter(x=>x.rate!=null);if(ag.length>=2){let b=[...ag].sort((a,b)=>b.rate-a.rate);if(b[0].rate-b[b.length-1].rate>=20)list.push({p:8,i:'🎯',h:'Najlepsza odpowiedzialność: '+b[0].label,t:b[0].rate+'% rozmów z odpowiedzią (n='+b[0].n+'), najsłabiej '+b[b.length-1].label+': '+b[b.length-1].rate+'%.'})}
+ list.sort((a,b)=>a.p-b.p);list=list.slice(0,6);
+ let card=secCard('Co zauważył Winq','Wnioski z Twoich rozmów. Pojawiają się dopiero, gdy jest dość danych, żeby nie zgadywać.','insights');
+ if(!list.length){card.append(el('p','sempty','Za mało danych na wnioski. Pierwsze pojawią się po ok. 20 wymienionych wiadomościach.'));return card}
+ let g=el('div','igrid');for(let x of list){let it=el('div','insight'+(x.tone?' '+x.tone:''));it.append(el('span','iico',x.i),el('div','','')); it.lastChild.append(el('b','',x.h),el('p','',x.t));g.append(it)}card.append(g);return card}
+
+function hotBlock(){let hot=data.threads.filter(t=>t.plan&&t.state!=='archived'&&t.state!=='paused'&&(['invite','logistics','date_set'].includes(t.plan.stage)||t.plan.interest>=70)).sort((a,b)=>b.plan.interest-a.plan.interest).slice(0,5);
+ let card=secCard('Gorące teraz','Rozmowy, w których dzieje się najwięcej. Kliknij, żeby przejść do czatu.','hot');
+ if(!hot.length){card.append(el('p','sempty','Nic się jeszcze nie rozgrzało. Gdy ktoś zacznie odpisywać z zaangażowaniem, pojawi się tutaj.'));return card}
+ for(let t of hot){let b=el('button','hrow');b.type='button';let av=avatarFor(t,'stats');b.append(av);let w=el('div','hinfo');w.append(el('b','',t.display_name+(t.profile?.age?', '+t.profile.age:'')),el('small','',t.plan.stage_label+' · '+t.plan.move_label));b.append(w);
+  let sc=el('div','hscore');sc.append(el('b','',t.plan.interest),el('small','','/100'));let bar=el('div','hbar'),f=el('i','');f.style.width=t.plan.interest+'%';bar.append(f);sc.append(bar);b.append(sc);b.onclick=()=>{setView('chats');choose(t.id)};card.append(b)}
+ return card}
+
+function funnelBlock(st){let f=st.funnel||{};let steps=[['matches','Dopasowania','każde dopasowanie'],['conversations','Rozmowy','ktoś napisał'],['invited','Zaproszenie padło','propozycja spotkania'],['agreed','Zgoda','termin się klei'],['confirmed','Spotkanie','dzień, godzina i miejsce']];
+ let card=secCard('Droga do spotkania','Cały lejek od dopasowania do potwierdzonej randki. Procent pod spodem to przejście z poprzedniego kroku.','funnel');
+ let max=Math.max(1,f.matches||0),worst=null;steps.forEach(([k],i)=>{if(i<1)return;let a=f[steps[i-1][0]]||0,b=f[k]||0;if(a>=3){let r=b/a;if(worst==null||r<worst.r)worst={i,r}}});
+ let wrap=el('div','fun');steps.forEach(([k,lab,hint],i)=>{let v=f[k]||0,prevV=i?f[steps[i-1][0]]||0:null;let row=el('div','fstep'+(worst&&worst.i===i?' leak':'')+(v?'':' zero'));
+  let bar=el('div','fbar2');let fill=el('div','ffill');fill.style.width=Math.max(v?6:0,100*v/max)+'%';fill.style.setProperty('--o',String(1-i*0.11));bar.append(fill);
+  let left=el('div','fname');left.append(el('b','',lab),el('small','',hint));let right=el('div','fnum');right.append(el('b','',v));if(i)right.append(el('small','',prevV?Math.min(100,Math.round(100*v/prevV))+'%':'—'));
+  row.append(left,bar,right);if(worst&&worst.i===i)row.append(el('span','fleak','Tu uciekają najczęściej'));wrap.append(row)});
+ card.append(wrap);return card}
+
+function constellation(m){let card=secCard('Mapa zainteresowania','Każda bańka to rozmowa. Wyżej = większe zainteresowanie, bardziej na prawo = starsze dopasowanie, większa = więcej wiadomości.','const');
+ let items=data.threads.filter(t=>t.plan&&t.state!=='archived');if(!items.length){card.append(el('p','sempty','Brak rozmów do pokazania.'));return card}
+ let W=720,H=340,L=46,R=18,T=16,B=36,pw=W-L-R,ph=H-T-B,now=m.now;
+ let ages=items.map(t=>Math.max(0,(now-(Date.parse(t.matched_at)||Date.parse(t.sort_at)||now))/SD));let X=Math.max(7,Math.ceil(Math.max(...ages)));
+ let svg=sv('svg',{viewBox:`0 0 ${W} ${H}`,class:'cmap',role:'img','aria-label':'Mapa zainteresowania: '+items.length+' rozmów'});
+ let defs=sv('defs',{},svg),g=sv('linearGradient',{id:'cg',x1:'0',y1:'0',x2:'1',y2:'1'},defs);sv('stop',{offset:'0',class:'g0'},g);sv('stop',{offset:'1',class:'g1'},g);
+ const px=d=>L+d/X*pw,py=v=>T+ph-v/100*ph;
+ sv('rect',{x:L,y:py(100),width:pw,height:py(70)-py(100),class:'czone'},svg);sv('text',{x:W-R-10,y:py(100)+16,class:'czl','text-anchor':'end'},svg,'Strefa zaproszenia');
+ for(let v of [0,25,50,75,100]){sv('line',{x1:L,x2:W-R,y1:py(v),y2:py(v),class:'cgrid'},svg);sv('text',{x:L-8,y:py(v)+4,class:'cax','text-anchor':'end'},svg,String(v))}
+ sv('text',{x:L,y:H-10,class:'cax'},svg,'świeże dopasowania');sv('text',{x:W-R,y:H-10,class:'cax','text-anchor':'end'},svg,'starsze · '+X+' '+pl(X,'dzień','dni','dni')+' →');
+ sv('text',{x:12,y:T+ph/2,class:'cax',transform:`rotate(-90 12 ${T+ph/2})`,'text-anchor':'middle'},svg,'zainteresowanie');
+ let pts=items.map((t,i)=>({t,x:px(ages[i]),y:py(t.plan.interest),r:13+Math.min(11,Math.sqrt(t.message_count||0)*2)}));
+ for(let it=0;it<80;it++){let moved=false;for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){let a=pts[i],b=pts[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=a.r+b.r+3;if(d<min){if(d<.01){dx=(i%2?1:-1);dy=.5;d=1.1}let k=(min-d)/2/d;a.x-=dx*k;a.y-=dy*k;b.x+=dx*k;b.y+=dy*k;moved=true}}
+  for(let p of pts){p.x=Math.max(L+p.r,Math.min(W-R-p.r,p.x));p.y=Math.max(T+p.r,Math.min(T+ph-p.r,p.y))}if(!moved)break}
+ let grp=t=>{let p=t.plan;return ['invite','date_set'].includes(p.stage)||['invite','settle_details','ask_instagram'].includes(p.move)||p.stage==='logistics'?'hot':['fading','cooldown','closed'].includes(p.stage)?'cold':p.stage==='opening'?'new':'warm'};
+ pts.sort((a,b)=>b.r-a.r);
+ pts.forEach((p,i)=>{let t=p.t,k=grp(t),gr=sv('g',{class:'cdot '+k,tabindex:'0',role:'button','aria-label':t.display_name+', zainteresowanie '+t.plan.interest+', '+t.plan.stage_label,transform:`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`},svg);gr.style.setProperty('--i',String(i));
+  let u=safeImg(t.profile?.photos?.[0]);sv('circle',{r:p.r,class:'cb'},gr);
+  if(u){let id='cp'+i;let cp=sv('clipPath',{id},gr);sv('circle',{r:p.r-2},cp);let im=sv('image',{href:u,x:-p.r,y:-p.r,width:p.r*2,height:p.r*2,'clip-path':`url(#${id})`,preserveAspectRatio:'xMidYMid slice'},gr);im.setAttribute('referrerpolicy','no-referrer')}
+  else sv('text',{class:'ci','text-anchor':'middle',dy:'.35em'},gr,(t.display_name||'?').slice(0,1).toUpperCase());
+  sv('circle',{r:p.r,class:'cr'},gr);
+  hover(gr,[t.display_name+(t.profile?.age?', '+t.profile.age:''),t.plan.stage_label+' · '+t.plan.move_label,'Zainteresowanie '+t.plan.interest+'/100',(t.message_count||0)+' '+pl(t.message_count||0,'wiadomość','wiadomości','wiadomości')]);
+  gr.addEventListener('click',()=>{setView('chats');choose(t.id)});gr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setView('chats');choose(t.id)}})});
+ let wrap=el('div','cwrap');wrap.append(svg);card.append(wrap);
+ let lg=el('div','legend clegend');for(let [c,l] of [['hot','Gorące: zaproszenie lub ustalanie'],['warm','Budowanie rozmowy'],['new','Nowe, bez wiadomości'],['cold','Wygasa lub po odmowie']]){let s=el('span','');s.append(el('i','sw '+c),document.createTextNode(l));lg.append(s)}card.append(lg);return card}
+
+function heatBlock(m){let card=secCard('Kiedy do Ciebie piszą','Wiadomości od dopasowań wg dnia tygodnia i godziny (Twój czas lokalny) · '+rangeLabel(m.range),'heat');
+ if(m.heatN<5){card.append(el('p','sempty','Za mało wiadomości w tym okresie. Zmień zakres albo wróć po kolejnych synchronizacjach.'));return card}
+ let mx=Math.max(1,...m.heat.flat()),grid=el('div','heat');grid.setAttribute('role','img');grid.setAttribute('aria-label','Mapa cieplna aktywności: najwięcej wiadomości '+Math.max(...m.dayTot)+' w jednym dniu tygodnia');
+ let hh=el('div','hhours');hh.append(el('span',''));for(let h=0;h<24;h++)hh.append(el('span','',h%6===0?String(h):''));grid.append(hh);
+ m.heat.forEach((row,d)=>{let r=el('div','hrow2');r.append(el('span','hday',DAYS_PL[d]));row.forEach((v,h)=>{let c=el('span','hcell');if(v){c.style.setProperty('--a',(0.18+0.82*v/mx).toFixed(2));c.classList.add('on')}hover(c,[DAYS_PL[d]+', '+String(h).padStart(2,'0')+':00–'+String((h+1)%24).padStart(2,'0')+':00',v+' '+pl(v,'wiadomość','wiadomości','wiadomości')+' od nich']);r.append(c)});grid.append(r)});
+ card.append(grid);let lg=el('div','heatlg');lg.append(el('span','','mniej'),el('i','hramp'),el('span','','więcej'));card.append(lg);return card}
+
+function speedBlock(m){let card=secCard('Tempo odpowiedzi','Po jakim czasie od Twojej wiadomości odpisuje druga strona · '+rangeLabel(m.range),'speed');let tot=m.buckets.reduce((s,b)=>s+b.n,0);
+ if(tot<3){card.append(el('p','sempty','Za mało zakończonych wymian, żeby pokazać rozkład.'));return card}
+ let mx=Math.max(...m.buckets.map(b=>b.n)),cols=el('div','cols');for(let [i,b] of m.buckets.entries()){let c=el('div','col');let v=el('b','cv',b.n),bar=el('div','cbar'),f=el('i','');f.style.height=Math.max(b.n?4:0,100*b.n/mx)+'%';f.style.setProperty('--o',String(1-i*0.14));bar.append(f);c.append(v,bar,el('span','cl',b.label));hover(c,[b.label,b.n+' '+pl(b.n,'wymiana','wymiany','wymian')+' ('+rate(b.n,tot)+'%)']);cols.append(c)}
+ card.append(cols);let foot=el('div','sfoot');foot.append(kv('Typowy czas odpowiedzi dopasowań',dur(m.cur.theirMed)),kv('Twój czas reakcji (z agentem)',dur(m.cur.yourMed)));card.append(foot);return card}
+
+function worksBlock(m){let card=secCard('Co działa','Jak cechy Twoich wiadomości przekładają się na odpowiedź · '+rangeLabel(m.range),'works');
+ const group=(title,rows,unit)=>{card.append(el('h3','wt',title));let any=false;for(let r of rows){let low=r.rate==null;if(!low)any=true;card.append(barRow(r.label,r.rate||0,100,low?'za mało danych (n='+r.n+')':r.rate+'% · n='+r.n,low))}};
+ group('Długość wiadomości',m.byLen);group('Zakończenie',m.byQ);
+ if(m.opened>=5)group('Kto otwiera rozmowę',[{label:'Ty piszesz pierwszy',rate:rate(m.openedAns,m.opened),n:m.opened}]);
+ if(m.byAge.some(x=>x.rate!=null))group('Wiek dopasowania (rozmowy z odpowiedzią)',m.byAge);
+ card.append(el('p','snote','Odsetek wiadomości (lub rozmów), które dostały odpowiedź. Próbki poniżej 5 nie są pokazywane, żeby nie wyciągać wniosków z przypadku.'));return card}
+
+function depthBlock(m){let card=secCard('Jak głęboko sięgają rozmowy','Liczba pełnych wymian (Ty ↔ ona) w aktywnych rozmowach','depth');let mx=Math.max(1,...m.depth.map(d=>d.n));let cols=el('div','cols');
+ for(let [i,d] of m.depth.entries()){let c=el('div','col');let bar=el('div','cbar'),f=el('i','');f.style.height=Math.max(d.n?4:0,100*d.n/mx)+'%';f.style.setProperty('--o',String(0.45+i*0.14));bar.append(f);c.append(el('b','cv',d.n),bar,el('span','cl',d.label));hover(c,[d.label,d.n+' '+pl(d.n,'rozmowa','rozmowy','rozmów')]);cols.append(c)}
+ card.append(cols);return card}
+
+function opsBlock(st){let sent=0,auto=0,manual=0,uncertain=0;for(let a of st.actions){if(a.status==='sent'){sent+=a.n;if(a.automatic)auto+=a.n;else manual+=a.n}if(a.status==='uncertain')uncertain+=a.n}
+ let d=el('details','more opsd');d.append(el('summary','','Pod maską: praca agenta, szkice i rezultaty'));let g=el('div','grid2');let how=el('div','cardx');how.append(el('h2','','Jak to działa'));
+ how.append(kv('Wysłane automatycznie',auto),kv('Wysłane po Twoim zatwierdzeniu',manual),kv('Szkice oczekujące',st.drafts.pending||0),kv('Szkice odrzucone',st.drafts.rejected||0),kv('Szkice nieaktualne',st.drafts.stale||0),kv('Wysyłki niepewne (do sprawdzenia)',uncertain),kv('Tryb',data.settings.mode),kv('Agent',data.settings.paused?'wstrzymany':(data.worker.running?'działa':'wyłączony')));
+ if(st.tinder_requests)how.append(kv('Zapytania do Tinder (min / godz.)',st.tinder_requests.minute+' / '+st.tinder_requests.hour));
+ let res=el('div','cardx');res.append(el('h2','','Zweryfikowane rezultaty'));let ks=Object.keys(st.outcomes);if(!ks.length)res.append(el('div','fact muted','Brak jeszcze rezultatów. Pojawią się, gdy rozmowa zawiera sprawdzalny kontakt lub plan spotkania.'));for(let k of ks)res.append(kv(OUTCOME_NAMES[k]||k,st.outcomes[k]));
+ res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiting:'Czekasz na odpowiedź',new_match:'Nowe dopasowania',paused:'Wstrzymane',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia',not_synced:'Niezsynchronizowane'};for(let k of Object.keys(st.by_state))res.append(kv(sn[k]||k,st.by_state[k]));
+ g.append(how,res);d.append(g);let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));d.append(act);return {node:d,sent}}
+
 function renderStats(){let root=document.getElementById('stats-view');root.replaceChildren();if(!data){root.textContent='Ładowanie...';return}let st=data.stats;if(!st){root.textContent='Brak statystyk.';return}
-let sent=0,auto=0,manual=0,uncertain=0;for(let a of st.actions){if(a.status==='sent'){sent+=a.n;if(a.automatic)auto+=a.n;else manual+=a.n}if(a.status==='uncertain')uncertain+=a.n}
-let rate=st.we_wrote?Math.round(100*st.they_replied/st.we_wrote)+'%':'—';
-let tiles=el('div','tiles');tiles.append(tile(st.matches,'Dopasowania'),tile(st.by_state.new_match||0,'Do napisania'),tile(st.conversations_two_way,'Rozmowy z odpowiedzią'),tile(rate,'Odpowiedzi na Twoje wiadomości'),tile(sent,'Wiadomości wysłane przez agenta'),tile(st.messages_them,'Wiadomości od dopasowań'),tile(st.with_photos+'/'+st.matches,'Dopasowania ze zdjęciem'));root.append(tiles);
-let fun=el('div','cardx');fun.append(el('h2','','Lejek: od dopasowania do spotkania'));let f=st.funnel||{};for(let [k,l] of [['matches','Dopasowania'],['conversations','Rozmowy'],['invite_window','W oknie na zaproszenie'],['invited','Zaproponowane spotkanie'],['agreed','Zgoda / ustalanie'],['confirmed','Spotkanie potwierdzone'],['instagram','Instagram podany']]){let row=el('div','frow');let w=Math.round(100*(f[k]||0)/Math.max(1,f.matches||1));let b=el('div','fbar');let fi=el('div','');fi.style.width=w+'%';b.append(fi);row.append(el('span','flab',l),b,el('b','',String(f[k]||0)));fun.append(row)}root.append(fun);
-let c=el('div','cardx');c.append(el('h2','','Ostatnie 7 dni'));let max=Math.max(1,...st.per_day.map(d=>d.you+d.them));let bars=el('div','bars');for(let d of st.per_day){let col=el('div','bcol');let stack=el('div','bstack');let them=el('div','b-them');them.style.height=(100*d.them/max)+'%';let you=el('div','b-you');you.style.height=(100*d.you/max)+'%';stack.append(them,you);col.append(stack,el('div','blab',d.day.slice(5)));col.title=d.day+': Ty '+d.you+', oni '+d.them;bars.append(col)}c.append(bars);let lg=el('div','legend');lg.innerHTML='<span><i class="b-you"></i>Ty / agent</span><span><i class="b-them"></i>Dopasowania</span>';c.append(lg);root.append(c);
-let g=el('div','grid2');let how=el('div','cardx');how.append(el('h2','','Jak to działa'));
-how.append(kv('Wysłane automatycznie',auto),kv('Wysłane po Twoim zatwierdzeniu',manual),kv('Szkice oczekujące',st.drafts.pending||0),kv('Szkice odrzucone',st.drafts.rejected||0),kv('Szkice nieaktualne',st.drafts.stale||0),kv('Wysyłki niepewne (do sprawdzenia)',uncertain),kv('Tryb',data.settings.mode),kv('Agent',data.settings.paused?'wstrzymany':(data.worker.running?'działa':'wyłączony')));
-if(st.tinder_requests)how.append(kv('Zapytania do Tinder (min / godz.)',st.tinder_requests.minute+' / '+st.tinder_requests.hour));
-let res=el('div','cardx');res.append(el('h2','','Zweryfikowane rezultaty'));let names=OUTCOME_NAMES;let ks=Object.keys(st.outcomes);if(!ks.length)res.append(el('div','fact muted','Brak jeszcze rezultatów. Pojawią się, gdy rozmowa zawiera sprawdzalny kontakt lub plan spotkania.'));for(let k of ks)res.append(kv(names[k]||k,st.outcomes[k]));
-res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiting:'Czekasz na odpowiedź',new_match:'Nowe dopasowania',paused:'Wstrzymane',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia',not_synced:'Niezsynchronizowane'};for(let k of Object.keys(st.by_state))res.append(kv(sn[k]||k,st.by_state[k]));
-g.append(how,res);root.append(g);
-let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));root.append(act)}
+ root.classList.toggle('anim',S.anim&&!REDUCED);
+ let head=el('div','stathead');let ttl=el('div','');ttl.append(el('h2','sttitle','Statystyki'),el('p','stsub','Wszystko, co Winq widzi w Twoich rozmowach, policzone na bieżąco z synchronizacji.'));
+ let seg=el('div','seg rangeseg');seg.setAttribute('role','group');seg.setAttribute('aria-label','Zakres czasu');for(let [v,l] of [[7,'7 dni'],[30,'30 dni'],[0,'Cały okres']]){let b=el('button',S.range===v?'active':'',l);b.type='button';b.setAttribute('aria-pressed',S.range===v);b.onclick=()=>{S.range=v;S.anim=false;renderStats()};seg.append(b)}
+ head.append(ttl,seg);root.append(head);
+ if(!data.threads.length){root.append(el('p','sempty big','Brak danych do analizy. Po pierwszej synchronizacji z Tinderem pojawią się tu Twoje statystyki.'));return}
+ let m=computeStats(S.range),ops=opsBlock(st);
+ root.append(heroBlock(m,st,ops.sent),kpiRow(m),insightsBlock(m,st,ops.sent));
+ let two=el('div','sgrid');two.append(constellation(m),hotBlock());root.append(two);
+ let two2=el('div','sgrid even');two2.append(funnelBlock(st),worksBlock(m));root.append(two2);
+ root.append(heatBlock(m));
+ let two3=el('div','sgrid even');two3.append(speedBlock(m),depthBlock(m));root.append(two3);
+ root.append(ops.node);S.anim=false}
 document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
 
 function renderOnboarding(){const box=document.getElementById('onboard');if(!box||!data)return;updateAutopilotButton();
