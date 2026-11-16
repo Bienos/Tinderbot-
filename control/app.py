@@ -260,7 +260,8 @@ def _same_origin(request: Request):
 
 
 async def _json(request: Request) -> dict:
-    _same_origin(request)
+    if not getattr(request.state, 'admin', False):  # the origin check guards cookie sessions; a request with the admin token has no cookie to abuse
+        _same_origin(request)
     try:
         body = await request.json()
     except ValueError:
@@ -1283,6 +1284,7 @@ def _admin(request: Request):
     supplied = request.headers.get('authorization', '').removeprefix('Bearer ').strip()
     if len(expected) < 24 or not secrets.compare_digest(supplied, expected):
         raise HTTPException(401, 'Unauthorized')
+    request.state.admin = True
 
 
 @app.get('/admin/accounts')

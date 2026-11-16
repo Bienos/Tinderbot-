@@ -157,3 +157,12 @@ def test_a_run_can_be_limited_to_one_provider(c,world):
     bot(c,1,'fly:winq-b-aaaa1111');bot(c,2,'srv-cust1')
     out,_=go(c,world,only='fly');assert results(out)==[('fly:winq-b-aaaa1111','updated')] and [e[0] for e in world.log]==['fly']   # Render bots are not even listed
     out,_=go(c,world,only='render');assert results(out)==[('srv-cust1','updated'),('srv-owner','updated')]
+
+def test_admin_posts_from_curl_work_with_an_origin_configured_but_sessions_stay_protected(c,world,monkeypatch):
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://winq.example')
+    cl=TestClient(c.app,base_url='https://winq.example')                                                    # no Origin header, like curl
+    assert cl.post('/admin/rollout/run',headers=ADMIN,json={'dry_run':True}).status_code==200
+    assert cl.post('/admin/rollout/run',headers={'Authorization':'Bearer wrong'+'x'*30},json={'dry_run':True}).status_code==401
+    cl.post('/api/register',json=REG,headers={'Origin':'https://winq.example'})
+    assert cl.post('/api/account/weekly',json={'enabled':False}).status_code==403                          # a cookie session still needs the right Origin
+    assert cl.post('/api/account/weekly',json={'enabled':False},headers={'Origin':'https://winq.example'}).status_code==200
