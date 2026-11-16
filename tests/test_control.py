@@ -867,9 +867,9 @@ def test_six_and_twelve_month_plans_show_the_saving_and_use_their_own_links(clie
     page=client.get('/').text
     assert 'class="period"' in page and '3 miesiące gratis' in page and '1 miesiąc gratis' in page and 'Weź rok i trzy miesiące masz gratis' in page
     assert 'pricing.js' in page and 'data-period="12"' in page
-    assert '51,75 zł' in page and '621 zł' in page and 'Oszczędzasz 207 zł' in page             # Flirt, year: 9 of 12 months, 69 zł a month
-    assert '14,25 zł' in page and '126,75 zł' in page and '57,5 zł'.replace('57,5 zł','57,50 zł') in page
-    assert 'zamiast 828 zł' in page and 'płacisz za 5 miesięcy' in client.get('/regulamin').text
+    assert '51,75 zł' in page and '621 zł za 12 miesięcy' in page and '3 miesiące gratis · −207 zł' in page   # Flirt, year: 9 of 12 months, 69 zł a month
+    assert '14,25 zł' in page and '126,75 zł' in page and '<s class="tier-was js-was">69 zł</s>' in page
+    assert 'Płacisz raz' not in page and 'tier-strip' not in page and 'płacisz za 5 miesięcy' in client.get('/regulamin').text
     client.post('/api/register',json=REG)
     plans=client.get('/api/me').json()['plans']
     flirt=[p for p in plans if p['slug']=='flirt'][0]['periods']
