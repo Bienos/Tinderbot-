@@ -326,7 +326,11 @@ let failures=0;
 let fastTimer=null,fastSince=0;
 function writing(){let t=data&&data.threads.find(x=>x.id===selected);if(t&&t.state==='new_match'&&data.campaign?.items?.[t.id]?.status==='queued'&&!data.drafts.some(d=>d.thread_id===t.id&&d.anchor_message_id===OPENER&&d.status==='pending'))return true;return !!t&&data.llm_enabled&&t.state==='needs_reply'&&!data.drafts.some(d=>d.thread_id===t.id&&d.anchor_message_id===t.latest_message_id&&['pending','needs_user','no_reply'].includes(d.status))}
 function fastPoll(){if(!writing()){fastSince=0;return}if(!fastSince)fastSince=Date.now();if(Date.now()-fastSince>90000||fastTimer)return;fastTimer=setTimeout(()=>{fastTimer=null;if(!document.getElementById('panel').open)safeRefresh()},1500)}
-async function safeRefresh(){try{await refresh();if(failures)connBanner(false);failures=0;fastPoll()}catch(e){failures++;
+/* One refresh at a time: on a slow server (a big inbox on a small machine) a new request every 5 s piled up behind the previous one
+   and made it slower still. */
+let REFRESHING=false;
+async function safeRefresh(){if(REFRESHING)return;REFRESHING=true;try{await safeRefreshOnce()}finally{REFRESHING=false}}
+async function safeRefreshOnce(){try{await refresh();if(failures)connBanner(false);failures=0;fastPoll()}catch(e){failures++;
  if(e.status===401){location.reload();return}
  connBanner(true,data?'Brak połączenia z serwerem. Pokazuję ostatnie dane, ponawiam…':'Łączę z serwerem… Jeśli właśnie był restart, to potrwa kilkanaście sekund.')}}
 setInterval(()=>{if(view==='stats'&&!document.hidden&&!document.getElementById('panel').open)renderStats()},60000)  // relative times and the 6-hour rule move on without new data
