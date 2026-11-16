@@ -137,7 +137,7 @@ async def auth(request,call_next):
     allowed=public_origin()
     if request.method not in ('GET','HEAD','OPTIONS') and origin and origin!=allowed and not (origin=='http://127.0.0.1:8765' and internal_request(request.scope)):return JSONResponse({'detail':'Cross-origin request blocked'},403)
     path=request.url.path
-    if path not in ('/health','/auth/login','/auth/sso','/webhooks/telegram') and path not in PUBLIC_STATIC:
+    if path not in ('/health','/auth/login','/auth/sso','/webhooks/telegram','/internal/summary') and path not in PUBLIC_STATIC:
         auth=request.headers.get('authorization','')
         authenticated=same_secret(auth[7:],token()) if auth.startswith('Bearer ') else session_valid(request.cookies.get('agent_session',''))
         if not authenticated:
@@ -171,7 +171,7 @@ def login(body:Login,request:Request):
     r=JSONResponse({'ok':True});r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=public_origin().startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
     return r
 @app.get('/auth/sso')
-def sso(t:str='',request:Request=None):
+def sso(t:str='',next:str='',request:Request=None):
     """Single sign-on from the Winq account page: a 60-second, single-use token HMAC-signed with SSO_SECRET."""
     from agent.auth import verify_sso
     if not verify_sso(t,public_origin()):
@@ -179,7 +179,8 @@ def sso(t:str='',request:Request=None):
         again=f'<a class="btn" href="{html.escape(account)}/konto/panel">Otwórz panel jeszcze raz</a>' if account else ''
         return brand_page('Link wygasł','<h1>Link logowania wygasł</h1><p>Ten link działa raz i tylko przez minutę. Wróć do konta i otwórz panel jeszcze raz.</p>'+again,401)
     # A same-site meta refresh (not a 30x) so the SameSite=Strict session cookie is sent on the next request.
-    r=brand_page('Logowanie','<h1>Logowanie…</h1><p>Otwieramy Twój panel.</p>',head='<meta http-equiv="refresh" content="0;url=/">')
+    target='/#stats' if next=='stats' else '/'  # only a known view name is accepted, never a free address
+    r=brand_page('Logowanie','<h1>Logowanie…</h1><p>Otwieramy Twój panel.</p>',head=f'<meta http-equiv="refresh" content="0;url={target}">')
     r.set_cookie('agent_session',create_session(),httponly=True,samesite='strict',secure=public_origin().startswith('https://') or os.getenv('COOKIE_SECURE','false')=='true',max_age=3600*12)
     return r
 
@@ -189,6 +190,19 @@ def logout(request:Request):
     r=JSONResponse({'ok':True});r.delete_cookie('agent_session');return r
 @app.get('/health')
 def health():return {'status':'ok'}
+_SUMMARY_CACHE={'at':0.0,'key':None,'value':None}
+@app.get('/internal/summary')
+def internal_summary(request:Request,days:int=7):
+    """Counts for the weekly e-mail and the fleet check. Only the control service can call it (signed with SSO_SECRET);
+    the answer holds numbers and health codes, never names or message text."""
+    from agent.auth import verify_control_request
+    if not verify_control_request(request.headers.get('x-winq-ts',''),request.headers.get('x-winq-sig',''),public_origin(),'summary'):
+        raise HTTPException(401,'Unauthorized')
+    days=max(1,min(30,days));c=_SUMMARY_CACHE;key=(days,str(s.DB_PATH))  # a few seconds of reuse protects the bot from repeated polling
+    if c['value'] is None or c['key']!=key or time.time()-c['at']>30:
+        from agent import summary
+        c.update(at=time.time(),key=key,value=summary.weekly(days=days))
+    return c['value']
 @app.get('/')
 def home():return FileResponse(BASE/'static/dashboard.html')
 @app.get('/mock')

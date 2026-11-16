@@ -83,3 +83,17 @@ def verify_sso(value,audience):
         if db.execute('SELECT 1 FROM sso_nonces WHERE nonce=?',(nonce,)).fetchone():return False
         db.execute('INSERT INTO sso_nonces VALUES(?,?)',(nonce,now+120))
     return True
+
+
+def verify_control_request(ts,sig,audience,purpose):
+    """A read-only request from the control service, signed with this instance's SSO_SECRET.
+    Signature = HMAC-SHA256(secret, "<purpose>:<unix seconds>:<our origin>"), valid for two minutes either side.
+    Replays inside that window can only read the same aggregate numbers again."""
+    import hmac
+    secret=os.getenv('SSO_SECRET','')
+    if len(secret)<32 or not isinstance(ts,str) or not isinstance(sig,str) or len(ts)>12 or len(sig)>128:return False
+    try:stamp=int(ts)
+    except ValueError:return False
+    if abs(time.time()-stamp)>120:return False
+    expected=hmac.new(secret.encode(),f"{purpose}:{stamp}:{audience.rstrip('/')}".encode(),hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected,sig.lower())

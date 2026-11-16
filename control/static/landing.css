@@ -405,3 +405,6 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .plan-opt h3{margin:0;font-size:19px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}.plan-opt h3 small{font-family:"Onest",sans-serif;font-weight:600;font-size:15px;color:var(--muted)}
 .plan-opt p{margin:6px 0 10px;font-size:14px;color:var(--text);line-height:1.5}
 .plan-opt .btn{padding:11px 22px;font-size:15px}.plan-opt .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* account page: weekly summary preference */
+.weekly-pref{display:flex;align-items:flex-start;gap:8px;margin-top:18px;font-size:13px;line-height:1.45;text-align:left;cursor:pointer}.weekly-pref input{margin-top:2px;accent-color:#fd267a}

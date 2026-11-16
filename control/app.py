@@ -5,24 +5,26 @@ Runs as its own small service, separate from customer instances. Stores only wha
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import html as html_lib
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import secrets
 import sqlite3
 import time
-from contextlib import closing
+from contextlib import asynccontextmanager, closing
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
-from control import mailer, provision, catalog
+from control import mailer, provision, catalog, weekly
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
@@ -33,7 +35,50 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
        "base-uri 'none'; form-action 'self'; object-src 'none'")
 _HITS: dict[str, list[float]] = {}
 
-app = FastAPI(title=f'{BRAND} control', docs_url=None, redoc_url=None, openapi_url=None)
+log = logging.getLogger('uvicorn.error')
+
+
+def run_weekly(now: float, **kw) -> list[dict]:
+    origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
+    if not origin:
+        return [{'result': 'skipped: PUBLIC_ORIGIN is not set'}]
+    return weekly.run(q, now, base_for=panel_url, has_access=has_access, origin=origin, **kw)
+
+
+async def _weekly_loop():
+    """Looks for due summaries every half hour. Each pass is cheap when nothing is due; the database claim in weekly.run
+    keeps it safe if two processes run it."""
+    await asyncio.sleep(90)
+    while True:
+        try:
+            if mailer.configured() and mailer.sender_problem() is None:
+                results = await asyncio.to_thread(run_weekly, time.time())
+                sent = sum(1 for r in results if r['result'] == 'sent')
+                failed = [r['result'] for r in results if r['result'].startswith('failed')]
+                if sent or failed:
+                    log.info('weekly summaries: %d sent, %d failed %s', sent, len(failed), failed[:3])
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.error('weekly summary pass failed: %s: %s', type(exc).__name__, str(exc)[:200])
+        await asyncio.sleep(1800)
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    task = asyncio.create_task(_weekly_loop()) if os.getenv('WEEKLY_SUMMARY', 'true').strip().lower() != 'false' else None
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+
+app = FastAPI(title=f'{BRAND} control', docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 
 
 def db_path() -> Path:
@@ -56,7 +101,9 @@ MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status
               ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
               ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
               ('accounts', 'withdrawn_at', 'DOUBLE PRECISION'), ('accounts', 'provision_started', 'DOUBLE PRECISION'),
-              ('accounts', 'source', 'TEXT'), ('accounts', 'plan', 'TEXT'), ('accounts', 'plan_choice', 'TEXT')]
+              ('accounts', 'source', 'TEXT'), ('accounts', 'plan', 'TEXT'), ('accounts', 'plan_choice', 'TEXT'),
+              ('accounts', 'weekly_summary', 'INTEGER NOT NULL DEFAULT 1'), ('accounts', 'weekly_sent_at', 'DOUBLE PRECISION'),
+              ('accounts', 'weekly_claim', 'DOUBLE PRECISION'), ('accounts', 'weekly_note', 'TEXT'), ('accounts', 'unsub_token', 'TEXT')]
 WITHDRAWAL_DAYS = 14
 # Optional "Skąd o nas wiesz?" answer on sign-up.
 SIGNUP_SOURCES = ('tiktok', 'instagram', 'friend', 'google', 'other')
@@ -232,9 +279,9 @@ def versioned_assets(html: str) -> str:
 
 PATHS = {'index.html': '/', 'privacy.html': '/prywatnosc', 'terms.html': '/regulamin', 'login.html': '/zaloguj',
          'register.html': '/rejestracja', 'forgot.html': '/nie-pamietam-hasla', 'reset.html': '/nowe-haslo',
-         'account.html': '/konto'}
+         'account.html': '/konto', 'unsubscribe.html': '/wypisz-sie'}
 # Account pages are not worth indexing. They stay crawlable (not in robots.txt) so the noindex is seen.
-NOINDEX = {'login.html', 'register.html', 'forgot.html', 'reset.html', 'account.html'}
+NOINDEX = {'login.html', 'register.html', 'forgot.html', 'reset.html', 'account.html', 'unsubscribe.html'}
 FAQ = re.compile(r'<details><summary>(.*?)</summary><p>(.*?)</p></details>', re.S)
 
 
@@ -313,7 +360,7 @@ def trial_texts() -> dict[str, str]:
                                 'pierwsza opłata zostanie pobrana automatycznie po jego zakończeniu. Anulowanie w okresie próbnym oznacza, że nic nie zapłacisz.</li>')}
 
 
-def page(name: str) -> HTMLResponse:
+def page(name: str, fill: dict | None = None) -> HTMLResponse:
     origin = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     path = PATHS.get(name, '/')
     html = (STATIC / name).read_text(encoding='utf-8')
@@ -340,6 +387,8 @@ def page(name: str) -> HTMLResponse:
     else:
         html = html.replace('<!--TICKET-->', '').replace('<!--/TICKET-->', '').replace('{{TIERS}}', '')
         faq_price, terms_price, plan_terms = f'Jeden plan w subskrypcji, {price}.', f'Cena Subskrypcji wynosi {price} (kwota brutto)', ''
+    for key, value in (fill or {}).items():
+        html = html.replace(key, value)
     html = html.replace('{{PRICE_FAQ}}', faq_price).replace('{{PRICE_TERMS}}', terms_price).replace('{{PLAN_TERMS}}', plan_terms)
     html = html.replace('{{ORIGIN}}', origin).replace('{{PATH}}', path).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND)
     if name == 'index.html' and origin:
@@ -458,12 +507,13 @@ def account_advanced_page(request: Request):
 
 @app.get('/konto/panel')
 def open_panel(request: Request):
+    stats = request.query_params.get('view') == 'stats'  # the weekly e-mail links straight to the statistics tab
     acc = current_account(request)
     if not acc:
-        return RedirectResponse('/zaloguj', 303)
+        return RedirectResponse('/zaloguj' + ('?next=' + quote('/konto/panel?view=stats', safe='') if stats else ''), 303)
     if acc['status'] != 'active' or not acc.get('instance_url') or not acc.get('sso_secret') or not has_access(acc):
         return RedirectResponse('/konto', 303)
-    return RedirectResponse(panel_url(acc) + '/auth/sso?t=' + sso_token(acc), 303)
+    return RedirectResponse(panel_url(acc) + '/auth/sso?t=' + sso_token(acc) + ('&next=stats' if stats else ''), 303)
 
 
 # Public demo: the bot's real panel (static/dashboard.html at the repo root) on invented data.
@@ -615,7 +665,46 @@ def me(request: Request):
             'withdrawn': bool(acc.get('withdrawn_at')),
             'trial_days': trial_days(), 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '',
             'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
-            'setup': setup_progress(acc)}
+            'weekly_summary': acc.get('weekly_summary') != 0, 'setup': setup_progress(acc)}
+
+
+@app.post('/api/account/weekly')
+async def weekly_preference(request: Request):
+    acc = current_account(request)
+    if not acc:
+        raise HTTPException(401, 'Nie jesteś zalogowany.')
+    _same_origin(request)
+    body = await _json(request)
+    q('UPDATE accounts SET weekly_summary=? WHERE id=?', (int(body.get('enabled') is True), acc['id']))
+    return {'ok': True, 'weekly_summary': body.get('enabled') is True}
+
+
+def _unsub_account(token: str) -> dict | None:
+    if not token or len(token) > 80:
+        return None
+    rows = q('SELECT id,email FROM accounts WHERE unsub_token=?', (token,), fetch=True)
+    return rows[0] if rows else None
+
+
+@app.get('/wypisz-sie')
+def unsubscribe_page(t: str = ''):
+    if not _unsub_account(t):
+        return page('unsubscribe.html', {'{{UNSUB_BODY}}': '<h1>Ten link jest nieprawidłowy</h1><p class="sub">Podsumowania wyłączysz też na stronie konta.</p>'
+                                                         '<a class="btn wide" href="/konto">Przejdź do konta</a>'})
+    return page('unsubscribe.html', {'{{UNSUB_BODY}}': '<h1>Wypisać Cię z podsumowań?</h1><p class="sub">Przestaniemy wysyłać cotygodniowe podsumowanie. '
+        f'Ważne wiadomości o koncie i płatnościach nadal będą przychodzić.</p><form method="post" action="/wypisz-sie?t={html_lib.escape(quote(t, safe=""))}">'
+        '<button class="btn wide" type="submit">Tak, wypisz mnie</button></form>'})
+
+
+@app.post('/wypisz-sie')
+def unsubscribe(t: str = ''):
+    """Also the target of the one-click List-Unsubscribe header: the token is the proof, no login needed."""
+    acc = _unsub_account(t)
+    if not acc:
+        raise HTTPException(404, 'Nieprawidłowy link')
+    q('UPDATE accounts SET weekly_summary=0 WHERE id=?', (acc['id'],))
+    return page('unsubscribe.html', {'{{UNSUB_BODY}}': '<h1>Gotowe, wypisaliśmy Cię</h1><p class="sub">Nie wyślemy już cotygodniowego podsumowania. '
+                                                      'Możesz je włączyć z powrotem na stronie konta.</p><a class="btn wide" href="/konto">Przejdź do konta</a>'})
 
 
 SETUP_SECONDS = {'create': 240, 'link': 120}  # typical time from start to a live server
@@ -954,7 +1043,8 @@ def _admin(request: Request):
 @app.get('/admin/accounts')
 def admin_accounts(request: Request):
     _admin(request)
-    rows = q('SELECT email,name,status,plan_status,comped,instance_url,render_service_id,provision_state,provision_error,mode,source,consent_marketing,created '
+    rows = q('SELECT email,name,status,plan_status,comped,instance_url,render_service_id,provision_state,provision_error,mode,source,consent_marketing,created,'
+             'weekly_summary,weekly_sent_at,weekly_note '
              'FROM accounts ORDER BY created DESC', fetch=True)
     return {'count': len(rows), 'items': rows}
 
@@ -998,6 +1088,26 @@ async def admin_status(request: Request):
     if status == 'disabled':
         q('DELETE FROM account_sessions WHERE account_id IN (SELECT id FROM accounts WHERE email=?)', (str(body.get('email', '')).strip().lower(),))
     return {'ok': True}
+
+
+@app.post('/admin/weekly/run')
+async def admin_weekly_run(request: Request):
+    """Run the weekly summary pass now. {"dry_run": true} composes and reports without sending or marking anything;
+    {"force": true} ignores the Monday window and the one-per-week rule; {"email": "..."} limits it to one account."""
+    _admin(request)
+    body = await _json(request)
+    kw = {'force': body.get('force') is True, 'dry_run': body.get('dry_run') is True, 'email': str(body['email']) if body.get('email') else None}
+    results = await asyncio.to_thread(run_weekly, time.time(), **kw)
+    return {'count': len(results), 'sent': sum(1 for r in results if r['result'] == 'sent'), 'items': results}
+
+
+@app.get('/admin/fleet')
+async def admin_fleet(request: Request):
+    """Every customer's bot as the bot reports itself: reachable, Tinder connected, data fresh, agent running."""
+    _admin(request)
+    items = await asyncio.to_thread(weekly.check_fleet, q, base_for=panel_url, has_access=has_access)
+    bad = [i for i in items if not i['reachable'] or i.get('status') == 'problem']
+    return {'count': len(items), 'reachable': sum(1 for i in items if i['reachable']), 'problems': len(bad), 'items': items}
 
 
 @app.post('/admin/fly/update-image')

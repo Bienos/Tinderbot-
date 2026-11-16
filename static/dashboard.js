@@ -1,6 +1,6 @@
 const OUTCOME_NAMES={instagram_shared:'Instagram podany',phone_shared:'Telefon podany',date_suggested:'Propozycja spotkania',date_tentative:'Spotkanie wstępne',date_confirmed:'Spotkanie potwierdzone',date_rescheduled:'Spotkanie przełożone',date_cancelled:'Spotkanie odwołane',outcome_uncertain:'Niepewny wynik'};
 
-let data=null, selected=null, filter='all';
+let data=null, selected=null, filter='all', DEEP=location.hash==='#stats';  // #stats: the weekly e-mail opens the panel on the statistics tab
 const statuses={not_synced:'Jeszcze nie sprawdzono',new_match:'Nowy match',needs_reply:'Odpowiedź oczekuje',waiting:'Czekasz na odpowiedź',paused:'Wstrzymana',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia'};
 function el(tag,cls,text){let x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=String(text);return x}
 async function api(path,method='GET',payload){let res=await fetch(path,{method,headers:{'Content-Type':'application/json','X-Agent-Request':'dashboard'},body:payload?JSON.stringify(payload):undefined});let body=await res.json().catch(()=>({}));if(!res.ok){let d=body.detail;if(Array.isArray(d))d='Niepoprawne dane w polu: '+d.map(x=>(x.loc||[]).slice(1).join(' / ')||'?').join(', ')+'.';throw Object.assign(Error(d||res.status),{status:res.status})}return body}
@@ -67,7 +67,7 @@ function choose(id){selected=id;render()}
 function threadById(){return data?.threads.find(t=>t.id===selected)}
 function isConv(t){return (t.message_count||0)>0}
 function filtered(t){if(!isConv(t))return false;if(filter==='all')return t.state!=='archived';if(filter==='needs')return t.state==='needs_reply';if(filter==='waiting')return t.state==='waiting';if(filter==='other')return ['archived','paused','unavailable_unknown','needs_review'].includes(t.state);return true}
-function render(){if(!data)return;renderPlan();renderOnboarding();renderRoster();if(view==='stats')renderStats();
+function render(){if(!data)return;if(DEEP){DEEP=false;setView('stats')}renderPlan();renderOnboarding();renderRoster();if(view==='stats')renderStats();
 const notices={rate_limited:'Tinder requested a cooldown.',server_retry_after:'Tinder requested a service cooldown.',local_request_budget:'The configured Tinder traffic budget is reached.',restriction_requires_manual_review:'Tinder needs an account check in the official app.',repeated_rate_limits_requires_review:'Repeated throttling: review the account before reconnecting.',circuit_open_requires_review:'Repeated connection failures: review the account before reconnecting.',session_expired_or_account_changed:'The Tinder session expired or account identity changed.',inbox_access_denied:'Tinder denied inbox access (HTTP 401). Check your current session in Tinder and reconnect; profile access alone is insufficient.'};
 let acct=document.getElementById('account-link'),au=/^https?:\/\//.test(data.account_url||'')?data.account_url:'';acct.hidden=!au;if(au)acct.href=au+'/konto';let alerts=data.tinder.connections.filter(c=>c.error);let alert=document.getElementById('account-alert');alert.hidden=!alerts.length;alert.textContent=alerts.map(c=>(notices[c.error]||'Tinder connection needs attention.')+(c.enabled&&c.blocked_until>Date.now()/1000?' Next possible request: '+new Date(c.blocked_until*1000).toLocaleString():!c.enabled?' Automatic requests are stopped.':'')).join(' ');
 
@@ -284,6 +284,7 @@ function fastPoll(){if(!writing()){fastSince=0;return}if(!fastSince)fastSince=Da
 async function safeRefresh(){try{await refresh();if(failures)connBanner(false);failures=0;fastPoll()}catch(e){failures++;
  if(e.status===401){location.reload();return}
  connBanner(true,data?'Brak połączenia z serwerem. Pokazuję ostatnie dane, ponawiam…':'Łączę z serwerem… Jeśli właśnie był restart, to potrwa kilkanaście sekund.')}}
+setInterval(()=>{if(view==='stats'&&!document.hidden&&!document.getElementById('panel').open)renderStats()},60000)  // relative times and the 6-hour rule move on without new data
 safeRefresh();setInterval(()=>{if(!document.hidden&&!document.getElementById('panel').open&&!document.getElementById('viewer')?.open)safeRefresh()},5000)
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('panel').open)safeRefresh()})
 
@@ -480,11 +481,22 @@ function opsBlock(st){let sent=0,auto=0,manual=0,uncertain=0;for(let a of st.act
  res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiting:'Czekasz na odpowiedź',new_match:'Nowe dopasowania',paused:'Wstrzymane',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia',not_synced:'Niezsynchronizowane'};for(let k of Object.keys(st.by_state))res.append(kv(sn[k]||k,st.by_state[k]));
  g.append(how,res);d.append(g);let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));d.append(act);return {node:d,sent}}
 
+/* Czy dane są świeże i połączenie działa: bez tego liczby mogłyby być spokojnie nieaktualne. */
+function linkStatus(){let cons=data.tinder?.connections||[],now=Date.now(),box=el('div','linkst');let c=cons[0];
+ let put=(tone,text,action)=>{box.className='linkst '+tone;box.append(el('i','lsdot'),el('span','',text));if(action){let b=el('button','lsbtn',action[0]);b.type='button';b.onclick=action[1];box.append(b)}return box};
+ if(!c)return put('warn','Nie połączono konta Tinder. Połącz je w Ustawieniach, żeby zobaczyć prawdziwe statystyki.',['Ustawienia',()=>{setView('settings');showSettings()}]);
+ if(c.error)return put('bad',tinderErrors[c.error]||('Połączenie z Tinderem wymaga uwagi ('+c.error+').'),['Napraw w Ustawieniach',()=>{setView('settings');showSettings()}]);
+ if(!c.enabled)return put('warn','Połączenie z Tinderem jest wyłączone, dane się nie odświeżają.');
+ let ls=Date.parse(c.last_sync||'');if(!ls)return put('warn','Czekamy na pierwszą synchronizację z Tinderem. Pierwszy import może potrwać kilka minut.');
+ let min=Math.max(0,Math.round((now-ls)/6e4));let ago=min<1?'przed chwilą':min<60?min+' min temu':min<1440?Math.round(min/60)+' godz. temu':Math.round(min/1440)+' dn. temu';
+ if(data.settings?.paused)return put('warn','Agent jest wstrzymany. Ostatnia synchronizacja: '+ago+'.');
+ if(min>30)return put('warn','Ostatnia synchronizacja była '+ago+'. Statystyki mogą być nieaktualne.');
+ return put('ok','Połączono z Tinderem. Ostatnia synchronizacja: '+ago+'.')}
 function renderStats(){let root=document.getElementById('stats-view');root.replaceChildren();if(!data){root.textContent='Ładowanie...';return}let st=data.stats;if(!st){root.textContent='Brak statystyk.';return}
  root.classList.toggle('anim',S.anim&&!REDUCED);
  let head=el('div','stathead');let ttl=el('div','');ttl.append(el('h2','sttitle','Statystyki'),el('p','stsub','Wszystko, co Winq widzi w Twoich rozmowach, policzone na bieżąco z synchronizacji.'));
  let seg=el('div','seg rangeseg');seg.setAttribute('role','group');seg.setAttribute('aria-label','Zakres czasu');for(let [v,l] of [[7,'7 dni'],[30,'30 dni'],[0,'Cały okres']]){let b=el('button',S.range===v?'active':'',l);b.type='button';b.setAttribute('aria-pressed',S.range===v);b.onclick=()=>{S.range=v;S.anim=false;renderStats()};seg.append(b)}
- head.append(ttl,seg);root.append(head);
+ head.append(ttl,seg);root.append(head,linkStatus());
  if(!data.threads.length){root.append(el('p','sempty big','Brak danych do analizy. Po pierwszej synchronizacji z Tinderem pojawią się tu Twoje statystyki.'));return}
  let m=computeStats(S.range),ops=opsBlock(st);
  root.append(heroBlock(m,st,ops.sent),kpiRow(m),insightsBlock(m,st,ops.sent));

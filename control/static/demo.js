@@ -112,7 +112,7 @@
     date_ideas: ['kawa albo matcha na mieście', 'spacer z kawą na wynos', 'planszówki w barze', 'wystawa albo targi']};
 
   const conn = {id: 'tinder:demo', enabled: true, unofficial: true, auto_send: true, bio_mode: true, bio_disclosure: true,
-    error: null, last_sync: null, next_poll: 0, blocked_until: 0, failures: 0};
+    error: null, last_sync: iso(NOW - 2 * MIN), next_poll: 0, blocked_until: 0, failures: 0};
   const autopilot = () => conn.auto_send && conn.bio_mode && conn.bio_disclosure;
 
   function project(t) {

@@ -107,13 +107,22 @@ def render(spec: dict) -> tuple[str, str]:
 
     # plain text
     lines = [spec['heading'], '']
-    for p in paras:
+    if callout and spec.get('callout_first'):
+        lines += [callout[1], '']
+    stats, cut = spec.get('stats', []), spec.get('stats_after', len(paras))
+    for p in paras[:cut]:
+        lines += [p, '']
+    for st in stats:
+        lines.append(f"• {st['label']}: {st['value']}" + (f" ({st['note']})" if st.get('note') else ''))
+    if stats:
+        lines.append('')
+    for p in paras[cut:]:
         lines += [p, '']
     for n, (title, desc) in enumerate(steps, 1):
         lines.append(f'{n}. {title}' + (f' {desc}' if desc else ''))
     if steps:
         lines.append('')
-    if callout:
+    if callout and not spec.get('callout_first'):
         lines += [callout[1], '']
     if btn:
         lines += [f'{btn[0]}: {btn[1]}', '']
@@ -125,12 +134,25 @@ def render(spec: dict) -> tuple[str, str]:
     lines.append(why)
     if seller:
         lines.append(seller)
-    lines += [f'{t}: {u}' for t, u in _links()]
+    lines += [f'{t}: {u}' for t, u in _links() + ([tuple(spec['footer_link'])] if spec.get('footer_link') else [])]
     text = '\n'.join(lines)
 
     # html: tables and inline styles only, because mail clients ignore almost everything else
     e = html.escape
-    p_html = ''.join(f'<p style="margin:0 0 18px;font-size:16px;line-height:1.65;color:{TEXT}">{e(p)}</p>' for p in paras)
+    para_html = lambda items: ''.join(f'<p style="margin:0 0 18px;font-size:16px;line-height:1.65;color:{TEXT}">{e(p)}</p>' for p in items)
+    cut_at = spec.get('stats_after', len(paras))
+    stats_html = ''
+    if stats:
+        def cell(st):
+            note = f'<div style="font-size:12px;color:{MUTED};margin-top:4px">{e(st["note"])}</div>' if st.get('note') else ''
+            return (f'<td width="50%" valign="top" style="padding:5px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    f'<td style="padding:14px 16px;background:{SOFT};border-radius:14px;font-family:{FONT}">'
+                    f'<div style="font-size:12px;color:{MUTED};font-weight:600">{e(st["label"])}</div>'
+                    f'<div style="font-size:28px;line-height:1.15;font-weight:800;color:{INK};letter-spacing:-.5px;margin-top:4px">{e(str(st["value"]))}</div>{note}'
+                    f'</td></tr></table></td>')
+        rows_html = ''.join('<tr>' + cell(stats[i]) + (cell(stats[i + 1]) if i + 1 < len(stats) else '<td width="50%"></td>') + '</tr>'
+                            for i in range(0, len(stats), 2))
+        stats_html = f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 -5px 18px;width:calc(100% + 10px)">{rows_html}</table>'
     steps_html = ''
     if steps:
         rows = ''.join(
@@ -157,7 +179,8 @@ def render(spec: dict) -> tuple[str, str]:
     logo_img = (f'<img src="{e(origin + "/assets/email-logo.png", quote=True)}" width="140" height="34" alt="{e(brand.lower())}" '
                 f'style="display:block;margin:0 auto;border:0;font-family:{FONT};font-size:26px;font-weight:700;color:{INK}">') if origin else \
         f'<span style="font-family:{FONT};font-size:26px;font-weight:700;color:{INK}">{e(brand.lower())}</span>'
-    foot_links = ' &nbsp;·&nbsp; '.join(f'<a href="{e(u, quote=True)}" style="color:{MUTED};text-decoration:underline">{e(t)}</a>' for t, u in _links())
+    foot_links = ' &nbsp;·&nbsp; '.join(f'<a href="{e(u, quote=True)}" style="color:{MUTED};text-decoration:underline">{e(t)}</a>'
+                                        for t, u in _links() + ([tuple(spec['footer_link'])] if spec.get('footer_link') else []))
     contact_html = (f'Pytania? Odpisz na tę wiadomość albo napisz na <a href="mailto:{e(contact, quote=True)}" style="color:{EMBER};text-decoration:none;font-weight:600">{e(contact)}</a>.<br>' if contact else '')
     seller_html = f'{e(seller)}<br>' if seller else ''
     page = f'''<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -171,7 +194,7 @@ def render(spec: dict) -> tuple[str, str]:
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td height="8" bgcolor="{EMBER}" style="height:8px;line-height:8px;font-size:0;background:{EMBER};background-image:linear-gradient(120deg,{EMBER},{FLAME})">&nbsp;</td></tr>
 <tr><td style="padding:36px 34px 30px;font-family:{FONT}">
 <h1 style="margin:0 0 20px;font-size:27px;line-height:1.2;color:{INK};font-weight:800;letter-spacing:-.5px">{e(spec['heading'])}</h1>
-{p_html}{steps_html}{callout_html}{btn_html}{link_line}{note_html}
+{callout_html if spec.get('callout_first') else ''}{para_html(paras[:cut_at])}{stats_html}{para_html(paras[cut_at:])}{steps_html}{'' if spec.get('callout_first') else callout_html}{btn_html}{link_line}{note_html}
 </td></tr></table></td></tr>
 <tr><td align="center" style="padding:24px 12px 0;font-family:{FONT};font-size:12px;line-height:1.7;color:{MUTED}">
 {contact_html}{e(why)}<br>{seller_html}{foot_links}
@@ -196,6 +219,8 @@ def send_spec(to: str, spec: dict) -> bool:
     msg['From'] = formataddr((_brand(), sender))
     msg['To'] = to
     msg['Reply-To'] = _contact() or sender
+    for name, value in (spec.get('headers') or {}).items():  # e.g. List-Unsubscribe for recurring mail
+        msg[name] = value
     msg.set_content(text)
     msg.add_alternative(page, subtype='html')
     with smtplib.SMTP(os.environ['SMTP_HOST'], int(os.getenv('SMTP_PORT', '587')), timeout=20) as s:
@@ -317,3 +342,90 @@ def account_deleted(to: str) -> None:
                'callout': ('info', 'Osobnego serwera z Twoim panelem i rozmowami nie kasujemy automatycznie. Jeśli z niego korzystałeś, odpisz na tę wiadomość, '
                                    'a usuniemy go razem z danymi. Jeśli masz aktywną subskrypcję, anuluj ją, żeby nie pobierano opłat.'),
                'why': 'To jednorazowe potwierdzenie. Nie wyślemy Ci już więcej wiadomości.'})
+
+
+# ---- weekly summary: counts only (the bot never sends names or message text), one link into the statistics tab
+def _plural(n: int, one: str, few: str, many: str) -> str:
+    d, h = n % 10, n % 100
+    return one if n == 1 else few if 2 <= d <= 4 and not 12 <= h <= 14 else many
+
+
+def _change(now: int | None, before: int | None, unit: str = '') -> str:
+    if now is None or before is None:
+        return ''
+    d = now - before
+    return 'tyle samo co przed tygodniem' if d == 0 else f"{'+' if d > 0 else '−'}{abs(d)}{unit} wobec poprzedniego tygodnia"
+
+
+ISSUES = {
+    'tinder_not_connected': 'Konto Tinder nie jest połączone, więc Winq nic nie widzi. Wklej token w Ustawieniach panelu.',
+    'sync_stale': 'Winq od dawna nie zsynchronizował rozmów z Tinderem. Otwórz panel, a jeśli to nie pomoże, odpisz na tę wiadomość.',
+    'worker_error': 'Winq miał problem z działaniem w tle. Zwykle mija sam, ale jeśli to się powtarza, odpisz na tę wiadomość.',
+    'agent_paused': 'Agent jest wstrzymany, więc nie przygotowuje szkiców ani nie odpisuje. Wznów go w panelu, gdy będziesz gotowy.',
+    'tinder_error:session_expired_or_account_changed': 'Sesja Tindera wygasła. Wklej nowy token w Ustawieniach panelu.',
+    'tinder_error:session_expired_or_access_denied': 'Sesja Tindera wygasła. Wklej nowy token w Ustawieniach panelu.',
+    'tinder_error:inbox_access_denied': 'Tinder odrzucił dostęp do skrzynki. Połącz konto ponownie z aktualnym tokenem.',
+    'tinder_error:restriction_requires_manual_review': 'Tinder prosi o sprawdzenie konta w oficjalnej aplikacji. Do tego czasu Winq się wstrzymał.',
+}
+GENERIC_TINDER_ISSUE = 'Połączenie z Tinderem wymaga uwagi. Otwórz panel i sprawdź Ustawienia, Tinder.'
+PROBLEM_ORDER = ('tinder_not_connected', 'tinder_error', 'sync_stale', 'worker_error', 'agent_paused')
+
+
+def weekly_issue(summary: dict) -> tuple[str, str] | None:
+    """(severity, wording) of the most important thing that needs the customer's attention, or None when all is well."""
+    issues = (summary.get('health') or {}).get('issues') or []
+    for key in PROBLEM_ORDER:
+        for issue in issues:
+            if issue == key or issue.startswith(key + ':'):
+                text = ISSUES.get(issue) or (GENERIC_TINDER_ISSUE if key == 'tinder_error' else ISSUES.get(key, ''))
+                return ('warn', text) if text else None
+    return None
+
+
+def weekly_spec(summary: dict, origin: str, unsubscribe: str) -> dict:
+    """The Monday message. Status first (is everything working?), then the numbers, then one button to the full picture."""
+    this, prev, now = summary.get('this') or {}, summary.get('prev') or {}, summary.get('now') or {}
+    health = summary.get('health') or {}
+    link = f'{origin}/konto/panel?view=stats'
+    foot = {'why': 'To cotygodniowe podsumowanie z Twojego konta w ' + _brand() + '. Zawiera same liczby, bez treści rozmów.',
+            'headers': {'List-Unsubscribe': f'<{unsubscribe}>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'},
+            'footer_link': ('Wypisz się z podsumowań', unsubscribe)}
+    issue = weekly_issue(summary)
+    if 'tinder_not_connected' in (health.get('issues') or []):
+        return {**foot, 'subject': f'Twój {_brand()} czeka na połączenie z Tinderem', 'preheader': 'Jeden krok i zaczniemy liczyć Twoje statystyki.',
+                'heading': 'Brakuje jednego kroku',
+                'paragraphs': ['Twój serwer działa, ale konto Tinder nie jest jeszcze połączone, więc nie mamy czego podsumować.'],
+                'callout': ('warn', issue[1] if issue else ISSUES['tinder_not_connected']), 'button': ('Otwórz panel', f'{origin}/konto/panel')}
+    matches, them = this.get('matches', 0), this.get('messages_them', 0)
+    rate = this.get('reply_rate')
+    stats = [
+        {'label': 'Nowe dopasowania', 'value': matches, 'note': _change(matches, prev.get('matches'))},
+        {'label': 'Wiadomości od nich', 'value': them, 'note': _change(them, prev.get('messages_them'))},
+        {'label': 'Odpowiedzi na Twoje wiadomości', 'value': '—' if rate is None else f'{rate}%',
+         'note': 'za mało danych' if rate is None else _change(rate, prev.get('reply_rate'), ' pp')},
+        {'label': 'Spotkania i kontakty', 'value': this.get('meetings', 0) + this.get('contacts', 0),
+         'note': (f"{this.get('meetings', 0)} {_plural(this.get('meetings', 0), 'potwierdzone spotkanie', 'potwierdzone spotkania', 'potwierdzonych spotkań')}, "
+                  f"{this.get('contacts', 0)} {_plural(this.get('contacts', 0), 'podany kontakt', 'podane kontakty', 'podanych kontaktów')}")
+         if this.get('meetings', 0) + this.get('contacts', 0) else 'jeszcze nic w tym tygodniu'}]
+    paras = ['Tak wyglądały ostatnie 7 dni na Twoim koncie.']
+    needs, invite = now.get('needs_reply', 0), now.get('invite_window', 0)
+    if needs:
+        paras.append(f"{needs} {_plural(needs, 'osoba czeka', 'osoby czekają', 'osób czeka')} na Twoją odpowiedź.")
+    if invite:
+        paras.append(f"{invite} {_plural(invite, 'rozmowa jest', 'rozmowy są', 'rozmów jest')} w oknie na zaproszenie: sygnały są dobre, warto zaproponować spotkanie.")
+    sent = this.get('sent_by_agent', 0)
+    if sent:
+        hours = sent / 60
+        paras.append(f"Winq wysłał w tym tygodniu {sent} {_plural(sent, 'wiadomość', 'wiadomości', 'wiadomości')}, czyli około "
+                     f"{'%d min' % sent if hours < 1 else ('%.1f' % hours).replace('.', ',') + ' godz.'} pisania mniej dla Ciebie.")
+    if len(paras) == 1:
+        paras.append('Spokojny tydzień. Pełny obraz, razem z mapą zainteresowania i godzinami największej aktywności, jest w panelu.')
+    if issue:
+        callout, button = ('warn', 'Co wymaga uwagi: ' + issue[1]), ('Otwórz panel', link)
+    else:
+        age = (health.get('tinder') or {}).get('last_sync_age_min')
+        when = '' if age is None else (' Ostatnia synchronizacja: ' + ('przed chwilą' if age < 1 else f'{age} min temu' if age < 60 else f'{age // 60} godz. temu') + '.')
+        callout, button = ('ok', 'Wszystko działa: Tinder jest połączony, a agent pracuje.' + when), ('Zobacz pełne statystyki', link)
+    subject = f'Twój tydzień w {_brand()}: ' + (f"{matches} {_plural(matches, 'nowe dopasowanie', 'nowe dopasowania', 'nowych dopasowań')}" if matches else 'podsumowanie')
+    return {**foot, 'subject': subject, 'preheader': 'Status konta i liczby z ostatnich 7 dni.', 'heading': 'Twój tydzień w ' + _brand() + ' 📊',
+            'paragraphs': paras, 'stats': stats, 'stats_after': 1, 'callout': callout, 'callout_first': bool(issue), 'button': button}

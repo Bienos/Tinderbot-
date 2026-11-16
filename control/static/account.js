@@ -3,7 +3,7 @@ async function post(url,payload){const r=await fetch(url,{method:'POST',headers:
 function bind(id,url,build,done){const f=document.getElementById(id);if(!f)return;const out=f.querySelector('[role=status]');
 f.addEventListener('submit',async e=>{e.preventDefault();const btn=f.querySelector('button[type=submit]');btn.disabled=true;out.className='';out.textContent='Chwila...';
 try{await post(url,build(new FormData(f)));done()}catch(err){out.className='err';out.textContent=err.message;btn.disabled=false}})}
-bind('login-form','/api/login',f=>({email:f.get('email'),password:f.get('password')}),()=>location.href='/konto');
+bind('login-form','/api/login',f=>({email:f.get('email'),password:f.get('password')}),()=>{const nx=new URLSearchParams(location.search).get('next');location.href=nx==='/konto/panel?view=stats'?nx:'/konto'});  // the weekly e-mail link: after signing in, straight to the statistics
 bind('register-form','/api/register',f=>({email:f.get('email'),name:f.get('name'),password:f.get('password'),source:f.get('source')||'',website:f.get('website'),adult:f.get('adult')==='on',terms:f.get('terms')==='on',marketing:f.get('marketing')==='on'}),()=>location.href='/konto');
 bind('forgot-form','/api/password/forgot',f=>({email:f.get('email')}),()=>{const out=document.querySelector('#forgot-form [role=status]');out.className='ok';out.textContent='Link jest już w drodze. Sprawdź skrzynkę, także spam.';document.querySelector('#forgot-form button[type=submit]').disabled=true});
 bind('reset-form','/api/password/reset',f=>({password:f.get('password'),token:new URLSearchParams(location.search).get('t')||''}),()=>location.href='/konto');
@@ -76,6 +76,7 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  if(me.withdrawn){const w=document.createElement('p');w.className='muted';w.textContent='Odstąpiłeś od umowy. Zwrot jest w drodze.';card.append(w)}
  if(me.can_withdraw)withdrawBox();
  if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';w.textContent='Twój pakiet: '+cur.name+' ('+cur.price+' zł / mies., do '+cur.conversations+' aktywnych rozmów).';card.append(w)}}
+ if(me.panel_ready){const lab=document.createElement('label');lab.className='muted weekly-pref';const cb=document.createElement('input');cb.type='checkbox';cb.checked=me.weekly_summary!==false;cb.addEventListener('change',()=>{cb.disabled=true;post('/api/account/weekly',{enabled:cb.checked}).catch(()=>{cb.checked=!cb.checked}).finally(()=>{cb.disabled=false})});lab.append(cb,document.createTextNode(' Cotygodniowe podsumowanie e-mailem (status i liczby, bez treści rozmów)'));card.append(lab)}
  if(me.can_manage_billing)card.append(btn(me.plans&&me.plans.length?'Zmień pakiet lub zarządzaj subskrypcją':'Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));
