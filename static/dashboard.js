@@ -195,7 +195,22 @@ function buildTinder(){
  else tok.append(el('div','gdesc','Brak tokena. Wklej go poniżej, żeby połączyć konto.'));
  if(!ts.enabled)tok.append(el('div','callout warn','Integracja Tinder jest wyłączona na tym serwerze (TINDER_ENABLED).'));
  if(!ts.vault_ready&&ts.token_source!=='env')tok.append(el('div','callout warn','Serwer nie ma klucza szyfrowania, więc nie zapisze tokena. Skontaktuj się z obsługą.'));
- let how=el('details','howto');how.append(el('summary','','Skąd wziąć token? (2 minuty)'));for(let s of ['Na komputerze otwórz tinder.com i zaloguj się.','Otwórz narzędzia deweloperskie: Chrome F12, Safari Cmd+Opcja+I (włącz w Ustawieniach → Zaawansowane).','Zakładka Application (Chrome) albo Storage (Safari) → Local Storage → https://tinder.com.','Znajdź klucz TinderWeb/APIToken i skopiuj jego wartość (zwykle 36 znaków).','Wklej poniżej. Nie wysyłaj tokena nikomu i nigdzie indziej.'])how.append(el('div','sig','• '+s));tok.append(how);
+
+ let how=el('details','howto');how.append(el('summary','','Jak zdobyć token? Krok po kroku (ok. 2 minuty)'));
+ how.append(el('div','gdesc','Token to długi „kod dostępu” do Twojego konta na Tinderze. Nie musisz go rozumieć, wystarczy go skopiować z przeglądarki i wkleić tutaj. Nic nie psujesz i niczego nie zmieniasz, tylko patrzysz i kopiujesz. Potrzebny jest komputer (nie telefon) i przeglądarka Chrome albo Safari.'));
+ let steps=[
+  ['Wejdź na Tindera w przeglądarce','Na komputerze otwórz stronę tinder.com i zaloguj się tak jak zwykle (numerem telefonu, Facebookiem albo Google). Zostaw tę kartę otwartą.'],
+  ['Otwórz „narzędzia deweloperskie”','To ukryty panel z technicznymi informacjami strony. Kliknij prawym przyciskiem myszy w puste miejsce na stronie Tindera i wybierz „Zbadaj” (w Safari: „Zbadaj element”). Możesz też nacisnąć F12 (Windows) albo Cmd+Opcja+I (Mac). Pojawi się panel z mnóstwem kodu po prawej stronie lub na dole ekranu. Niczego w nim nie zmieniaj.'],
+  ['Safari nie pokazuje „Zbadaj”?','Najpierw to włącz: u góry ekranu wybierz Safari → Ustawienia → Zaawansowane i zaznacz „Pokaż funkcje dla twórców stron” (albo „Pokaż menu Programowanie”). Potem wróć do kroku 2.'],
+  ['Znajdź zakładkę z zapisanymi danymi','U góry panelu są zakładki (Elements, Console, Network…). Kliknij „Application” (w Chrome) albo „Storage” / „Pamięć” (w Safari). Jeśli jej nie widzisz, kliknij małą strzałkę „»” na końcu paska zakładek, tam się chowa.'],
+  ['Otwórz Local Storage','W lewej kolumnie panelu znajdź „Local Storage”. Kliknij strzałkę obok, żeby ją rozwinąć, i kliknij „https://tinder.com”. Po prawej pojawi się tabelka z dwiema kolumnami: Key (nazwa) i Value (wartość).'],
+  ['Znajdź właściwy wiersz','Szukaj w kolumnie Key wiersza o nazwie TinderWeb/APIToken. Tabelka jest długa, więc użyj pola „Filter” nad nią i wpisz APIToken. Zostanie jeden wiersz.'],
+  ['Skopiuj wartość','Kliknij ten wiersz. W kolumnie Value jest ciąg liter, cyfr i myślników, wygląda mniej więcej tak: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d (ma 36 znaków). Kliknij dwa razy w tę wartość, zaznacz ją całą i skopiuj: Ctrl+C (Windows) albo Cmd+C (Mac). W Chrome pełna wartość pokazuje się też na dole panelu, po kliknięciu wiersza.'],
+  ['Wklej tutaj','Wróć do tej strony i kliknij pole „Wklej token” poniżej. Wklej: Ctrl+V albo Cmd+V. Zaznacz trzy zgody i kliknij „Zapisz i połącz”. Jeśli się uda, zobaczysz zielone „zapisany”.']
+ ];
+ steps.forEach((st,i)=>{let r=el('div','sig');let b=el('b','',(i+1)+'. '+st[0]+'. ');r.append(b,document.createTextNode(st[1]));r.style.marginBottom='8px';how.append(r)});
+ how.append(el('div','callout warn','Token działa jak hasło do Twojego konta. Nie wysyłaj go nikomu, nie wklejaj w czatach ani na forach i nie podawaj osobom, które o niego proszą. Tutaj zapisujemy go zaszyfrowanego. Jeśli po jakimś czasie przestanie działać (np. po wylogowaniu z tinder.com), po prostu powtórz te kroki i wklej nowy.'));
+ tok.append(how);
  let tin=el('input','inp');tin.type='password';tin.autocomplete='off';tin.placeholder=ts.token_source?'Wklej nowy token, żeby go podmienić':'Wklej token';tin.spellcheck=false;
  let [tow,town]=toggle('To jest moje konto Tinder',false);let [tak,tack]=toggle('Rozumiem, że integracja jest nieoficjalna i Tinder może ograniczyć konto',false);let [tsd,tsdc]=toggle('Zgadzam się na przetwarzanie danych z rozmów, które mogą dotyczyć życia intymnego (art. 9 RODO). Zgodę wycofam, usuwając token.',false);
  let tres=el('div','mresult');let tsave=el('button','primary','Zapisz i połącz');tsave.disabled=!ts.enabled||!ts.vault_ready;
