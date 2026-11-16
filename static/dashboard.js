@@ -402,12 +402,12 @@ function insightsBlock(m,st,sent){let list=[],th=data.threads,c=m.cur;
  let needs=th.filter(t=>t.state==='needs_reply');
  if(needs.length)list.push({p:1,i:'💬',tone:'hot',h:needs.length+' '+pl(needs.length,'osoba czeka','osoby czekają','osób czeka')+' na odpowiedź',t:names(needs)+'. Im szybciej odpiszesz, tym większa szansa na ciąg dalszy.'});
  let inv=th.filter(t=>t.plan?.stage==='invite');if(inv.length)list.push({p:2,i:'🔥',tone:'hot',h:inv.length+' '+pl(inv.length,'rozmowa jest','rozmowy są','rozmów jest')+' w oknie na zaproszenie',t:names(inv)+': sygnały zainteresowania są dobre, warto zaproponować spotkanie.'});
- if(statsAdv()&&m.heatN>=8){let best=[...m.parts].sort((a,b)=>b.n-a.n)[0],share=Math.round(100*best.n/m.heatN),bd=m.dayTot.indexOf(Math.max(...m.dayTot));list.push({p:3,i:'🕘',h:share+'% wiadomości od nich przychodzi '+best.label+' ('+best.a+'–'+best.b+')',t:'Najaktywniejsze są '+DAYS_LONG[bd]+'. Wtedy najłatwiej złapać rozmowę „na żywo”.'})}
- let q=m.byQ;if(statsAdv()&&q[0].rate!=null&&q[1].rate!=null&&Math.abs(q[0].rate-q[1].rate)>=10){let w=q[0].rate>q[1].rate;list.push({p:4,i:'❓',h:(w?'Pytanie na końcu':'Wiadomość bez pytania')+' dostaje odpowiedź częściej',t:'Z pytaniem: '+q[0].rate+'% (n='+q[0].n+'), bez: '+q[1].rate+'% (n='+q[1].n+').'})}
- let ls=m.byLen.filter(x=>x.rate!=null);if(statsAdv()&&ls.length>=2){let b=[...ls].sort((a,b)=>b.rate-a.rate),w=b[b.length-1];if(b[0].rate-w.rate>=12)list.push({p:5,i:'✍️',h:'Najlepiej działają wiadomości: '+b[0].label,t:b[0].rate+'% odpowiedzi wobec '+w.rate+'% dla „'+w.label+'”.'})}
+ if(m.heatN>=8){let best=[...m.parts].sort((a,b)=>b.n-a.n)[0],share=Math.round(100*best.n/m.heatN),bd=m.dayTot.indexOf(Math.max(...m.dayTot));list.push({p:3,i:'🕘',h:share+'% wiadomości od nich przychodzi '+best.label+' ('+best.a+'–'+best.b+')',t:'Najaktywniejsze są '+DAYS_LONG[bd]+'. Wtedy najłatwiej złapać rozmowę „na żywo”.'})}
+ let q=m.byQ;if(q[0].rate!=null&&q[1].rate!=null&&Math.abs(q[0].rate-q[1].rate)>=10){let w=q[0].rate>q[1].rate;list.push({p:4,i:'❓',h:(w?'Pytanie na końcu':'Wiadomość bez pytania')+' dostaje odpowiedź częściej',t:'Z pytaniem: '+q[0].rate+'% (n='+q[0].n+'), bez: '+q[1].rate+'% (n='+q[1].n+').'})}
+ let ls=m.byLen.filter(x=>x.rate!=null);if(ls.length>=2){let b=[...ls].sort((a,b)=>b.rate-a.rate),w=b[b.length-1];if(b[0].rate-w.rate>=12)list.push({p:5,i:'✍️',h:'Najlepiej działają wiadomości: '+b[0].label,t:b[0].rate+'% odpowiedzi wobec '+w.rate+'% dla „'+w.label+'”.'})}
  if(c.theirMed!=null&&c.theirDelays.length>=3)list.push({p:6,i:'⏱️',h:'Odpowiadają zwykle w ciągu '+dur(c.theirMed),t:c.yourMed!=null?'Ty (z agentem) reagujesz po ok. '+dur(c.yourMed)+'.':'Tak wygląda mediana z ostatnich wymian.'});
  if(m.ghosted.length)list.push({p:7,i:'👻',tone:'cold',h:m.ghosted.length+' '+pl(m.ghosted.length,'rozmowa ucichła','rozmowy ucichły','rozmów ucichło')+' po Twojej wiadomości (3 dni +)',t:names(m.ghosted)+'. Możesz je odpuścić albo zagadać o czymś nowym.'});
- let ag=m.byAge.filter(x=>x.rate!=null);if(statsAdv()&&ag.length>=2){let b=[...ag].sort((a,b)=>b.rate-a.rate);if(b[0].rate-b[b.length-1].rate>=20)list.push({p:8,i:'🎯',h:'Najlepsza odpowiedzialność: '+b[0].label,t:b[0].rate+'% rozmów z odpowiedzią (n='+b[0].n+'), najsłabiej '+b[b.length-1].label+': '+b[b.length-1].rate+'%.'})}
+ let ag=m.byAge.filter(x=>x.rate!=null);if(ag.length>=2){let b=[...ag].sort((a,b)=>b.rate-a.rate);if(b[0].rate-b[b.length-1].rate>=20)list.push({p:8,i:'🎯',h:'Najlepsza odpowiedzialność: '+b[0].label,t:b[0].rate+'% rozmów z odpowiedzią (n='+b[0].n+'), najsłabiej '+b[b.length-1].label+': '+b[b.length-1].rate+'%.'})}
  list.sort((a,b)=>a.p-b.p);list=list.slice(0,6);
  let card=secCard('Co zauważył Winq','Wnioski z Twoich rozmów. Pojawiają się dopiero, gdy jest dość danych, żeby nie zgadywać.','insights');
  if(!list.length){card.append(el('p','sempty','Za mało danych na wnioski. Pierwsze pojawią się po ok. 20 wymienionych wiadomościach.'));return card}
@@ -478,13 +478,12 @@ function depthBlock(m){let card=secCard('Jak głęboko sięgają rozmowy','Liczb
  for(let [i,d] of m.depth.entries()){let c=el('div','col');let bar=el('div','cbar'),f=el('i','');f.style.height=Math.max(d.n?4:0,100*d.n/mx)+'%';f.style.setProperty('--o',String(0.45+i*0.14));bar.append(f);c.append(el('b','cv',d.n),bar,el('span','cl',d.label));hover(c,[d.label,d.n+' '+pl(d.n,'rozmowa','rozmowy','rozmów')]);cols.append(c)}
  card.append(cols);return card}
 
-function opsBlock(st){let sent=0,auto=0,manual=0,uncertain=0;for(let a of st.actions){if(a.status==='sent'){sent+=a.n;if(a.automatic)auto+=a.n;else manual+=a.n}if(a.status==='uncertain')uncertain+=a.n}
- let d=el('details','more opsd');d.append(el('summary','','Pod maską: praca agenta, szkice'+(statsAdv()?' i rezultaty':'')));let g=el('div','grid2');let how=el('div','cardx');how.append(el('h2','','Jak to działa'));
- how.append(kv('Wysłane automatycznie',auto),kv('Wysłane po Twoim zatwierdzeniu',manual),kv('Szkice oczekujące',st.drafts.pending||0),kv('Szkice odrzucone',st.drafts.rejected||0),kv('Szkice nieaktualne',st.drafts.stale||0),kv('Wysyłki niepewne (do sprawdzenia)',uncertain),kv('Tryb',data.settings.mode),kv('Agent',data.settings.paused?'wstrzymany':(data.worker.running?'działa':'wyłączony')));
- if(st.tinder_requests)how.append(kv('Zapytania do Tinder (min / godz.)',st.tinder_requests.minute+' / '+st.tinder_requests.hour));
- let out=el('div','cardx');out.append(el('h2','','Zweryfikowane rezultaty'));let ks=Object.keys(st.outcomes);if(!ks.length)out.append(el('div','fact muted','Brak jeszcze rezultatów. Pojawią się, gdy rozmowa zawiera sprawdzalny kontakt lub plan spotkania.'));for(let k of ks)out.append(kv(OUTCOME_NAMES[k]||k,st.outcomes[k]));
- let res=el('div','cardx');res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiting:'Czekasz na odpowiedź',new_match:'Nowe dopasowania',paused:'Wstrzymane',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia',not_synced:'Niezsynchronizowane'};for(let k of Object.keys(st.by_state))res.append(kv(sn[k]||k,st.by_state[k]));
- g.append(how,res);d.append(g);if(statsAdv())d.append(out);let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));d.append(act);return {node:d,sent}}
+/* Ile wiadomości wysłał Winq (do szacunku zaoszczędzonego czasu w kafelku na górze). */
+function sentByWinq(st){let n=0;for(let a of st.actions)if(a.status==='sent')n+=a.n;return n}
+/* Zweryfikowane rezultaty (randki, Instagram, numery): obiecane w pakiecie Casanova, więc zostają, ale w części zaawansowanej. */
+function resultsBlock(st){let card=secCard('Zweryfikowane rezultaty','Tylko to, co da się sprawdzić w rozmowie: potwierdzony termin, podany kontakt.','results');let ks=Object.keys(st.outcomes);
+ if(!ks.length){card.append(el('p','sempty','Brak jeszcze rezultatów. Pojawią się, gdy rozmowa zawiera sprawdzalny kontakt lub plan spotkania.'));return card}
+ for(let k of ks)card.append(kv(OUTCOME_NAMES[k]||k,st.outcomes[k]));return card}
 
 /* Czy dane są świeże i połączenie działa: bez tego liczby mogłyby być spokojnie nieaktualne. */
 function linkStatus(){let cons=data.tinder?.connections||[],now=Date.now(),box=el('div','linkst');let c=cons[0];
@@ -500,22 +499,26 @@ function linkStatus(){let cons=data.tinder?.connections||[],now=Date.now(),box=e
 /* Podstawowe statystyki (kafelki, odpowiedzi, stan połączenia, gorące rozmowy) dostaje każdy pakiet. Zaawansowane (lejek do randki,
    mapa zainteresowania, aktywność dzień po dniu, co działa, zweryfikowane rezultaty) tylko Casanova: data.plan.advanced_stats. */
 const statsAdv=()=>!data.plan||data.plan.advanced_stats;
-function statsLock(){let c=el('section','cardx statslock');c.append(el('h2','','Zaawansowane statystyki w pakiecie Casanova'),el('p','muted','Zobacz, gdzie rozmowy zamieniają się w randki: lejek od dopasowania do umówionego spotkania, mapę zainteresowania, godziny największej aktywności, to co działa w Twoich wiadomościach i zweryfikowane rezultaty (randki, Instagram, numery).'));c.append(upgradeLink('Zobacz pakiety'));return c}
+function statsLock(){let c=el('section','cardx statslock');c.append(el('span','lockico','🔒'),el('h2','','Reszta statystyk odblokuje się w pakiecie Casanova'),el('p','','Lejek od dopasowania do umówionej randki, mapa zainteresowania, godziny największej aktywności, to co działa w Twoich wiadomościach i zweryfikowane rezultaty. Pojawią się tu od razu po wykupieniu pakietu.'));let a=upgradeLink('Odblokuj w pakiecie Casanova');a.className='btn';c.append(a);return c}
+/* Podgląd tego, co jest za zamkiem: prawdziwe bloki, rozmyte i nieklikalne, z kartą odblokowania na wierzchu. */
+function lockedPreview(blocks){let w=el('div','lockwrap'),body=el('div','lockbody');body.setAttribute('aria-hidden','true');body.inert=true;body.append(...blocks);let ov=el('div','lockov');ov.append(statsLock());w.append(body,ov);return w}
 function renderStats(){let root=document.getElementById('stats-view');root.replaceChildren();if(!data){root.textContent='Ładowanie...';return}let st=data.stats;if(!st){root.textContent='Brak statystyk.';return}
  root.classList.toggle('anim',S.anim&&!REDUCED);
  let head=el('div','stathead');let ttl=el('div','');ttl.append(el('h2','sttitle','Statystyki'),el('p','stsub','Wszystko, co Winq widzi w Twoich rozmowach, policzone na bieżąco z synchronizacji.'));
  let seg=el('div','seg rangeseg');seg.setAttribute('role','group');seg.setAttribute('aria-label','Zakres czasu');for(let [v,l] of [[7,'7 dni'],[30,'30 dni'],[0,'Cały okres']]){let b=el('button',S.range===v?'active':'',l);b.type='button';b.setAttribute('aria-pressed',S.range===v);b.onclick=()=>{S.range=v;S.anim=false;renderStats()};seg.append(b)}
  head.append(ttl,seg);root.append(head,linkStatus());
  if(!data.threads.length){root.append(el('p','sempty big','Brak danych do analizy. Po pierwszej synchronizacji z Tinderem pojawią się tu Twoje statystyki.'));return}
- let m=computeStats(S.range),ops=opsBlock(st);
- root.append(heroBlock(m,st,ops.sent),kpiRow(m),insightsBlock(m,st,ops.sent));
- if(statsAdv()){
-  let two=el('div','sgrid');two.append(constellation(m),hotBlock());root.append(two);
-  let two2=el('div','sgrid even');two2.append(funnelBlock(st),worksBlock(m));root.append(two2);
-  root.append(heatBlock(m));
-  let two3=el('div','sgrid even');two3.append(speedBlock(m),depthBlock(m));root.append(two3)}
- else{root.append(hotBlock(),statsLock())}
- root.append(ops.node);S.anim=false}
+ let m=computeStats(S.range);
+ /* Góra (pasek połączenia, pierścień, cztery kafelki) widzi każdy pakiet. Reszta tylko Casanova, u pozostałych rozmyta za zamkiem. */
+ root.append(heroBlock(m,st,sentByWinq(st)),kpiRow(m));
+ let deep=[insightsBlock(m,st,0)];
+ let two=el('div','sgrid');two.append(constellation(m),hotBlock());deep.push(two);
+ let two2=el('div','sgrid even');two2.append(funnelBlock(st),worksBlock(m));deep.push(two2);
+ deep.push(heatBlock(m));
+ let two3=el('div','sgrid even');two3.append(speedBlock(m),depthBlock(m));deep.push(two3);
+ deep.push(resultsBlock(st));
+ if(statsAdv())root.append(...deep);else root.append(lockedPreview(deep));
+ S.anim=false}
 document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
 
 function renderOnboarding(){const box=document.getElementById('onboard');if(!box||!data)return;updateAutopilotButton();
