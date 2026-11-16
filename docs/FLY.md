@@ -23,7 +23,7 @@ własną aplikację, maszynę, bazę na własnym dysku i własne klucze. Zmienia
    repozytorium `FLY_IMAGE_APP`). Nie uruchamia żadnej maszyny, tylko przechowuje obraz bota.
 4. GitHub, repozytorium, **Settings → Secrets and variables → Actions**: sekret `FLY_API_TOKEN` (token z kroku 2).
    Potem **Actions → Fly bot image → Run workflow**. Obraz buduje się sam po każdej zmianie bota na `main`.
-5. Render, `iskra-landing`, **Environment**:
+5. Render, `winq-site` (dawniej `iskra-landing`, adres onrender.com bez zmian), **Environment**:
    - `FLY_API_TOKEN`: ten sam token,
    - `FLY_ORG`: nazwa organizacji (dla konta osobistego zwykle `personal`),
    - `FLY_IMAGE`: `registry.fly.io/iskra-obraz-e96u:latest`,

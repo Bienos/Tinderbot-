@@ -410,7 +410,7 @@ def test_landing_seo_head_canonical_structured_data_and_no_third_party_fonts(cli
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example');monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
     html=client.get('/').text
     assert '<link rel="canonical" href="https://iskra.example/">' in html
-    assert '<title>Winq, asystent randkowy AI do odpowiedzi na Tinderze</title>' in html and 'noindex' not in html
+    assert '<title>Winq | Skrzydłowy AI</title>' in html and 'noindex' not in html
     assert 'fonts.googleapis.com' not in html and 'fonts.gstatic.com' not in html
     assert "googleapis" not in client.get('/').headers['content-security-policy']
     block=re.search(r'<script type="application/ld\+json">(.*?)</script>',html,re.S).group(1)
