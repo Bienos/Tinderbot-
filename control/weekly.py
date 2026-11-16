@@ -153,6 +153,7 @@ def check_fleet(q, *, base_for, has_access, workers: int = 8) -> list[dict]:
         h = data['health']
         return {**row, 'reachable': True, 'ms': round((time.time() - started) * 1000), 'status': h['status'], 'issues': h['issues'],
                 'tinder_connected': h['tinder']['connected'], 'last_sync_age_min': h['tinder']['last_sync_age_min'],
+                'unreadable_threads': h['tinder'].get('unreadable_threads'),
                 'agent_paused': h['agent']['paused'], 'worker_running': h['agent']['worker_running'],
                 'conversations': data['now']['conversations']}
 
