@@ -62,3 +62,29 @@ i przyjmuje link logowania.
 obraz Fly (`:latest` dla nowych klientów), a istniejące boty przesuwasz `POST /admin/fly/update-image`. Instancje na Renderze mają
 `autoDeployTrigger: off`, więc trzeba je wdrożyć ręcznie. Do tego czasu `/admin/fleet` pokaże je jako nieosiągalne, a podsumowanie
 dla ich właścicieli się nie wyśle (bez błędu dla klienta).
+
+## Automatyczny rollout nowych wersji botów (co noc o 3:00)
+
+Serwis kontrolny sam przestawia boty na najnowszą zbudowaną wersję. Nie trzeba już ręcznie wołać `/admin/fly/update-image`.
+
+- **Skąd wie, co jest najnowsze:** z ostatniego udanego przebiegu workflow „Fly bot image” na `main` (repozytorium jest publiczne, więc GitHub API
+  nie wymaga sekretu). Obraz to `registry.fly.io/<aplikacja>:git-<12 znaków commita>`.
+- **Co jest nieaktualne:** bot, któremu serwis nie zapisał jeszcze tej wersji (tabela `rollout_state`). Boty sprzed tej funkcji dostają ją przy pierwszym przebiegu.
+  Nowo utworzony bot jest od razu oznaczony jako aktualny.
+- **Kiedy:** raz na noc w oknie 3:00-5:00 czasu warszawskiego (początek zapisywany, więc nie powtarza się tej samej nocy, nawet po awarii).
+  `ROLLOUT=false` na serwisie kontrolnym wyłącza harmonogram.
+- **Kolejność:** boty Fly (od najstarszego konta), potem boty klientów na Renderze, na końcu Twój własny bot (`OWNER_SERVICE_ID`).
+- **Bezpieczeństwo:** jeden bot naraz z przerwą. Bot Fly musi wstać jako `live` i odpowiedzieć na podpisane zapytanie `/internal/summary`, zanim
+  ruszy następny. Przy pierwszej awarii serwis cofa ten bot do dokładnie poprzedniego obrazu (po digeście, nie po `:latest`), **zatrzymuje cały przebieg**
+  i wysyła mail na `OWNER_EMAIL`. Konta bez aktywnej subskrypcji są pomijane (ich bot jest wyłączony), a po wznowieniu dostaną nową wersję następnej nocy.
+  Zły build na Renderze zostawia starą wersję (Render nie podmienia jej przy `build_failed`), wtedy tylko alert.
+
+```bash
+# stan: docelowa wersja, które boty są za nią, czy trwa przebieg
+curl -s -H "Authorization: Bearer $ADMIN_TOKEN" https://winq.site/admin/rollout
+# podgląd, co zostałoby zaktualizowane (nic nie rusza)
+curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" -d '{"dry_run":true}' https://winq.site/admin/rollout/run
+# uruchom teraz (w tle), a {"force":true} przestawia też boty, które są już aktualne
+curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" -d '{}' https://winq.site/admin/rollout/run
+```
+Pierwszej nocy po wdrożeniu tej funkcji przestawią się **wszystkie** istniejące boty. Warto wcześniej zrobić `dry_run`, żeby zobaczyć listę.

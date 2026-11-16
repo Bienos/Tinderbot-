@@ -168,6 +168,14 @@ def link_existing(service_id: str) -> dict:
     return {'url': url, 'sso_secret': sso_secret}
 
 
+def trigger_deploy(service_id: str) -> None:
+    """Deploy the newest commit of the branch on a Render-hosted bot (these have auto-deploy off)."""
+    if not re.fullmatch(r'srv-[a-z0-9]+', service_id):
+        raise RuntimeError('refusing to deploy a service with an unexpected id')
+    with _client() as c:
+        c.post(f'/services/{service_id}/deploys', json={}).raise_for_status()
+
+
 def delete_instance(service_id: str) -> None:
     """Remove a customer's bot and its disk for good, on whichever provider runs it. Already gone counts as done."""
     if service_id.startswith('fly:'):

@@ -220,6 +220,17 @@ def delete_instance(app: str) -> None:
                 _check(r, 'delete certificate')
 
 
+def current_image(app: str) -> str:
+    """The image the Machine runs right now, pinned by digest when Fly reports one, so a rollback returns to exactly this build
+    (the ":latest" tag would just pull the newest image again)."""
+    with _client() as c:
+        m = _machine(c, app)
+    ref = m.get('image_ref') or {}
+    if ref.get('registry') and ref.get('repository') and ref.get('digest'):
+        return f"{ref['registry']}/{ref['repository']}@{ref['digest']}"
+    return m['config']['image']
+
+
 def update_image(app: str, image: str) -> str:
     """Move one bot to a new image. The volume (and its data) stays attached; the Machine restarts."""
     with _client() as c:

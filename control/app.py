@@ -16,6 +16,7 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
 import time
 from contextlib import asynccontextmanager, closing
 from pathlib import Path
@@ -24,7 +25,7 @@ from urllib.parse import quote, urlsplit
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
-from control import mailer, provision, catalog, weekly, retention
+from control import mailer, provision, catalog, weekly, retention, rollout
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
@@ -36,6 +37,29 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
 _HITS: dict[str, list[float]] = {}
 
 log = logging.getLogger('uvicorn.error')
+
+
+_TASKS: set = set()
+_ROLLOUT_LOCK = threading.Lock()
+
+
+def run_rollout(**kw) -> dict:
+    """Move every bot to the newest built version (control/rollout.py). Only one run at a time; the owner is mailed on a failure."""
+    if not _ROLLOUT_LOCK.acquire(blocking=False):
+        return {'result': 'already running', 'items': []}
+    try:
+        owner = os.getenv('OWNER_EMAIL', '').strip()
+        alert = (lambda subject, text: mailer.safe_send(owner, subject, text)) if owner else None
+        result = rollout.run(q, has_access=has_access, base_for=panel_url, owner_service_id=os.getenv('OWNER_SERVICE_ID', '').strip(), alert=alert, **kw)
+        done = [i for i in result['items'] if i['result'] == 'updated']
+        if done or result['result'] == 'aborted':
+            log.info('rollout %s: %d updated, %d items', result['result'], len(done), len(result['items']))
+        return result
+    except Exception as exc:  # a crash must not leave the lock held or the loop dead
+        log.error('rollout crashed: %s: %s', type(exc).__name__, str(exc)[:200])
+        return {'result': f'crashed: {type(exc).__name__}', 'items': []}
+    finally:
+        _ROLLOUT_LOCK.release()
 
 
 def run_weekly(now: float, **kw) -> list[dict]:
@@ -53,6 +77,11 @@ async def _weekly_loop():
         try:
             await asyncio.to_thread(remove_pending_instances)  # bots of deleted accounts that could not be removed earlier
             await asyncio.to_thread(reapply_retention_bonuses)  # accepted offers whose bot could not be updated at the time
+            if os.getenv('ROLLOUT', 'true').strip().lower() != 'false' and await asyncio.to_thread(rollout.due, q, time.time()):
+                await asyncio.to_thread(rollout.claim_today, q, time.time())  # once per night, even if it fails or takes hours
+                task = asyncio.create_task(asyncio.to_thread(run_rollout))  # long: it must not hold up the other half-hourly jobs
+                _TASKS.add(task)
+                task.add_done_callback(_TASKS.discard)
             if mailer.configured() and mailer.sender_problem() is None:
                 results = await asyncio.to_thread(run_weekly, time.time())
                 sent = sum(1 for r in results if r['result'] == 'sent')
@@ -101,6 +130,10 @@ SCHEMAS = [
     # Answers of customers who started cancelling (control/retention.py). Kept without identity once the account is deleted.
     'CREATE TABLE IF NOT EXISTS cancel_feedback (id {pk}, account_id INTEGER, created DOUBLE PRECISION NOT NULL, '
     'satisfaction INTEGER NOT NULL, reason TEXT NOT NULL, note TEXT, outcome TEXT NOT NULL)',
+    # Which bot version each customer's bot was last rolled to (control/rollout.py), and when the nightly run last started.
+    'CREATE TABLE IF NOT EXISTS rollout_state (service_id TEXT PRIMARY KEY, target TEXT NOT NULL, status TEXT NOT NULL, '
+    'updated DOUBLE PRECISION NOT NULL, error TEXT)',
+    'CREATE TABLE IF NOT EXISTS rollout_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
 ]
 
 
@@ -227,7 +260,8 @@ def _same_origin(request: Request):
 
 
 async def _json(request: Request) -> dict:
-    _same_origin(request)
+    if not getattr(request.state, 'admin', False):  # the origin check guards cookie sessions; a request with the admin token has no cookie to abuse
+        _same_origin(request)
     try:
         body = await request.json()
     except ValueError:
@@ -852,6 +886,7 @@ def remove_pending_instances() -> dict:
             failed += 1
             continue
         q('DELETE FROM instance_removals WHERE service_id=?', (sid,))
+        q('DELETE FROM rollout_state WHERE service_id=?', (sid,))
         log.info('removed instance %s of a deleted account', sid)
         done += 1
     return {'removed': done, 'failed': failed}
@@ -1159,6 +1194,10 @@ def run_provision(account_id: int, origin: str = '') -> str:
         return 'missing'
     q("UPDATE accounts SET status='active', instance_url=?, sso_secret=?, render_service_id=?, provision_state='done' WHERE id=?",
       (inst['url'], inst['sso_secret'], inst['service_id'], account_id))
+    try:
+        rollout.mark_current(q, inst['service_id'])  # created from the newest image: nothing to roll tonight
+    except Exception:
+        pass
     mailer.panel_ready(acc['email'], origin or os.getenv('PUBLIC_ORIGIN', '').rstrip('/'))
     return 'done'
 
@@ -1245,6 +1284,7 @@ def _admin(request: Request):
     supplied = request.headers.get('authorization', '').removeprefix('Bearer ').strip()
     if len(expected) < 24 or not secrets.compare_digest(supplied, expected):
         raise HTTPException(401, 'Unauthorized')
+    request.state.admin = True
 
 
 @app.get('/admin/accounts')
@@ -1295,6 +1335,35 @@ async def admin_status(request: Request):
     if status == 'disabled':
         q('DELETE FROM account_sessions WHERE account_id IN (SELECT id FROM accounts WHERE email=?)', (str(body.get('email', '')).strip().lower(),))
     return {'ok': True}
+
+
+@app.get('/admin/rollout')
+async def admin_rollout(request: Request):
+    """The version bots should run, what each bot was last rolled to, and when the nightly run last started."""
+    _admin(request)
+    target = await asyncio.to_thread(rollout.latest_build)
+    state = q('SELECT service_id,target,status,updated,error FROM rollout_state ORDER BY service_id', fetch=True)
+    meta = {r['key']: r['value'] for r in q('SELECT key,value FROM rollout_meta', fetch=True)}
+    return {'target': target and {'sha': target['sha'], 'tag': target['tag']}, 'last_nightly_start': meta.get('last_run_day'),
+            'running': _ROLLOUT_LOCK.locked(), 'behind': [s['service_id'] for s in state if target and (s['target'] != target['sha'] or s['status'] != 'ok')],
+            'items': state}
+
+
+@app.post('/admin/rollout/run')
+async def admin_rollout_run(request: Request):
+    """Run the rollout now. {"dry_run": true} lists what would change and touches nothing; {"force": true} also re-rolls bots that are
+    already on the newest version. A real run goes on in the background (check GET /admin/rollout)."""
+    _admin(request)
+    body = await _json(request)
+    only = body.get('only') if body.get('only') in ('fly', 'render') else None  # e.g. just the customers' Fly bots, not the Render ones
+    if body.get('dry_run') is True:
+        return await asyncio.to_thread(run_rollout, dry_run=True, only=only)
+    if _ROLLOUT_LOCK.locked():
+        raise HTTPException(409, 'A rollout is already running.')
+    task = asyncio.create_task(asyncio.to_thread(run_rollout, force=body.get('force') is True, only=only))
+    _TASKS.add(task)
+    task.add_done_callback(_TASKS.discard)
+    return {'started': True}
 
 
 @app.get('/admin/instances/removals')
