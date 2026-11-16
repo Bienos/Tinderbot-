@@ -418,7 +418,5 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .period.acc{width:auto;border-radius:18px;margin:0 0 6px;justify-content:flex-start;padding:5px}.period.acc button{padding:8px 13px;font-size:13px;text-align:left}
 
 .tier-was{color:var(--muted);font-size:18px;font-weight:600;margin-left:6px;text-decoration:line-through;text-decoration-color:rgba(253,38,122,.7)}.tier-was[hidden]{display:none}
-.tier .js-cta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.2}
-.cta-sub{font-size:12px;font-weight:600;opacity:.85}.cta-sub[hidden]{display:none}
 .tier-price{flex-wrap:wrap}.tier-price b{white-space:nowrap}
 .tier-was{order:-1;flex-basis:100%;margin:0 0 2px;line-height:1.1}
