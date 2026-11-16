@@ -384,14 +384,14 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .src input:checked+span{border-color:var(--ember);background:rgba(253,38,122,.08);color:var(--ember);font-weight:600}.src input:focus-visible+span{outline:3px solid var(--flame);outline-offset:2px}
 
 /* pricing: three plans (Winq / Flirt / Casanova), generated from control/catalog.py */
-.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1040px;margin:0 auto;align-items:stretch}
+.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:20px;row-gap:0;max-width:1040px;margin:0 auto;align-items:stretch}
 .tier{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:26px;padding:30px 26px 26px;box-shadow:0 24px 50px -34px rgba(42,15,34,.35)}
-.tier.popular{border:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--fire) border-box;box-shadow:0 34px 60px -30px rgba(253,38,122,.55);transform:translateY(-8px)}
+.tier.popular{border:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--fire) border-box;box-shadow:0 34px 60px -30px rgba(253,38,122,.55)}
 .tier-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--fire);color:#fff;border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700;letter-spacing:.03em}
 .tier h3{font-size:26px;margin:0}
-.tier-tag{margin:4px 0 0;color:var(--muted);font-size:15px}
-.tier-price{margin:18px 0 6px;display:flex;align-items:baseline;gap:4px}.tier-price b{font-family:"Unbounded",sans-serif;font-size:42px;letter-spacing:-.04em;color:var(--ink)}.tier-price span{color:var(--muted);font-size:15px}
-.tier-pitch{margin:0 0 18px;color:var(--text);font-size:16px;line-height:1.5}
+.tier-price{margin:0;display:flex;align-items:baseline;gap:4px}.tier-price b{font-family:"Unbounded",sans-serif;font-size:42px;letter-spacing:-.04em;color:var(--ink)}.tier-price span{color:var(--muted);font-size:15px}
+.tier-pitch{margin:8px 0 22px;color:var(--ink);font-size:16px;line-height:1.5;font-weight:500}
+.tier-pricebox{margin:0 0 22px;padding:0 0 22px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start}
 .tier ul{list-style:none;padding:0;margin:0 0 24px;display:grid;gap:10px;flex:1;align-content:start}
 .tier li{display:flex;gap:10px;font-size:15px;line-height:1.45;color:var(--text)}.tier li::before{content:"✓";color:var(--ember);font-weight:800;flex:none}
 .tier .btn{text-align:center}
@@ -412,14 +412,31 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .period button{font:inherit;font-weight:700;font-size:15px;color:var(--muted);background:none;border:0;border-radius:999px;padding:11px 22px;cursor:pointer;display:flex;align-items:center;gap:8px}
 .period button i{font-style:normal;font-size:12px;font-weight:700;background:rgba(253,38,122,.1);color:var(--ember);border-radius:999px;padding:3px 9px}
 .period button.on{background:var(--fire);color:#fff;box-shadow:0 10px 24px -10px rgba(253,38,122,.7)}.period button.on i{background:rgba(255,255,255,.25);color:#fff}
-.tier-save{margin:0 0 10px;display:inline-block;align-self:flex-start;background:rgba(31,157,85,.12);color:#16834a;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:700}
+.tier-save{margin:12px 0 0;display:inline-block;align-self:flex-start;background:rgba(31,157,85,.12);color:#16834a;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:700}
 .tier-save[hidden]{display:none}
 @media(max-width:560px){.period button{padding:10px 14px;font-size:14px}.period button i{display:none}.period-lead{font-size:17px}}
 .period.acc{width:auto;border-radius:18px;margin:0 0 6px;justify-content:flex-start;padding:5px}.period.acc button{padding:8px 13px;font-size:13px;text-align:left}
 
-.tier-was{color:var(--muted);font-size:18px;font-weight:600;margin-left:6px;text-decoration:line-through;text-decoration-color:rgba(253,38,122,.7)}.tier-was[hidden]{display:none}
+.tier-was{color:#6f5c68;font-size:17px;font-weight:600;margin-left:6px;text-decoration:line-through;text-decoration-color:rgba(253,38,122,.7)}.tier-was[hidden]{display:none}
 .tier-price{flex-wrap:wrap}.tier-price b{white-space:nowrap}
 .tier-was{order:-1;flex-basis:100%;margin:0 0 2px;line-height:1.1}
 
 /* account page: weekly summary preference */
 .weekly-pref{display:flex;align-items:flex-start;gap:8px;margin-top:18px;font-size:13px;line-height:1.45;text-align:left;cursor:pointer}.weekly-pref input{margin-top:2px;accent-color:#fd267a}
+
+/* pricing cards: every card on the same rows (name, description, price, list, button), one voice for the text */
+@media(min-width:901px){@supports(grid-template-rows:subgrid){
+ .tier{display:grid;grid-row:span 5;grid-template-rows:subgrid;row-gap:0}
+ .tier>h3,.tier>.tier-pitch,.tier>.tier-pricebox{align-self:start}
+ .tier>.tier-pricebox{align-self:stretch}.tier>ul{margin-bottom:26px}
+ .tier>.btn{align-self:end}}}
+.tier h3{margin-top:6px}
+.tier-info{max-width:760px;margin:26px auto 0;text-align:center;color:var(--text);font-size:15px;line-height:1.65}
+.tier-trial{margin:0}.tier-trial b{color:var(--ink)}
+.tier-active{margin:12px auto 0;max-width:620px}
+.tier-active summary{display:inline-block;cursor:pointer;color:var(--ember);font-weight:700;font-size:14px;list-style:none;padding:6px 14px;border-radius:999px;background:rgba(253,38,122,.08)}
+.tier-active summary::-webkit-details-marker{display:none}.tier-active[open] summary{background:rgba(253,38,122,.14)}
+.tier-active p{margin:10px 0 0;color:var(--text);font-size:14.5px}
+.tier .btn{box-sizing:border-box;height:60px;padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:center}
+.tier.popular{padding:29px 25px 25px}
+@media(max-width:900px){.tiers{row-gap:22px}}

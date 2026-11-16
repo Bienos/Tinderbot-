@@ -363,11 +363,11 @@ def tiers_html() -> str:
         data = html_lib.escape(json.dumps(facts, ensure_ascii=False), quote=True)
         cards.append(
             f'<article class="tier{" popular" if p.get("popular") else ""}" data-slug="{p["slug"]}" data-prices="{data}">{badge}<h3>{p["name"]}</h3>'
-            f'<p class="tier-tag">{html_lib.escape(p["tagline"])}</p>'
-            f'<p class="tier-price"><b class="js-per">{cur["per"]}</b><span> / mies.</span>'
+            f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p>'
+            f'<div class="tier-pricebox"><p class="tier-price"><b class="js-per">{cur["per"]}</b><span> / mies.</span>'
             f'<s class="tier-was js-was"{"" if cur["was"] else " hidden"}>{cur["was"]}</s></p>'
-            f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p>'
-            f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p><ul>{items}</ul>'
+            f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p></div>'
+            f'<ul>{items}</ul>'
             f'<a class="btn{"" if p.get("popular") else " ghost"} js-cta" href="/rejestracja?plan={p["slug"]}&amp;period={default["key"]}">'
             f'Wybieram {p["name"]}</a></article>')
     switch = ''
@@ -376,10 +376,11 @@ def tiers_html() -> str:
                        f'{q["label"]}{f"<i>{_free_label(q["free"])}</i>" if q["free"] else ""}</button>' for q in catalog.PERIODS)
         switch = ('<p class="period-lead">Im dłużej, tym taniej. <b>Weź rok i trzy miesiące masz gratis.</b></p>'
                   f'<div class="period" role="group" aria-label="Okres rozliczeniowy">{tabs}</div>')
-    trial = f'Pierwsze {_days(n)} w każdym pakiecie za darmo. Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. ' if n else ''
-    note = (f'<p class="tier-note">{trial}Anulujesz w każdej chwili, a dostęp działa do końca opłaconego okresu.</p>'
-            '<p class="tier-note">Aktywna rozmowa to taka, w której ktoś odpisał Ci w ciągu ostatnich 14 dni. Gdy rozmowa ucichnie, miejsce się zwalnia, '
-            'a rozmowy, w których umawiasz spotkanie, nigdy się nie blokują.</p>')
+    trial = (f'<b>Pierwsze {_days(n)} w każdym pakiecie za darmo.</b> Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. ' if n else '')
+    note = (f'<div class="tier-info"><p class="tier-trial">{trial}Anulujesz w każdej chwili, a dostęp działa do końca opłaconego okresu.</p>'
+            '<details class="tier-active"><summary>Co to znaczy „aktywna rozmowa”?</summary>'
+            '<p>Aktywna rozmowa to taka, w której ktoś odpisał Ci w ciągu ostatnich 14 dni. Gdy rozmowa ucichnie, miejsce się zwalnia, '
+            'a rozmowy, w których umawiasz spotkanie, nigdy się nie blokują.</p></details></div>')
     return f'<div class="tiers-wrap" data-period="{default["key"]}">{switch}<div class="tiers" role="group" aria-label="Pakiety">' + ''.join(cards) + '</div></div>' + note
 
 
