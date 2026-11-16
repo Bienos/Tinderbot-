@@ -22,4 +22,5 @@ def store(tmp_path,monkeypatch):
     monkeypatch.setenv('TINDER_ENABLED','false')
     monkeypatch.delenv('TINDER_AUTH_TOKEN',raising=False)
     monkeypatch.delenv('TINDER_OWNER_ID',raising=False)
+    from agent import tinder_traffic;tinder_traffic._OWNER_CHECKS.clear()  # in-memory owner-check cap must not leak between tests
     rt.init();return s

@@ -268,6 +268,14 @@ class TinderClient:
             self.owner_bio = user.get('bio') if isinstance(user, dict) and isinstance(user.get('bio'), str) else ''
         return self.owner_bio
 
+    async def owner_interests_now(self) -> list[str]:
+        """The owner's own Tinder interests ("passions"), read defensively: field names are not under our control."""
+        data = await self.request('GET', '/v2/profile', params={'include': 'user'})
+        user = (data.get('data') or {}).get('user') if isinstance(data.get('data'), dict) else None
+        raw = (user.get('user_interests') or {}).get('selected_interests') if isinstance(user, dict) and isinstance(user.get('user_interests'), dict) else None
+        names = [i.get('name') if isinstance(i, dict) else i for i in raw] if isinstance(raw, list) else []
+        return [n.strip()[:40] for n in names if isinstance(n, str) and n.strip()][:15]
+
     async def pages(self, path: str, key: str, count: int, extra: dict | None = None) -> Page:
         collected = {}; cursor = None; seen = set()
         for _ in range(self.max_pages):
@@ -547,6 +555,23 @@ async def check_bio(connection_id: str) -> dict:
         db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), connection_id))
     rt.audit(None, 'tinder_bio_checked', 'AI disclosure found in bio' if found else 'No AI disclosure in bio')
     return {'found': found, 'bio': bio[:500]}
+
+
+async def sync_profile(connection_id: str) -> dict:
+    """Separate, owner-triggered read of the owner's own profile (interests). It never touches the inbox sync and its
+    budget; it has its own small cap. Fills the "zainteresowania" fact only when the owner left it empty."""
+    con, _ = connection(connection_id, owner_check=True)
+    async with client() as api:
+        api.owner_check = True
+        owner = await api.profile()
+        if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
+        interests = await api.owner_interests_now()
+    cfg = rt.settings(); profile = dict(cfg.get('profile') or {})
+    filled = bool(interests) and not str(profile.get('zainteresowania', '')).strip()
+    if filled:
+        profile['zainteresowania'] = ', '.join(interests); cfg['profile'] = profile; rt.save_settings(cfg)
+    rt.audit(None, 'tinder_profile_synced', f'Read {len(interests)} interests from the owner\'s own profile; ' + ('saved' if filled else 'nothing changed'))
+    return {'interests': interests, 'filled': filled}
 
 
 async def poll():

@@ -192,3 +192,35 @@ async def test_owner_checks_have_their_own_small_cap(store,monkeypatch):
     monkeypatch.setattr(traffic,'_OWNER_CHECKS',[])
     for _ in range(6):traffic.claim_request(owner=True)
     with pytest.raises(traffic.TrafficBudget):traffic.claim_request(owner=True)
+
+
+def _profile_with_interests(monkeypatch,source,names):
+    real=source.handle
+    def handle(req):
+        if req.url.path=='/v2/profile':
+            source.requests.append(req)
+            return httpx.Response(200,json={'data':{'user':{'_id':OWNER,'bio':'x','user_interests':{'selected_interests':[{'id':str(i),'name':n} for i,n in enumerate(names)]}}}})
+        return real(req)
+    monkeypatch.setattr(tinder,'client',lambda:tinder.TinderClient(TOKEN,transport=httpx.MockTransport(handle)))
+
+async def test_profile_sync_fills_empty_interests_even_when_inbox_budget_is_used_up(source,monkeypatch):
+    await tinder.connect()
+    tinder.status_update(CID,error='local_request_budget',delay=1800)
+    _profile_with_interests(monkeypatch,source,['Bieganie','Planszówki'])
+    r=await tinder.sync_profile(CID)
+    assert r=={'interests':['Bieganie','Planszówki'],'filled':True}
+    assert rt.settings()['profile']['zainteresowania']=='Bieganie, Planszówki'
+
+async def test_profile_sync_never_overwrites_what_the_owner_wrote(source,monkeypatch):
+    await tinder.connect()
+    cfg=rt.settings();cfg['profile']={'zainteresowania':'góry, kawa'};rt.save_settings(cfg)
+    _profile_with_interests(monkeypatch,source,['Bieganie'])
+    r=await tinder.sync_profile(CID)
+    assert r['filled'] is False and rt.settings()['profile']['zainteresowania']=='góry, kawa'
+
+async def test_profile_sync_respects_a_cooldown_from_tinder(source,monkeypatch):
+    await tinder.connect()
+    tinder.status_update(CID,error='rate_limited',delay=7200)
+    _profile_with_interests(monkeypatch,source,['Bieganie']);before=len(source.requests)
+    with pytest.raises(tinder.TinderRateLimited):await tinder.sync_profile(CID)
+    assert len(source.requests)==before
