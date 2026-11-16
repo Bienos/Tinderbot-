@@ -154,6 +154,8 @@ def check_fleet(q, *, base_for, has_access, workers: int = 8) -> list[dict]:
         return {**row, 'reachable': True, 'ms': round((time.time() - started) * 1000), 'status': h['status'], 'issues': h['issues'],
                 'tinder_connected': h['tinder']['connected'], 'last_sync_age_min': h['tinder']['last_sync_age_min'],
                 'unreadable_threads': h['tinder'].get('unreadable_threads'),
+                'tinder_debug': {k: h['tinder'].get(k) for k in ('threads_read', 'threads_total', 'requests_last_hour', 'requests_last_minute',
+                                                                 'import_done', 'blocked_for_min', 'next_poll_in_min')},
                 'agent_paused': h['agent']['paused'], 'worker_running': h['agent']['worker_running'],
                 'conversations': data['now']['conversations']}
 

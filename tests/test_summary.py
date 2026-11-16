@@ -103,3 +103,18 @@ def test_health_counts_conversations_that_could_not_be_read(store):
         db.execute("INSERT INTO tinder_threads VALUES('a',?),('b',?),('c',?)",
                    (json.dumps({'read_failed': True}), json.dumps({'person_id': 'x'}), json.dumps({'read_failed': True, 'failed_at': 1})))
     assert summary.weekly()['health']['tinder']['unreadable_threads'] == 2
+
+
+def test_health_reports_synchronization_progress_and_budget_use(store):
+    import json
+    from agent import summary
+    now = time.time()
+    with s.connect() as db:
+        db.execute("INSERT INTO connections VALUES('tinder:x',1,1,'x',?)", (json.dumps({'initial_import_done': False, 'blocked_until': now + 600, 'next_poll': now + 120}),))
+        db.execute("INSERT INTO tinder_threads VALUES('a',?),('b',?),('c',?)",
+                   (json.dumps({'last_read': 1}), json.dumps({'last_read': 2}), json.dumps({'person_id': 'p'})))
+        db.executemany('INSERT INTO tinder_requests(ts) VALUES(?)', [(now - 10,), (now - 30,), (now - 1800,), (now - 7200,)])
+    tin = summary.weekly()['health']['tinder']
+    assert (tin['threads_read'], tin['threads_total']) == (2, 3) and tin['import_done'] is False
+    assert (tin['requests_last_minute'], tin['requests_last_hour']) == (2, 3)
+    assert 9 <= tin['blocked_for_min'] <= 10 and 1 <= tin['next_poll_in_min'] <= 2

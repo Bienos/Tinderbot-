@@ -95,13 +95,19 @@ def _health(now: float) -> dict:
     for r in rows:
         v = json.loads(r['value'])
         conns.append({'enabled': bool(r['enabled']), 'error': v.get('error'), 'last_sync': _ts(v.get('last_sync')),
-                      'blocked_until': float(v.get('blocked_until', 0) or 0)})
-    unreadable = 0
+                      'blocked_until': float(v.get('blocked_until', 0) or 0), 'import_done': bool(v.get('initial_import_done')),
+                      'next_poll': float(v.get('next_poll', 0) or 0), 'idle_rounds': v.get('idle_rounds')})
+    unreadable = threads_read = threads_total = 0
     for r in s.rows('SELECT value FROM tinder_threads'):
         try:
-            unreadable += bool(json.loads(r['value']).get('read_failed'))
+            v = json.loads(r['value'])
         except ValueError:
-            pass
+            continue
+        threads_total += 1
+        threads_read += bool(v.get('last_read'))
+        unreadable += bool(v.get('read_failed'))
+    requests_hour = s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?', (now - 3600,))[0]['n']
+    requests_minute = s.rows('SELECT COUNT(*) n FROM tinder_requests WHERE ts>?', (now - 60,))[0]['n']
     issues: list[str] = []
     paused = bool(cfg.get('paused'))
     live = [c for c in conns if c['enabled']]
@@ -119,7 +125,12 @@ def _health(now: float) -> dict:
         issues.append('worker_error')
     problem = any(i.startswith('tinder_error') or i in ('sync_stale', 'worker_error', 'tinder_not_connected') for i in issues)
     return {'status': 'problem' if problem else 'attention' if issues else 'ok', 'issues': sorted(set(issues)),
-            'tinder': {'configured': tinder.configured(), 'connections': len(conns), 'unreadable_threads': unreadable, 'connected': bool(live) and not any(c['error'] for c in live),
+            'tinder': {'configured': tinder.configured(), 'connections': len(conns), 'unreadable_threads': unreadable,
+                       # Diagnostics for a synchronization that does not finish: progress, budget use and waiting times.
+                       'threads_read': threads_read, 'threads_total': threads_total, 'requests_last_hour': requests_hour,
+                       'requests_last_minute': requests_minute, 'import_done': any(c['import_done'] for c in conns),
+                       'blocked_for_min': max((round(max(0, c['blocked_until'] - now) / 60, 1) for c in conns), default=0),
+                       'next_poll_in_min': max((round(max(0, c['next_poll'] - now) / 60, 1) for c in conns), default=0), 'connected': bool(live) and not any(c['error'] for c in live),
                        'last_sync_age_min': None if last_sync is None else max(0, round((now - last_sync) / 60))},
             'agent': {'paused': paused, 'mode': cfg.get('mode'), 'worker_running': bool(service.WORKER.get('running'))}}
 
