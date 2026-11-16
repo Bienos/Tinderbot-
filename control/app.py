@@ -22,7 +22,7 @@ from urllib.parse import urlsplit
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
-from control import mailer, provision
+from control import mailer, provision, catalog
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / 'static'
@@ -56,7 +56,7 @@ MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status
               ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
               ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
               ('accounts', 'withdrawn_at', 'DOUBLE PRECISION'), ('accounts', 'provision_started', 'DOUBLE PRECISION'),
-              ('accounts', 'source', 'TEXT')]
+              ('accounts', 'source', 'TEXT'), ('accounts', 'plan', 'TEXT'), ('accounts', 'plan_choice', 'TEXT')]
 WITHDRAWAL_DAYS = 14
 # Optional "Skąd o nas wiesz?" answer on sign-up.
 SIGNUP_SOURCES = ('tiktok', 'instagram', 'friend', 'google', 'other')
@@ -283,6 +283,24 @@ def _days(n: int) -> str:
     return f'{n} dzień' if n == 1 else f'{n} dni'
 
 
+def tiers_html() -> str:
+    """The pricing cards on the landing page, generated from the catalog so prices and limits exist in one place."""
+    n = trial_days()
+    cards = []
+    for p in catalog.PLANS:
+        items = ''.join(f'<li>{html_lib.escape(f)}</li>' for f in p['features'])
+        badge = '<span class="tier-badge">Najczęściej wybierany</span>' if p.get('popular') else ''
+        cards.append(f'<article class="tier{" popular" if p.get("popular") else ""}">{badge}<h3>{p["name"]}</h3>'
+                     f'<p class="tier-tag">{html_lib.escape(p["tagline"])}</p><p class="tier-price"><b>{p["price"]} zł</b><span> / mies.</span></p>'
+                     f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p><ul>{items}</ul>'
+                     f'<a class="btn{"" if p.get("popular") else " ghost"}" href="/rejestracja?plan={p["slug"]}">Wybieram {p["name"]}</a></article>')
+    trial = f'Pierwsze {_days(n)} w każdym pakiecie za darmo. Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. ' if n else ''
+    note = (f'<p class="tier-note">{trial}Anulujesz w każdej chwili.</p>'
+            '<p class="tier-note">Aktywna rozmowa to taka, w której ktoś odpisał Ci w ciągu ostatnich 14 dni. Gdy rozmowa ucichnie, miejsce się zwalnia, '
+            'a rozmowy, w których umawiasz spotkanie, nigdy się nie blokują.</p>')
+    return '<div class="tiers" role="group" aria-label="Pakiety">' + ''.join(cards) + '</div>' + note
+
+
 def trial_texts() -> dict[str, str]:
     n = trial_days()
     if not n:
@@ -310,6 +328,19 @@ def page(name: str) -> HTMLResponse:
         html = html.replace('{{' + key + '}}', os.getenv(key, '').strip() or fallback)
     for token_, text_ in trial_texts().items():
         html = html.replace(token_, text_)
+    prices = ', '.join(f'{p["name"]} {p["price"]} zł' for p in catalog.PLANS)
+    if catalog.enabled():
+        html = re.sub(r'<!--TICKET-->.*?<!--/TICKET-->', '', html, flags=re.S).replace('{{TIERS}}', tiers_html())
+        price = f'od {min(p["price"] for p in catalog.PLANS)} zł / mies.'
+        faq_price = f'Trzy pakiety: {prices} miesięcznie.'
+        terms_price = f'Cena Subskrypcji zależy od wybranego pakietu: {prices} miesięcznie (kwoty brutto)'
+        plan_terms = ('<li>Pakiety różnią się liczbą aktywnych rozmów prowadzonych naraz i dostępnością funkcji Autopilot, zgodnie z opisem w cenniku. '
+                      'Aktywna rozmowa to rozmowa, w której druga osoba odpisała w ciągu ostatnich 14 dni. Rozmowy, w których ustalany jest termin spotkania, '
+                      'nie są blokowane limitem.</li>')
+    else:
+        html = html.replace('<!--TICKET-->', '').replace('<!--/TICKET-->', '').replace('{{TIERS}}', '')
+        faq_price, terms_price, plan_terms = f'Jeden plan w subskrypcji, {price}.', f'Cena Subskrypcji wynosi {price} (kwota brutto)', ''
+    html = html.replace('{{PRICE_FAQ}}', faq_price).replace('{{PRICE_TERMS}}', terms_price).replace('{{PLAN_TERMS}}', plan_terms)
     html = html.replace('{{ORIGIN}}', origin).replace('{{PATH}}', path).replace('{{PRICE}}', price).replace('{{BRAND}}', BRAND)
     if name == 'index.html' and origin:
         html = html.replace('</head>', structured_data(html, origin, price) + '</head>', 1)
@@ -582,7 +613,8 @@ def me(request: Request):
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
             'provision_state': acc.get('provision_state') or '', 'can_withdraw': can_withdraw(acc),
             'withdrawn': bool(acc.get('withdrawn_at')),
-            'trial_days': trial_days(), 'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
+            'trial_days': trial_days(), 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '',
+            'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
             'setup': setup_progress(acc)}
 
 
@@ -684,9 +716,15 @@ async def billing_checkout(request: Request):
     if body.get('start_now') is not True:
         raise HTTPException(422, 'Zaznacz zgodę na rozpoczęcie usługi przed upływem 14 dni i akceptację regulaminu.')
     q('UPDATE accounts SET start_consent_at=? WHERE id=?', (time.time(), acc['id']))
+    chosen = None
+    if catalog.enabled():
+        chosen = catalog.get(body.get('plan'))
+        if not chosen:
+            raise HTTPException(422, 'Wybierz pakiet.')
+        q('UPDATE accounts SET plan_choice=? WHERE id=?', (chosen['slug'], acc['id']))
     if link_mode():
         from urllib.parse import urlencode
-        return {'url': os.environ['STRIPE_PAYMENT_LINK'] + '?' + urlencode({'client_reference_id': str(acc['id']), 'prefilled_email': acc['email'], 'locale': 'pl'})}
+        return {'url': (catalog.link_for(chosen['slug']) if chosen else os.environ['STRIPE_PAYMENT_LINK']) + '?' + urlencode({'client_reference_id': str(acc['id']), 'prefilled_email': acc['email'], 'locale': 'pl'})}
     import stripe
     params = dict(mode='subscription', line_items=[{'price': os.environ['STRIPE_PRICE_ID'], 'quantity': 1}],
                   client_reference_id=str(acc['id']), success_url=_origin(request) + '/konto?platnosc=ok',
@@ -770,12 +808,14 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
     if event['type'] == 'checkout.session.completed' and obj.get('mode') == 'subscription':
         ref = str(obj.get('client_reference_id') or '')
         if ref.isdigit():
-            q("UPDATE accounts SET stripe_customer=?, plan_status='active', withdrawn_at=NULL, paid_at=COALESCE(paid_at, ?) WHERE id=?",
+            q("UPDATE accounts SET stripe_customer=?, plan_status='active', withdrawn_at=NULL, paid_at=COALESCE(paid_at, ?), plan=COALESCE(plan_choice, plan) WHERE id=?",
               (obj.get('customer'), time.time(), int(ref)))
-            rows = q('SELECT email FROM accounts WHERE id=?', (int(ref),), fetch=True)
+            rows = q('SELECT email, plan, render_service_id FROM accounts WHERE id=?', (int(ref),), fetch=True)
             if rows:
                 tasks.add_task(mailer.payment_ok, rows[0]['email'], _origin(request))
                 tasks.add_task(run_provision, int(ref), _origin(request))
+                if rows[0].get('render_service_id') and catalog.get(rows[0].get('plan')):
+                    tasks.add_task(_apply_plan, rows[0]['render_service_id'], rows[0]['plan'])  # came back with another plan
     elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
         status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
         # A withdrawn contract stays withdrawn until the owner cancels it in Stripe; only a fresh checkout reopens it.
@@ -811,7 +851,7 @@ def run_provision(account_id: int, origin: str = '') -> str:
         return 'running'
     q("UPDATE accounts SET provision_state='running', provision_error=NULL, provision_started=? WHERE id=?", (time.time(), account_id))
     try:
-        inst = provision.create_instance(account_id)
+        inst = provision.create_instance(account_id, (catalog.get(acc.get('plan')) or {}).get('slug'))
     except Exception as exc:
         q("UPDATE accounts SET provision_state='failed', provision_error=? WHERE id=?", (type(exc).__name__ + ': ' + str(exc)[:240], account_id))
         return 'failed'
@@ -840,6 +880,13 @@ def link_owner(acc: dict) -> str:
     q("UPDATE accounts SET status='active', comped=1, instance_url=?, sso_secret=?, provision_state='done' WHERE id=?",
       (inst['url'], inst['sso_secret'], acc['id']))
     return 'done'
+
+
+def _apply_plan(service_id: str, plan: str) -> None:
+    try:
+        provision.set_plan(service_id, plan)
+    except Exception:
+        pass
 
 
 def _suspend(service_id: str, suspended: bool) -> None:

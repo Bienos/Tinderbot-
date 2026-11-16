@@ -181,6 +181,8 @@ def auto_allowed(thread,ctx=None):
     cfg=ctx['cfg'] if 'cfg' in ctx else ctx.setdefault('cfg',settings())
     if not eligible(thread,ctx):return False
     if thread['platform']=='simulator':return cfg['mode']=='simulation'
+    from agent import plans
+    if not plans.autopilot_allowed():return False  # the plan has drafts only: the owner clicks Send
     con=_connection(thread['connection_id'],ctx)
     platform_auto=cfg['mode']=='authorized_autonomy'
     if thread['platform']=='tinder':

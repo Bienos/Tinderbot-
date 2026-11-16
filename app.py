@@ -267,7 +267,13 @@ def state():
         p=project(t,hist[t['id']],[d for d in drafts if d['thread_id']==t['id']],[])
         p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t,ctx);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
     mem=rt.memory_by_thread()
-    return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
+    from agent import plans
+    plan=plans.status(rows,hist)
+    if plan:
+        waiting=set(plan['queued'])
+        for p_ in threads:p_['queued']=p_['id'] in waiting
+        plan['queued']=len(waiting)
+    return {'plan':plan,'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:mem.get(t['id'],[]) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
@@ -541,6 +547,9 @@ def tinder_automation(connection_id:str,body:TinderAutomation):
         row=db.execute("SELECT value FROM connections WHERE id=? AND id LIKE 'tinder:%'",(connection_id,)).fetchone()
         if not row:raise HTTPException(404,'Tinder connection not found')
         value=json.loads(row['value'])
+        if body.enabled:
+            from agent import plans
+            if not plans.autopilot_allowed():raise HTTPException(403,'Autopilot jest w pakietach Flirt i Casanova. Ulepsz pakiet na stronie konta.')
         if body.enabled is not None:value['auto_send']=body.enabled
         if body.bio_mode is not None:value['bio_mode']=body.bio_mode
         db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),connection_id))

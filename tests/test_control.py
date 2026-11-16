@@ -769,3 +769,60 @@ def test_free_trial_wording_follows_trial_days(client,monkeypatch):
     assert 'Zacznij 3 dni za darmo' in mailer.SENT[1]['text']
     monkeypatch.setenv('TRIAL_DAYS','0');mailer.SENT.clear();mailer.payment_ok('a@b.pl',o)
     assert mailer.SENT[0]['subject']=='Płatność przyjęta'
+
+
+PLAN_LINKS={'STRIPE_LINK_WINQ':'https://buy.stripe.com/w','STRIPE_LINK_FLIRT':'https://buy.stripe.com/f','STRIPE_LINK_CASANOVA':'https://buy.stripe.com/c'}
+
+
+def test_landing_shows_three_plans_only_when_all_payment_links_exist(client,monkeypatch):
+    monkeypatch.setenv('PLAN_PRICE','49 zł / mies.');monkeypatch.setenv('TRIAL_DAYS','3')
+    for k in PLAN_LINKS:monkeypatch.delenv(k,raising=False)
+    old=client.get('/').text
+    assert 'class="ticket"' in old and 'class="tiers"' not in old and 'Jeden plan w subskrypcji, 49 zł / mies.' in old
+    monkeypatch.setenv('STRIPE_LINK_WINQ','https://buy.stripe.com/w');monkeypatch.setenv('STRIPE_LINK_FLIRT','https://buy.stripe.com/f')
+    assert 'class="tiers"' not in client.get('/').text            # two of three is not enough
+    for k,v in PLAN_LINKS.items():monkeypatch.setenv(k,v)
+    page=client.get('/').text
+    assert 'class="tiers"' in page and 'class="ticket"' not in page and '{{' not in page
+    for needle in ('Winq</h3>','Flirt</h3>','Casanova</h3>','19 zł','69 zł','169 zł','Najczęściej wybierany','Do 10 aktywnych rozmów','Pierwsze 3 dni w każdym pakiecie za darmo','href="/rejestracja?plan=flirt"'):
+        assert needle in page,needle
+    assert 'Trzy pakiety: Winq 19 zł, Flirt 69 zł, Casanova 169 zł miesięcznie.' in page and 'Jeden plan w subskrypcji' not in page
+    terms=client.get('/regulamin').text
+    assert 'zależy od wybranego pakietu' in terms and 'Aktywna rozmowa to rozmowa' in terms and '{{' not in terms
+
+
+def test_plan_chosen_at_checkout_is_stored_and_reaches_the_new_bot(client,monkeypatch):
+    pytest.importorskip('stripe')
+    import json
+    from control import provision
+    from urllib.parse import urlparse,parse_qs
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls))
+    for k,v in PLAN_LINKS.items():monkeypatch.setenv(k,v)
+    client.post('/api/register',json=REG)
+    me=client.get('/api/me').json();assert [p['slug'] for p in me['plans']]==['winq','flirt','casanova'] and me['plans'][1]['popular']
+    assert client.post('/api/billing/checkout',json={'start_now':True}).status_code==422                      # a plan must be chosen
+    assert client.post('/api/billing/checkout',json={'start_now':True,'plan':'vip'}).status_code==422
+    url=client.post('/api/billing/checkout',json={'start_now':True,'plan':'flirt'}).json()['url']
+    assert url.startswith('https://buy.stripe.com/f?');aid=parse_qs(urlparse(url).query)['client_reference_id'][0]
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_pl'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    assert client.get('/api/me').json()['plan']=='flirt'
+    created=[c for c in calls if c[1]=='/v1/services'];assert len(created)==1
+    assert {e['key']:e['value'] for e in created[0][2]['envVars']}['PLAN']=='flirt'
+
+
+def test_coming_back_with_another_plan_updates_the_running_bot(client,monkeypatch):
+    pytest.importorskip('stripe')
+    import json
+    from control import provision
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls))
+    for k,v in PLAN_LINKS.items():monkeypatch.setenv(k,v)
+    from urllib.parse import urlparse,parse_qs
+    client.post('/api/register',json=REG)
+    aid=parse_qs(urlparse(client.post('/api/billing/checkout',json={'start_now':True,'plan':'winq'}).json()['url']).query)['client_reference_id'][0]
+    pay=lambda:client.post('/stripe/webhook',content=(ev:=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_pl'}}})),headers=_signed(ev,'whsec_p'))
+    client.post('/api/billing/checkout',json={'start_now':True,'plan':'winq'});pay()
+    import control.app as capp
+    capp.q("UPDATE accounts SET plan_status='canceled' WHERE id=?",(int(aid),))
+    client.post('/api/billing/checkout',json={'start_now':True,'plan':'casanova'});pay()
+    assert ('PUT','/v1/services/srv-new/env-vars/PLAN',{'value':'casanova'}) in calls
