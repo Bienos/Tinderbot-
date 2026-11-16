@@ -826,3 +826,28 @@ def test_coming_back_with_another_plan_updates_the_running_bot(client,monkeypatc
     capp.q("UPDATE accounts SET plan_status='canceled' WHERE id=?",(int(aid),))
     client.post('/api/billing/checkout',json={'start_now':True,'plan':'casanova'});pay()
     assert ('PUT','/v1/services/srv-new/env-vars/PLAN',{'value':'casanova'}) in calls
+
+
+def test_switching_plan_in_stripe_changes_the_plan_and_the_running_bot(client,monkeypatch):
+    pytest.importorskip('stripe')
+    import json
+    from urllib.parse import urlparse,parse_qs
+    from control import provision
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls))
+    for k,v in PLAN_LINKS.items():monkeypatch.setenv(k,v)
+    for slug in ('WINQ','FLIRT','CASANOVA'):monkeypatch.setenv('STRIPE_PRICE_'+slug,'price_'+slug.lower())
+    client.post('/api/register',json=REG)
+    aid=parse_qs(urlparse(client.post('/api/billing/checkout',json={'start_now':True,'plan':'winq'}).json()['url']).query)['client_reference_id'][0]
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_up'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    assert client.get('/api/me').json()['plan']=='winq'
+    def switch(price,status='active'):
+        e=json.dumps({'type':'customer.subscription.updated','data':{'object':{'customer':'cus_up','status':status,'items':{'data':[{'price':{'id':price}}]}}}})
+        return client.post('/stripe/webhook',content=e,headers=_signed(e,'whsec_p'))
+    plan_puts=lambda:[c for c in calls if c[1].endswith('/env-vars/PLAN')]
+    assert switch('price_winq').status_code==200 and not plan_puts()                       # same plan: bot untouched
+    assert switch('price_flirt').status_code==200
+    assert client.get('/api/me').json()['plan']=='flirt' and ('PUT','/v1/services/srv-new/env-vars/PLAN',{'value':'flirt'}) in calls
+    assert switch('price_unknown').status_code==200 and client.get('/api/me').json()['plan']=='flirt'   # an unknown price changes nothing
+    assert switch('price_winq').status_code==200 and client.get('/api/me').json()['plan']=='winq'        # downgrade works the same way
+    assert ('PUT','/v1/services/srv-new/env-vars/PLAN',{'value':'winq'}) in calls
