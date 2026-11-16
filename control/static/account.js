@@ -15,12 +15,16 @@ async function go(url,payload){try{const r=await post(url,payload);location.href
 function buy(label,plans){const l=document.createElement('label');l.className='check consent';const c=document.createElement('input');c.type='checkbox';
  l.append(c,document.createTextNode(' Akceptuję regulamin i proszę o rozpoczęcie usługi od razu, przed upływem 14 dni na odstąpienie. Jeśli odstąpię, zapłacę tylko za dni korzystania.'));
  if(plans&&plans.length){const want=(()=>{try{return sessionStorage.getItem('winq-plan')||''}catch(e){return ''}})(),box=document.createElement('div');box.className='plans';
-  const start=(slug)=>{if(!c.checked){l.classList.add('need');l.scrollIntoView({block:'center'});return}go('/api/billing/checkout',{start_now:true,plan:slug})};
-  plans.forEach(p=>{const o=document.createElement('div');o.className='plan-opt'+((want?want===p.slug:p.popular)?' pick':'');
-   const h=document.createElement('h3');h.textContent=p.name;const pr=document.createElement('small');pr.textContent=p.price+' zł / mies.';h.append(pr);
-   const d=document.createElement('p');d.textContent=p.tagline+'. '+(p.autopilot?'Autopilot, ':'Szkice, ')+'do '+p.conversations+' aktywnych rozmów naraz.';
-   o.append(h,d,btn('Wybieram '+p.name,p.popular||want===p.slug?'btn':'btn ghost',()=>start(p.slug)));box.append(o)});
-  card.append(box,l);return}
+  const keys=(plans[0].periods||[]).map(x=>x.key),wp=(()=>{try{return sessionStorage.getItem('winq-period')||''}catch(e){return ''}})();let per=keys.includes(wp)?wp:(keys.includes('12')?'12':'1');
+  const zl=n=>(Number.isInteger(n)?String(n):n.toFixed(2).replace('.',','))+' zł',free=n=>n===1?'1 miesiąc gratis':n+' miesiące gratis';
+  const start=(slug)=>{if(!c.checked){l.classList.add('need');l.scrollIntoView({block:'center'});return}go('/api/billing/checkout',{start_now:true,plan:slug,period:per})};
+  const draw=()=>{box.replaceChildren();
+   if(keys.length>1){const sw=document.createElement('div');sw.className='period acc';plans[0].periods.forEach(x=>{const b=document.createElement('button');b.type='button';b.className=x.key===per?'on':'';b.textContent=x.label+(x.free?' · '+free(x.free):'');b.onclick=()=>{per=x.key;try{sessionStorage.setItem('winq-period',per)}catch(e){}draw()};sw.append(b)});box.append(sw)}
+   plans.forEach(p=>{const f=(p.periods||[]).find(x=>x.key===per)||p.periods[0],o=document.createElement('div');o.className='plan-opt'+((want?want===p.slug:p.popular)?' pick':'');
+    const h=document.createElement('h3');h.textContent=p.name;const pr=document.createElement('small');pr.textContent=zl(f.per_month)+' / mies.';h.append(pr);
+    const d=document.createElement('p');d.textContent=p.tagline+'. '+(p.autopilot?'Autopilot, ':'Szkice, ')+'do '+p.conversations+' aktywnych rozmów naraz.';
+    o.append(h,d,btn('Wybieram '+p.name,p.popular||want===p.slug?'btn':'btn ghost',()=>start(p.slug)));box.append(o)})};
+  draw();card.append(box,l);return}
  const b=btn(label,'btn',()=>{if(!c.checked){l.classList.add('need');return}go('/api/billing/checkout',{start_now:true})});card.append(l,b)}
 function withdrawBox(){const d=document.createElement('details');d.className='withdraw';const s=document.createElement('summary');s.textContent='Odstąp od umowy';
  const t=document.createElement('p');t.textContent='Masz 14 dni od zakupu. Nie musisz podawać powodu. Zwrócimy pieniądze pomniejszone o dni korzystania, w ciągu 14 dni.';
@@ -75,7 +79,7 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut, a ta strona odświeży się sama.':'Stawiamy Twój osobny serwer. Ta strona odświeży się sama, a gdy panel będzie gotowy, napiszemy też mailem.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s);watch(me)}
  if(me.withdrawn){const w=document.createElement('p');w.className='muted';w.textContent='Odstąpiłeś od umowy. Zwrot jest w drodze.';card.append(w)}
  if(me.can_withdraw)withdrawBox();
- if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';w.textContent='Twój pakiet: '+cur.name+' ('+cur.price+' zł / mies., do '+cur.conversations+' aktywnych rozmów).';card.append(w)}}
+ if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';const pp=(cur.periods||[]).find(x=>x.key===(me.plan_period||'1'));w.textContent='Twój pakiet to '+cur.name+(pp&&pp.months>1?' ('+pp.label.toLowerCase()+')':'')+', do '+cur.conversations+' aktywnych rozmów.';card.append(w)}}
  if(me.can_manage_billing)card.append(btn(me.plans&&me.plans.length?'Zmień pakiet lub zarządzaj subskrypcją':'Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));

@@ -18,9 +18,9 @@ from datetime import datetime, timedelta, timezone
 from agent import storage as s
 
 PLANS = {
-    'winq': {'label': 'Winq', 'conversations': 3, 'autopilot': False},
-    'flirt': {'label': 'Flirt', 'conversations': 10, 'autopilot': True},
-    'casanova': {'label': 'Casanova', 'conversations': 30, 'autopilot': True},
+    'winq': {'label': 'Winq', 'conversations': 3, 'autopilot': False, 'advanced_stats': False},
+    'flirt': {'label': 'Flirt', 'conversations': 10, 'autopilot': True, 'advanced_stats': False},
+    'casanova': {'label': 'Casanova', 'conversations': 30, 'autopilot': True, 'advanced_stats': True},
 }
 ACTIVE_DAYS = 14
 DATE_KINDS = {'date_suggested', 'date_tentative', 'date_confirmed'}
@@ -123,5 +123,5 @@ def status(threads: list[dict] | None = None, hist: dict | None = None) -> dict 
         if (t.get('platform') not in (None, 'simulator') and h and h[-1]['sender'] == 'them'
                 and not t.get('user_archived') and not t.get('user_paused') and t['id'] not in admitted):
             queued.append(t['id'])
-    return {'name': name, 'label': plan['label'], 'limit': limit(), 'used': used, 'autopilot': plan['autopilot'],
+    return {'name': name, 'label': plan['label'], 'limit': limit(), 'used': used, 'autopilot': plan['autopilot'], 'advanced_stats': plan['advanced_stats'],
             'active_days': ACTIVE_DAYS, 'queued': queued}
