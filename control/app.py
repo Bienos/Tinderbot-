@@ -135,9 +135,18 @@ def current_account(request: Request) -> dict | None:
     return rows[0] if rows else None
 
 
+def panel_url(account: dict) -> str:
+    """Where this customer's panel lives. The owner's bot runs on Render's own address; OWNER_PANEL_URL puts it on
+    the brand's domain (e.g. https://panel.winq.site) without touching the stored address."""
+    custom = os.getenv('OWNER_PANEL_URL', '').strip().rstrip('/')
+    if custom.startswith('https://') and is_owner(account.get('email', '')):
+        return custom
+    return account['instance_url'].rstrip('/')
+
+
 def sso_token(account: dict) -> str:
     """Single-use, 60-second sign-in link for the customer's own instance, HMAC-signed with its secret."""
-    origin = account['instance_url'].rstrip('/')
+    origin = panel_url(account)
     payload = base64.urlsafe_b64encode(json.dumps({'aud': origin, 'sub': account['email'], 'exp': int(time.time()) + 60,
                                                    'n': secrets.token_urlsafe(16)}, separators=(',', ':')).encode()).decode().rstrip('=')
     sig = hmac.new(account['sso_secret'].encode(), payload.encode(), hashlib.sha256).digest()
@@ -397,7 +406,7 @@ def open_panel(request: Request):
         return RedirectResponse('/zaloguj', 303)
     if acc['status'] != 'active' or not acc.get('instance_url') or not acc.get('sso_secret') or not has_access(acc):
         return RedirectResponse('/konto', 303)
-    return RedirectResponse(acc['instance_url'].rstrip('/') + '/auth/sso?t=' + sso_token(acc), 303)
+    return RedirectResponse(panel_url(acc) + '/auth/sso?t=' + sso_token(acc), 303)
 
 
 # Public demo: the bot's real panel (static/dashboard.html at the repo root) on invented data.
