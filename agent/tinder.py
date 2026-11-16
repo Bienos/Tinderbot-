@@ -155,6 +155,7 @@ def poll_interval() -> int:
 
 
 class TinderClient:
+    read_reserve = 0  # synchronization sets this so that reads leave part of the hourly budget for sending
     """OpenDate-derived async HTTP connector, without its mutation retry/synthetic receipt paths."""
     def __init__(self, auth_token: str, *, transport=None, max_pages: int = 20):
         self.max_pages = max(1, max_pages)
@@ -198,7 +199,7 @@ class TinderClient:
                 if state.get('blocked_until',0)>time.time() and not (self.owner_check and state.get('error')=='local_request_budget'):
                     raise active_cooldown(state['blocked_until']-time.time(),state.get('error'))
                 if not row['enabled'] and not self.reconnect:raise TinderAuthError('connection_paused')
-            try:traffic.claim_request(owner=self.owner_check)
+            try:traffic.claim_request(owner=self.owner_check,reserve=self.read_reserve)
             except traffic.TrafficBudget as exc:
                 limited=TinderRateLimited(exc.delay);limited.reason='local_request_budget';raise limited from None
             try:
@@ -489,10 +490,16 @@ async def sync_connection(connection_id: str):
     async with client() as api:
         owner = await api.profile()
         if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
-        page = await api.matches(); observed = set()
+        api.read_reserve = traffic.integer('TINDER_SEND_RESERVE', 40, 0, 500)
+        page = await api.matches(); observed = set(); deferred = False
         listing_signature=hashlib.sha256(json.dumps([(m.get('_id') or m.get('id'),traffic.metadata_key(m)) for m in page.items],sort_keys=True).encode()).hexdigest()
         changed=prior_state.get('listing_signature')!=listing_signature
-        for match in page.items:
+        # Conversations with messages are read first, so that when the read budget runs out the empty matches are the ones that wait.
+        convo = {r['thread_id'] for r in s.rows('SELECT DISTINCT thread_id FROM messages')}
+        def _order(m):
+            try:return 0 if f"tinder:{owner}:{ident(m.get('_id') or m.get('id'))}" in convo else 1
+            except Exception:return 1
+        for match in sorted(page.items, key=_order):
             # Check account revocation after each network await, before retaining data.
             connection(connection_id)
             match_id = ident(match.get('_id') or match.get('id')); person = match.get('person')
@@ -513,7 +520,7 @@ async def sync_connection(connection_id: str):
                 # Listed by Tinder again: it is there. A one-off gap in an earlier listing must not hide it for good.
                 s.set_thread_flags(tid, visibility='available')
             thread = next(t for t in s.threads() if t['id'] == tid)
-            if not traffic.should_read(thread,cached,activity_key):continue
+            if deferred or not traffic.should_read(thread,cached,activity_key):continue
             previous_hash=rt.history_hash(s.source_for_thread(tid))
             try:
                 history = await _history(api, thread, owner)
@@ -529,12 +536,18 @@ async def sync_connection(connection_id: str):
             except TinderUnavailable:
                 _mark_read_failed(tid)
                 s.set_thread_flags(tid, visibility='not_observed')
+            except TinderRateLimited as exc:
+                # Our own read budget is used up for this hour. That is pacing, not a failure: finish this round calmly, the
+                # conversations still due are read in the next ones, and the rest of the budget stays free for sending.
+                if not is_local_limit(exc) or exc.existing: raise
+                deferred = True
         if page.complete:
             for thread in s.threads():
                 if thread['connection_id'] == connection_id and thread['id'] not in observed:
                     # Hide only after several complete listings in a row without it (unmatch), not after one gap.
                     if _bump_missed(thread['id']) >= MISSES_BEFORE_HIDDEN:
                         s.set_thread_flags(thread['id'], visibility='not_observed')
+    changed = changed or deferred  # work is waiting: no idle back-off
     idle_rounds=0 if changed else prior_state.get('idle_rounds',0)+1
     delay=min(poll_interval()*(2**min(idle_rounds,5)),max(poll_interval(),traffic.integer('TINDER_IDLE_POLL_INTERVAL',900,60,86400)))
     with s.connect() as db:
@@ -542,7 +555,7 @@ async def sync_connection(connection_id: str):
         value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature})
         if getattr(api,'owner_bio',None) is not None:
             value.update({'bio_disclosure':bio_discloses_ai(api.owner_bio),'bio_checked':time.time()})
-        if page.complete and not value.get('initial_import_done'):
+        if page.complete and not deferred and not value.get('initial_import_done'):
             value['initial_import_done']=True  # from now on the everyday (lower) request budget applies
             rt.audit(None,'tinder_initial_import_done','First full import finished; switching to everyday request limits')
         db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),connection_id))
@@ -600,7 +613,9 @@ async def poll():
         if max(value.get('next_poll', 0), value.get('blocked_until', 0)) > time.time(): continue
         try: await sync_connection(row['id'])
         except TinderRateLimited as exc:
-            if not exc.existing:status_update(row['id'],error=exc.reason,delay=exc.delay)
+            if exc.existing:pass
+            elif is_local_limit(exc):status_update(row['id'],error=None,delay=exc.delay)  # our own pacing: wait, no error, sending stays possible
+            else:status_update(row['id'],error=exc.reason,delay=exc.delay)
         except TinderRestriction:status_update(row['id'],error='restriction_requires_manual_review',disable=True)
         except TinderAuthError as exc: status_update(row['id'], error='inbox_access_denied' if str(exc)=='inbox_access_denied' else 'session_expired_or_account_changed', disable=True)
         except TinderError: status_update(row['id'], error='source_sync_failed', delay=poll_interval())

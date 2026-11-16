@@ -24,6 +24,17 @@ Primary sources were fetched directly; URLs, access outcomes and hashes are in `
 | Failure circuit breaker | Three consecutive unsuccessful synchronization attempts open the circuit and pause the connection. A complete successful synchronization resets the ordinary failure count. |
 | Quiet uncertainty recovery | A concrete but unobserved receipt is checked at most once per poll interval. A missing receipt is never inferred from similar text, and message POSTs still execute once. |
 
+## Pacing of reads (what a large inbox needs)
+
+Found on an account with 470 matches (73 with messages): every thread became due for its hourly refresh at the same moment, 470 requests
+against a budget of 300 an hour, so a synchronization never finished and the connection sat in a "local request budget" pause while sending
+competed for the same budget. Now: (1) reads never use the last `TINDER_SEND_RESERVE` (default 40) requests of the hour, so sending always
+has room; (2) running out of read budget ends the round calmly (no error, no block, `last_sync` moves) and the threads still due are read in the
+next rounds; (3) conversations with messages are read first; (4) a match with no messages is refreshed every `TINDER_EMPTY_THREAD_REFRESH`
+seconds (default 6 h) unless Tinder's activity metadata reports a change; (5) a conversation that could not be read is retried after
+`TINDER_FAILED_THREAD_RETRY` (default 1 h). The bot's health report shows the progress (`threads_read/total`, requests in the last
+minute and hour, `import_done`, waiting times) so a stuck synchronization can be diagnosed from the control service (`/admin/fleet`).
+
 ## Campaigns (first messages)
 
 Writing first to many new matches is more visible to a platform than answering people who wrote to you, and the sources above give no safe volume for it. Automatyzuj therefore adds its own conservative limits on top of the send budgets above, as three pace profiles chosen per run: *Ostrożny* (one opener every 8 minutes, at most 8 a day, 18:00–22:00 local time), *Zrównoważony*, the default (every 5 minutes, 15 a day, 17:00–22:30) and *Szybki* (every 3 minutes, 30 a day, 10:00–23:00). Spacing is a fixed interval, not simulated human timing. The last `CAMPAIGN_REPLY_RESERVE` sends of the hourly Tinder budget (default 5) and of the daily budget stay free for replies. Openers are never sent outside the window, so nothing goes out at night; replies to people who wrote are not limited by it. `CAMPAIGN_GAP_SECONDS`, `CAMPAIGN_OPENERS_PER_DAY` and `CAMPAIGN_WINDOW` override every profile for the whole installation. Drafts for the owner's own click are not spaced because nothing is sent. Pause, revocation, a rejected or uncertain delivery and restriction signals stop openers like any other send. These numbers are not verified thresholds; fewer and slower is safer, and a platform-approved channel remains the only way to remove the authorization risk.

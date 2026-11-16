@@ -39,7 +39,7 @@ def caps():
 
 _OWNER_CHECKS=[]
 
-def claim_request(owner=False):
+def claim_request(owner=False,reserve=0):
     now=time.time()
     if owner:
         # Owner-clicked bio check (2 tiny reads): not held back by the sync budget, but capped on its own.
@@ -55,7 +55,9 @@ def claim_request(owner=False):
         db.execute('BEGIN IMMEDIATE');db.execute('DELETE FROM tinder_requests WHERE ts<?',(now-3600,))
         for window,cap in caps_now:
             rows=db.execute('SELECT ts FROM tinder_requests WHERE ts>? ORDER BY ts',(now-window,)).fetchall()
-            if len(rows)>=cap:raise TrafficBudget(max(15,math.ceil(rows[0]['ts']+window-now)))
+            # Reads (synchronization) never use the last `reserve` requests of the HOUR: those stay free for sending. A send passes 0.
+            limit=max(1,cap-reserve) if window>=3600 else cap
+            if len(rows)>=limit:raise TrafficBudget(max(15,math.ceil(rows[len(rows)-limit]['ts']+window-now)))
         db.execute('INSERT INTO tinder_requests(ts) VALUES(?)',(now,))
 
 def metadata_key(match):
@@ -66,6 +68,10 @@ def metadata_key(match):
 def should_read(thread,cached,key,now=None):
     now=time.time() if now is None else now
     if thread['user_paused'] or thread['user_archived']:return False
+    # A match with no messages at all (a brand-new match) changes rarely and there can be hundreds: with the hourly refresh below,
+    # 470 of them made every hour's budget run out and the synchronization never finished. Activity metadata still reads a thread
+    # the moment it changes; without metadata an empty match is looked at every TINDER_EMPTY_THREAD_REFRESH seconds (default 6 h).
+    empty=not s.rows('SELECT 1 FROM messages WHERE thread_id=? LIMIT 1',(thread['id'],))
     # A conversation that could not be read (media we do not support, a very long history, an odd shape) is NOT retried every
     # poll: each retry costs several requests and, with a few such chats, used up the whole hourly budget so that no
     # synchronization ever finished. It is tried again after TINDER_FAILED_THREAD_RETRY seconds (default one hour).
@@ -77,4 +83,4 @@ def should_read(thread,cached,key,now=None):
     active=bool(grants and all(grants[0][k] for k in ('enabled','participant_consent','disclosed')))
     # Active threads are refreshed on each scheduled poll when metadata is missing/unreliable.
     if active:return True
-    return now-cached['last_read']>=integer('TINDER_INACTIVE_THREAD_REFRESH',3600,60,86400)
+    return now-cached['last_read']>=(integer('TINDER_EMPTY_THREAD_REFRESH',21600,60,172800) if empty else integer('TINDER_INACTIVE_THREAD_REFRESH',3600,60,86400))

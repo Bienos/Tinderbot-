@@ -239,3 +239,40 @@ def test_a_conversation_that_could_not_be_read_is_not_retried_every_poll(store, 
     assert traffic.should_read(thread, {**failed, 'failed_at': now - 130}, 'k', now) is True
     # a healthy but never-read conversation is still read at once
     assert traffic.should_read({**thread, 'source_visibility': 'available'}, None, 'k', now) is True
+
+
+def test_reads_leave_part_of_the_hourly_budget_for_sending(store, monkeypatch):
+    import time
+    import pytest
+    from agent import tinder_traffic as traffic
+    monkeypatch.setattr(traffic, 'caps', lambda: [(60, 1000), (3600, 100)])
+    now = time.time()
+    with s.connect() as db:
+        db.executemany('INSERT INTO tinder_requests(ts) VALUES(?)', [(now - 100 - i,) for i in range(60)])
+    with pytest.raises(traffic.TrafficBudget):
+        traffic.claim_request(reserve=40)                    # reads may use 60 of the 100: 60 are used, the next read waits
+    for _ in range(40):
+        traffic.claim_request()                              # a send may use the reserve, up to the full 100
+    with pytest.raises(traffic.TrafficBudget):
+        traffic.claim_request()                              # and then everything waits
+    with s.connect() as db:                                  # how long a read waits: until enough requests age out of the hour
+        db.execute('DELETE FROM tinder_requests')
+        db.executemany('INSERT INTO tinder_requests(ts) VALUES(?)', [(now - 3000 + i,) for i in range(60)])
+    with pytest.raises(traffic.TrafficBudget) as wait:
+        traffic.claim_request(reserve=40)
+    assert 590 <= wait.value.delay <= 610                    # the oldest request leaves the hour in ~600 s
+
+
+def test_an_empty_match_is_refreshed_slowly_and_a_conversation_hourly(store):
+    import time
+    from agent import tinder_traffic as traffic
+    now = time.time()
+    with s.connect() as db:
+        db.execute("INSERT INTO threads(id,display_name,source_seen) VALUES('empty','E',1),('chat','C',1)")
+        db.execute("INSERT INTO messages(id,thread_id,sender,body,created_at,synced_at) VALUES('m','chat','them','hej','2026-11-01T10:00:00+00:00','x')")
+    base = {'last_read': now - 4000, 'activity_key': 'k'}
+    mk = lambda tid: {'id': tid, 'user_paused': 0, 'user_archived': 0, 'source_visibility': 'available'}
+    assert traffic.should_read(mk('chat'), base, 'k', now) is True          # a conversation: older than an hour
+    assert traffic.should_read(mk('empty'), base, 'k', now) is False        # an empty match: not yet (6 h)
+    assert traffic.should_read(mk('empty'), {**base, 'last_read': now - 22000}, 'k', now) is True
+    assert traffic.should_read(mk('empty'), base, 'changed', now) is True   # but the moment Tinder reports activity, it is read

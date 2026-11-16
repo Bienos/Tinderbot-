@@ -609,3 +609,31 @@ def test_location_is_stored_only_when_tinder_sends_it():
     assert tinder.profile_summary({'city': 'Kraków'})['location'] == {'city': 'Kraków', 'distance_km': None}
     assert tinder.profile_summary({'distance_km': 7})['location'] == {'city': None, 'distance_km': 7}
     assert 'location' not in tinder.profile_summary({'city': {'name': ''}, 'distance_mi': 'far'})
+
+
+async def test_running_out_of_read_budget_finishes_the_round_calmly_and_never_blocks_sending(source,monkeypatch):
+    """Our own pacing is not a failure: no error, no block, last_sync moves, sending is still possible, the rest is read next round."""
+    from agent import tinder_traffic as traffic
+    await tinder.connect()
+    with s.connect() as db:db.execute('DELETE FROM tinder_requests')
+    monkeypatch.setattr(traffic,'caps',lambda:[(60,1000),(3600,10)]);monkeypatch.setenv('TINDER_SEND_RESERVE','6')   # reads may use 4 requests an hour: profile + 2 listing pages + one conversation
+    await tinder.sync_connection(CID)
+    v=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
+    assert v.get('error') is None and not v.get('blocked_until') and v.get('last_sync') and not v.get('initial_import_done')
+    read=lambda tid:bool(json.loads(s.rows('SELECT value FROM tinder_threads WHERE thread_id=?',(tid,))[0]['value']).get('last_read'))
+    assert read(TID) and not read('tinder:owner-a:match-b')                  # the first got read, the second waits
+    assert tinder.paused_for(CID)==0                                          # the connection is NOT blocked: a send could still go out
+    with s.connect() as db:db.execute('DELETE FROM tinder_requests')           # an hour later the budget is back
+    await tinder.sync_connection(CID)
+    assert read('tinder:owner-a:match-b')
+
+
+async def test_hitting_the_read_budget_before_listing_waits_without_an_error(source,monkeypatch):
+    from agent import tinder_traffic as traffic
+    await tinder.connect()
+    monkeypatch.setattr(traffic,'caps',lambda:[(60,1000),(3600,10)]);monkeypatch.setenv('TINDER_SEND_RESERVE','9')   # reads: 1 an hour
+    with s.connect() as db:
+        db.execute('DELETE FROM tinder_requests');db.execute('INSERT INTO tinder_requests(ts) VALUES(?)',(__import__('time').time(),))
+    await tinder.poll()
+    v=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
+    assert v.get('error') is None and not v.get('blocked_until') and v.get('next_poll',0)>__import__('time').time()
