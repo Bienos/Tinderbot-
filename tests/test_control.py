@@ -250,6 +250,27 @@ def test_paid_checkout_provisions_instance_once_and_cancel_suspends(client,monke
     assert calls[-1][:2]==('POST','/v1/services/srv-new/suspend')
 
 
+def test_ending_an_older_subscription_does_not_suspend_the_account(client,monkeypatch):
+    """Bought a new plan, then ended the old subscription: the account keeps its server."""
+    pytest.importorskip('stripe')
+    import json
+    from control import provision,mailer
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls));mailer.SENT.clear()
+    client.post('/api/register',json=REG);aid=parse_id(client)
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_p'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    def send(kind,sub,status):
+        e=json.dumps({'type':kind,'data':{'object':{'object':'subscription','id':sub,'customer':'cus_p','status':status}}})
+        return client.post('/stripe/webhook',content=e,headers=_signed(e,'whsec_p'))
+    send('customer.subscription.created','sub_old','active')
+    send('customer.subscription.created','sub_new','active')                      # the new plan becomes the current one
+    r=send('customer.subscription.deleted','sub_old','canceled')                   # the old one ends
+    assert r.json().get('ignored')=='not_the_current_subscription'
+    assert not [c for c in calls if c[1].endswith('/suspend')] and client.get('/api/me').json()['has_access']
+    send('customer.subscription.deleted','sub_new','canceled')                     # the current one ends: now it is cancelled
+    assert calls[-1][:2]==('POST','/v1/services/srv-new/suspend') and not client.get('/api/me').json()['has_access']
+
+
 def parse_id(client):
     from urllib.parse import urlparse,parse_qs
     return parse_qs(urlparse(client.post('/api/billing/checkout',json={'start_now':True}).json()['url']).query)['client_reference_id'][0]

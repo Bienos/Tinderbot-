@@ -137,7 +137,7 @@ SCHEMAS = [
 ]
 
 
-MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status', "TEXT NOT NULL DEFAULT 'none'"),
+MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'stripe_subscription', 'TEXT'), ('accounts', 'plan_status', "TEXT NOT NULL DEFAULT 'none'"),
               ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0'), ('accounts', 'render_service_id', 'TEXT'),
               ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
               ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
@@ -1141,6 +1141,15 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
                     tasks.add_task(_apply_plan, rows[0]['render_service_id'], rows[0]['plan'])  # came back with another plan
     elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
         status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
+        # A customer can hold several subscriptions (bought a new plan, then ended the old one). The newest active one is the
+        # account's current subscription; ending or failing an OLDER one must not cancel the account or suspend the server.
+        sub_id = obj.get('id')
+        if sub_id:
+            holders = q('SELECT stripe_subscription FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True)
+            if status in ('active', 'trialing'):
+                q('UPDATE accounts SET stripe_subscription=? WHERE stripe_customer=? AND withdrawn_at IS NULL', (sub_id, obj.get('customer')))
+            elif any(h.get('stripe_subscription') and h['stripe_subscription'] != sub_id for h in holders):
+                return {'received': True, 'ignored': 'not_the_current_subscription'}
         # A withdrawn contract stays withdrawn until the owner cancels it in Stripe; only a fresh checkout reopens it.
         # The customer switched plan in the Stripe portal (or someone changed it in Stripe): the plan follows the price.
         items = ((obj.get('items') or {}).get('data') or [{}])
