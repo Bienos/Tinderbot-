@@ -27,10 +27,10 @@ function buy(label,plans,trial){const l=document.createElement('label');l.classN
     o.append(h,d,btn('Wybieram '+p.name,p.popular||want===p.slug?'btn':'btn ghost',()=>start(p.slug)));box.append(o)})};
   draw();card.append(box,l);return}
  const b=btn(label,'btn',()=>{if(!c.checked){l.classList.add('need');return}go('/api/billing/checkout',{start_now:true})});card.append(l,b)}
-function withdrawBox(){const d=document.createElement('details');d.className='withdraw';const s=document.createElement('summary');s.textContent='Odstąp od umowy';
+function withdrawBox(host){const d=document.createElement('details');d.className='withdraw';d.open=true;const s=document.createElement('summary');s.textContent='Odstąp od umowy';
  const t=document.createElement('p');t.textContent='Masz 14 dni od zakupu. Nie musisz podawać powodu. Zwrócimy pieniądze pomniejszone o dni korzystania, w ciągu 14 dni.';
  const b=btn('Potwierdzam odstąpienie od umowy','btn ghost',async()=>{b.disabled=true;try{await post('/api/billing/withdraw',{confirm:true});t.textContent='Gotowe. Potwierdzenie wysłaliśmy mailem.';b.remove()}catch(e){t.textContent=e.message;b.disabled=false}});
- d.append(s,t,b);card.append(d)}
+ d.append(s,t,b);host.append(d)}
 // Setup progress: real stages from the server, an honest estimate and a running clock.
 const STAGES=[['pay','Płatność potwierdzona'],['creating','Tworzymy Twój osobny serwer'],['building','Instalujemy asystenta'],['starting','Uruchamiamy i sprawdzamy'],['ready','Gotowe, otwieramy panel']];
 const ORDER={payment:0,queued:1,manual:1,creating:1,building:2,starting:3,ready:4,slow:2};
@@ -79,9 +79,12 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  else if(me.provision_state==='failed'){mark(2);h.textContent='Stawianie serwera się przedłuża';p.textContent='Coś poszło nie tak przy przygotowaniu Twojego serwera. Już nad tym pracujemy i napiszemy, gdy będzie gotowy.'}
  else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut, a ta strona odświeży się sama.':'Stawiamy Twój osobny serwer. Ta strona odświeży się sama, a gdy panel będzie gotowy, napiszemy też mailem.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s);watch(me)}
  if(me.withdrawn){const w=document.createElement('p');w.className='muted';w.textContent='Odstąpiłeś od umowy. Zwrot jest w drodze.';card.append(w)}
- if(me.can_withdraw)withdrawBox();
  if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';const pp=(cur.periods||[]).find(x=>x.key===(me.plan_period||'1'));w.textContent='Twój pakiet to '+cur.name+(pp&&pp.months>1?' ('+pp.label.toLowerCase()+')':'')+', do '+cur.conversations+' aktywnych rozmów.';card.append(w)}}
  if(me.panel_ready){const lab=document.createElement('label');lab.className='muted weekly-pref';const cb=document.createElement('input');cb.type='checkbox';cb.checked=me.weekly_summary!==false;cb.addEventListener('change',()=>{cb.disabled=true;post('/api/account/weekly',{enabled:cb.checked}).catch(()=>{cb.checked=!cb.checked}).finally(()=>{cb.disabled=false})});lab.append(cb,document.createTextNode(' Cotygodniowe podsumowanie e-mailem (status i liczby, bez treści rozmów)'));card.append(lab)}
  if(me.can_manage_billing)card.append(btn(me.plans&&me.plans.length?'Zmień pakiet lub zarządzaj subskrypcją':'Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));
+
+// Withdrawal from the contract lives with the other account actions (Zaawansowane ustawienia konta), not on the status page.
+const withdrawZone=document.getElementById('withdraw-zone');
+if(withdrawZone)fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{if(me.can_withdraw)withdrawBox(withdrawZone)}).catch(()=>{});

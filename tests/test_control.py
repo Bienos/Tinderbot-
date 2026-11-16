@@ -122,6 +122,16 @@ def test_delete_option_is_not_on_main_account_page(client):
     assert 'delete-form' in client.get('/konto/zaawansowane').text
 
 
+def test_withdrawal_is_in_the_account_settings_not_on_the_status_page(client):
+    client.post('/api/register',json=REG)
+    main,adv=client.get('/konto').text,client.get('/konto/zaawansowane').text
+    js=client.get('/assets/account.js').text
+    assert 'withdraw-zone' not in main and 'withdraw-zone' in adv                      # the button has a home next to "Usuń konto"
+    assert 'withdrawBox(withdrawZone)' in js and 'withdrawBox();' not in js            # and is never drawn on the status page
+    terms=client.get('/regulamin').text                                                  # the terms point at where it really is
+    assert 'Zaawansowane ustawienia konta' in terms and 'na stronie Konta albo' not in terms
+
+
 def test_cross_origin_posts_blocked_when_origin_configured(client,monkeypatch):
     monkeypatch.setenv('PUBLIC_ORIGIN','https://iskra.example')
     assert client.post('/api/register',json=REG,headers={'Origin':'https://evil.example'}).status_code==403
