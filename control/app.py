@@ -324,7 +324,8 @@ def structured_data(html: str, origin: str, price: str) -> str:
 
 
 def trial_days() -> int:
-    """Free days at the start of a subscription (TRIAL_DAYS). 0 means none. The Stripe payment link must carry the same number."""
+    """The configured free days (TRIAL_DAYS). 0 means none. Only the yearly package gets them (see trial_for), and only the
+    yearly Stripe payment links (STRIPE_LINK_*_12) may carry the same number."""
     try:
         return max(0, min(30, int(os.getenv('TRIAL_DAYS', '0') or 0)))
     except ValueError:
@@ -333,6 +334,11 @@ def trial_days() -> int:
 
 def _days(n: int) -> str:
     return f'{n} dzień' if n == 1 else f'{n} dni'
+
+
+def trial_for(period: str | None) -> int:
+    """Free days a purchase of this period gets: only the yearly package has a trial, monthly and 6-month pay at once."""
+    return trial_days() if catalog.periods_enabled() and str(period or '1') == catalog.TRIAL_PERIOD else 0
 
 
 def _zl(x: float) -> str:
@@ -349,14 +355,15 @@ def _period_facts(plan: dict, per: dict) -> dict:
     longer = per['months'] > 1
     return {'per': _zl(total / per['months']), 'was': _zl(plan['price']) if longer else '', 'total': total, 'regular': regular,
             'save': regular - total, 'months': per['months'], 'free': per['free'],
-            'badge': '' if not per['free'] else f'{_free_label(per["free"])} · −{_zl(regular - total)}'}
+            'badge': '' if not per['free'] else f'{_free_label(per["free"])} · −{_zl(regular - total)}',
+            'trial': f'Pierwsze {_days(trial_for(per["key"]))} za darmo' if trial_for(per['key']) else ''}
 
 
 def tiers_html() -> str:
     """The pricing cards on the landing page, generated from the catalog so prices and limits exist in one place.
     With the 6- and 12-month payment links present there is a period switch (pricing.js) that opens on the year."""
-    n = trial_days()
     longer = catalog.periods_enabled()
+    n = trial_days() if longer else 0
     default = catalog.period('12' if longer else '1')
     cards = []
     for p in catalog.PLANS:
@@ -370,7 +377,8 @@ def tiers_html() -> str:
             f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p>'
             f'<div class="tier-pricebox"><p class="tier-price"><b class="js-per">{cur["per"]}</b><span> / mies.</span>'
             f'<s class="tier-was js-was"{"" if cur["was"] else " hidden"}>{cur["was"]}</s></p>'
-            f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p></div>'
+            f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p>'
+            f'<p class="tier-trialtag js-trial"{"" if cur["trial"] else " hidden"}>{cur["trial"]}</p></div>'
             f'<ul>{items}</ul>'
             f'<a class="btn{"" if p.get("popular") else " ghost"} js-cta" href="/rejestracja?plan={p["slug"]}&amp;period={default["key"]}">'
             f'Wybieram {p["name"]}</a></article>')
@@ -378,9 +386,11 @@ def tiers_html() -> str:
     if longer:
         tabs = ''.join(f'<button type="button" data-period="{q["key"]}" class="{"on" if q["key"] == default["key"] else ""}" aria-pressed="{"true" if q["key"] == default["key"] else "false"}">'
                        f'{q["label"]}{f"<i>{_free_label(q["free"])}</i>" if q["free"] else ""}</button>' for q in catalog.PERIODS)
-        switch = ('<p class="period-lead">Im dłużej, tym taniej. <b>Weź rok i trzy miesiące masz gratis.</b></p>'
+        switch = ('<p class="period-lead">Im dłużej, tym taniej. <b>Weź rok i trzy miesiące masz gratis.</b>'
+                  + (f' Do tego <b>pierwsze {_days(n)} za darmo</b>.' if n else '') + '</p>'
                   f'<div class="period" role="group" aria-label="Okres rozliczeniowy">{tabs}</div>')
-    trial = (f'<b>Pierwsze {_days(n)} w każdym pakiecie za darmo.</b> Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. ' if n else '')
+    trial = (f'<b>Pakiet roczny: pierwsze {_days(n)} za darmo.</b> Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. '
+             'W pakiecie miesięcznym i 6-miesięcznym płacisz od razu. ' if n else '')
     note = (f'<div class="tier-info"><p class="tier-trial">{trial}Anulujesz w każdej chwili, a dostęp działa do końca opłaconego okresu.</p>'
             '<details class="tier-active"><summary>Co to znaczy „aktywna rozmowa”?</summary>'
             '<p>Aktywna rozmowa to taka, w której ktoś odpisał Ci w ciągu ostatnich 14 dni. Gdy rozmowa ucichnie, miejsce się zwalnia, '
@@ -389,15 +399,17 @@ def tiers_html() -> str:
 
 
 def trial_texts() -> dict[str, str]:
-    n = trial_days()
+    """Free-trial wording for the pages. Only the yearly package has a trial, so there is nothing to say without the yearly option."""
+    n = trial_days() if catalog.periods_enabled() else 0
     if not n:
-        return {'{{TRIAL}}': '', '{{TRIAL_NOTE}}': '', '{{TRIAL_TERMS}}': ''}
+        return {'{{TRIAL_META}}': '', '{{TRIAL_NOTE}}': '', '{{TRIAL_TERMS}}': ''}
     d = _days(n)
-    return {'{{TRIAL}}': f'Pierwsze {d} za darmo, potem ',
-            '{{TRIAL_NOTE}}': f' Pierwsze {d} są bezpłatne. Kartę podajesz od razu, a jeśli anulujesz przed ich końcem, nic nie zapłacisz.',
-            '{{TRIAL_TERMS}}': (f'<li>Pierwsze {d} Subskrypcji są bezpłatne (okres próbny), a umowa zostaje zawarta z chwilą jego rozpoczęcia. '
+    return {'{{TRIAL_META}}': f' W pakiecie rocznym pierwsze {d} za darmo.',
+            '{{TRIAL_NOTE}}': f' W pakiecie rocznym pierwsze {d} są bezpłatne. Kartę podajesz od razu, a jeśli anulujesz przed ich końcem, nic nie zapłacisz. Pakiety miesięczny i 6-miesięczny nie mają okresu próbnego.',
+            '{{TRIAL_TERMS}}': (f'<li>W przypadku wyboru pakietu rocznego (12 miesięcy) pierwsze {d} Subskrypcji są bezpłatne (okres próbny), a umowa zostaje zawarta z chwilą jego rozpoczęcia. '
                                 'Do rozpoczęcia okresu próbnego wymagamy podania metody płatności. Jeżeli nie anulujesz Subskrypcji przed jego końcem, '
-                                'pierwsza opłata zostanie pobrana automatycznie po jego zakończeniu. Anulowanie w okresie próbnym oznacza, że nic nie zapłacisz.</li>')}
+                                'pierwsza opłata zostanie pobrana automatycznie po jego zakończeniu. Anulowanie w okresie próbnym oznacza, że nic nie zapłacisz. '
+                                'Pakiety miesięczny i 6-miesięczny nie obejmują okresu próbnego, a opłata jest pobierana od razu.</li>')}
 
 
 def page(name: str, fill: dict | None = None) -> HTMLResponse:
@@ -706,7 +718,7 @@ def me(request: Request):
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
             'provision_state': acc.get('provision_state') or '', 'can_withdraw': can_withdraw(acc),
             'withdrawn': bool(acc.get('withdrawn_at')),
-            'trial_days': trial_days(), 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '', 'plan_period': acc.get('plan_period') or '1',
+            'trial_days': trial_days() if catalog.periods_enabled() else 0, 'trial_period': catalog.TRIAL_PERIOD, 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '', 'plan_period': acc.get('plan_period') or '1',
             'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
             'weekly_summary': acc.get('weekly_summary') != 0, 'setup': setup_progress(acc)}
 
@@ -890,7 +902,7 @@ async def billing_checkout(request: Request):
     params = dict(mode='subscription', line_items=[{'price': os.environ['STRIPE_PRICE_ID'], 'quantity': 1}],
                   client_reference_id=str(acc['id']), success_url=_origin(request) + '/konto?platnosc=ok',
                   cancel_url=_origin(request) + '/konto', allow_promotion_codes=True, locale='pl',
-                  metadata={'account_id': str(acc['id'])}, subscription_data={'metadata': {'account_id': str(acc['id'])}, **({'trial_period_days': trial_days()} if trial_days() else {})},
+                  metadata={'account_id': str(acc['id'])}, subscription_data={'metadata': {'account_id': str(acc['id'])}, **({'trial_period_days': trial_for(per['key'])} if chosen and trial_for(per['key']) else {})},
                   custom_text={'submit': {'message': 'Zamawiając, prosisz o rozpoczęcie usługi przed upływem 14 dni na odstąpienie od umowy.'}})
     if acc.get('stripe_customer'):
         params['customer'] = acc['stripe_customer']
@@ -971,9 +983,9 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
         if ref.isdigit():
             q("UPDATE accounts SET stripe_customer=?, plan_status='active', withdrawn_at=NULL, paid_at=COALESCE(paid_at, ?), plan=COALESCE(plan_choice, plan), plan_period=COALESCE(period_choice, plan_period) WHERE id=?",
               (obj.get('customer'), time.time(), int(ref)))
-            rows = q('SELECT email, plan, render_service_id FROM accounts WHERE id=?', (int(ref),), fetch=True)
+            rows = q('SELECT email, plan, plan_period, render_service_id FROM accounts WHERE id=?', (int(ref),), fetch=True)
             if rows:
-                tasks.add_task(mailer.payment_ok, rows[0]['email'], _origin(request))
+                tasks.add_task(mailer.payment_ok, rows[0]['email'], _origin(request), rows[0].get('plan_period') or '1')
                 tasks.add_task(run_provision, int(ref), _origin(request))
                 if rows[0].get('render_service_id') and catalog.get(rows[0].get('plan')):
                     tasks.add_task(_apply_plan, rows[0]['render_service_id'], rows[0]['plan'])  # came back with another plan

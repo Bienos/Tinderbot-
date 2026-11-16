@@ -750,25 +750,32 @@ def test_email_logo_is_served_for_mails(client):
     r=client.get('/assets/email-logo.png');assert r.status_code==200 and r.headers['content-type']=='image/png'
 
 
-def test_free_trial_wording_follows_trial_days(client,monkeypatch):
+def test_free_trial_is_only_for_the_yearly_package(client,monkeypatch):
     from control import mailer
-    monkeypatch.delenv('TRIAL_DAYS',raising=False);monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
-    plain=client.get('/').text
-    assert 'za darmo, potem' not in plain and '{{TRIAL' not in plain
+    monkeypatch.setenv('PLAN_PRICE','49 zł / mies.')
+    for k in (*PLAN_LINKS,*PERIOD_LINKS):monkeypatch.delenv(k,raising=False)
     monkeypatch.setenv('TRIAL_DAYS','3')
-    page=client.get('/').text
-    assert 'Pierwsze 3 dni za darmo, potem 49 zł / mies.' in page and '{{TRIAL' not in page and 'nic nie zapłacisz' in page
-    terms=client.get('/regulamin').text
-    assert 'Pierwsze 3 dni Subskrypcji są bezpłatne (okres próbny)' in terms and '{{TRIAL' not in terms
-    assert client.get('/rejestracja').status_code==200
+    single=client.get('/').text                                       # one monthly plan: there is no yearly package, so no trial
+    assert 'pakiecie rocznym' not in single and 'Pierwsze 3 dni' not in single and '{{TRIAL' not in single
+    assert 'okres próbny' not in client.get('/regulamin').text
     client.post('/api/register',json=REG)
-    assert client.get('/api/me').json()['trial_days']==3
+    assert client.get('/api/me').json()['trial_days']==0
+    for k,v in {**PLAN_LINKS,**PERIOD_LINKS}.items():monkeypatch.setenv(k,v)
+    page=client.get('/').text
+    assert 'Pakiet roczny: pierwsze 3 dni za darmo.' in page and 'W pakiecie miesięcznym i 6-miesięcznym płacisz od razu' in page
+    assert 'W pakiecie rocznym pierwsze 3 dni za darmo.' in page and 'W pakiecie rocznym pierwsze 3 dni są bezpłatne' in page
+    assert 'js-trial">Pierwsze 3 dni za darmo</p>' in page and 'w każdym pakiecie' not in page and '{{TRIAL' not in page
+    terms=client.get('/regulamin').text
+    assert 'W przypadku wyboru pakietu rocznego (12 miesięcy) pierwsze 3 dni Subskrypcji są bezpłatne (okres próbny)' in terms and '{{TRIAL' not in terms
+    me=client.get('/api/me').json()
+    assert me['trial_days']==3 and me['trial_period']=='12'
     mailer.SENT.clear();o='https://winq.site'
-    mailer.payment_ok('a@b.pl',o);mailer.welcome('a@b.pl',o)
+    mailer.payment_ok('a@b.pl',o,'12');mailer.welcome('a@b.pl',o);mailer.payment_ok('a@b.pl',o,'6');mailer.payment_ok('a@b.pl',o)
     assert mailer.SENT[0]['subject']=='Okres próbny rozpoczęty' and '3 dni za darmo' in mailer.SENT[0]['text'] and 'nic z niej nie pobraliśmy' in mailer.SENT[0]['text']
-    assert 'Zacznij 3 dni za darmo' in mailer.SENT[1]['text']
-    monkeypatch.setenv('TRIAL_DAYS','0');mailer.SENT.clear();mailer.payment_ok('a@b.pl',o)
-    assert mailer.SENT[0]['subject']=='Płatność przyjęta'
+    assert 'W pakiecie rocznym pierwsze 3 dni za darmo' in mailer.SENT[1]['text'] and 'Zacznij 3 dni' not in mailer.SENT[1]['text']
+    assert mailer.SENT[2]['subject']=='Płatność przyjęta' and mailer.SENT[3]['subject']=='Płatność przyjęta'   # monthly and 6 months pay at once
+    monkeypatch.setenv('TRIAL_DAYS','0');mailer.SENT.clear();mailer.payment_ok('a@b.pl',o,'12')
+    assert mailer.SENT[0]['subject']=='Płatność przyjęta' and 'pakiecie rocznym' not in client.get('/').text
 
 
 PLAN_LINKS={'STRIPE_LINK_WINQ':'https://buy.stripe.com/w','STRIPE_LINK_FLIRT':'https://buy.stripe.com/f','STRIPE_LINK_CASANOVA':'https://buy.stripe.com/c'}
@@ -784,9 +791,10 @@ def test_landing_shows_three_plans_only_when_all_payment_links_exist(client,monk
     for k,v in PLAN_LINKS.items():monkeypatch.setenv(k,v)
     page=client.get('/').text
     assert 'class="tiers"' in page and 'class="ticket"' not in page and '{{' not in page
-    for needle in ('Winq</h3>','Flirt</h3>','Casanova</h3>','19 zł','69 zł','169 zł','Najczęściej wybierany','Do 10 aktywnych rozmów','Pierwsze 3 dni w każdym pakiecie za darmo','href="/rejestracja?plan=flirt&amp;period=1"'):
+    for needle in ('Winq</h3>','Flirt</h3>','Casanova</h3>','19 zł','69 zł','169 zł','Najczęściej wybierany','Do 10 aktywnych rozmów','href="/rejestracja?plan=flirt&amp;period=1"'):
         assert needle in page,needle
     assert 'Trzy pakiety: Winq 19 zł, Flirt 69 zł, Casanova 169 zł miesięcznie.' in page and 'Jeden plan w subskrypcji' not in page
+    assert 'Pierwsze 3 dni' not in page and 'js-trial">' not in page      # no yearly package yet, so no trial
     terms=client.get('/regulamin').text
     assert 'zależy od wybranego pakietu' in terms and 'Aktywna rozmowa to rozmowa' in terms and '{{' not in terms
 
@@ -867,6 +875,7 @@ def test_six_and_twelve_month_plans_show_the_saving_and_use_their_own_links(clie
     page=client.get('/').text
     assert 'class="period"' in page and '3 miesiące gratis' in page and '1 miesiąc gratis' in page and 'Weź rok i trzy miesiące masz gratis' in page
     assert 'pricing.js' in page and 'data-period="12"' in page
+    assert 'Pakiet roczny: pierwsze 3 dni za darmo.' in page and page.count('js-trial">Pierwsze 3 dni za darmo</p>')==3 and 'Do tego <b>pierwsze 3 dni za darmo</b>' in page
     assert '51,75 zł' in page and '3 miesiące gratis · −207 zł' in page and 'za 12 miesięcy' not in page and 'js-sub' not in page   # Flirt, year: 9 of 12 months, 69 zł a month
     assert '14,25 zł' in page and '126,75 zł' in page and '<s class="tier-was js-was">69 zł</s>' in page
     assert 'Płacisz raz' not in page and 'tier-strip' not in page and 'płacisz za 5 miesięcy' in client.get('/regulamin').text
