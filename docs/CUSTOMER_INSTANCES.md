@@ -30,13 +30,13 @@ Dane i tokeny jednego klienta nigdy nie są w tym samym procesie ani bazie co da
 (wiadomości, profile, plan rozmowy). Nic nie trzeba konfigurować per instancja. Pasek na górze zakładki pokazuje, czy
 połączenie działa i kiedy była ostatnia synchronizacja (ostrzega po 30 min ciszy, przy błędzie tokenu, przy wstrzymanym agencie).
 
-**Podsumowanie tygodnia** wysyła serwis kontrolny (poniedziałek 08:00 czasu warszawskiego, doganianie do środy rano):
+**Podsumowanie tygodnia** wysyła serwis kontrolny (niedziela 20:00 czasu warszawskiego, doganianie do wtorku 20:00):
 1. Serwis pyta bota klienta o `GET /internal/summary`. Zapytanie jest podpisane `SSO_SECRET` tej instancji
    (HMAC, ważne 2 minuty), więc odpowie tylko serwisowi kontrolnemu. Odpowiedź to **same liczby i kody stanu**, bez imion i treści rozmów.
 2. Z odpowiedzi powstaje mail: status (czy wszystko działa), cztery liczby ze zmianą wobec poprzedniego tygodnia, co czeka na klienta
    i przycisk „Zobacz pełne statystyki" → `/konto/panel?view=stats` (po zalogowaniu wprost w zakładce Statystyki).
 3. Konto jest „zajmowane" w bazie przed wysyłką i oznaczane jako wysłane dopiero po przyjęciu maila przez SMTP, więc restart, dwa procesy
-   ani ponowienie nie wyślą dwóch maili. Bot, który nie odpowiada, jest ponawiany co 30 minut do środy rano, potem tydzień jest pomijany.
+   ani ponowienie nie wyślą dwóch maili. Bot, który nie odpowiada, jest ponawiany co 30 minut do wtorku 20:00, potem tydzień jest pomijany.
 4. Klient wypisuje się linkiem w mailu (jedno kliknięcie, także nagłówek `List-Unsubscribe`) albo checkboxem na stronie konta.
 
 Ustawienia serwisu kontrolnego: `WEEKLY_SUMMARY=false` wyłącza pętlę (domyślnie włączona; działa tylko przy skonfigurowanym SMTP i `PUBLIC_ORIGIN`).

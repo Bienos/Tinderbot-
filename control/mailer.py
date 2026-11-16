@@ -383,7 +383,7 @@ def weekly_issue(summary: dict) -> tuple[str, str] | None:
 
 
 def weekly_spec(summary: dict, origin: str, unsubscribe: str) -> dict:
-    """The Monday message. Status first (is everything working?), then the numbers, then one button to the full picture."""
+    """The weekly message (Sunday evening). Status first (is everything working?), then the numbers, then one button to the full picture."""
     this, prev, now = summary.get('this') or {}, summary.get('prev') or {}, summary.get('now') or {}
     health = summary.get('health') or {}
     link = f'{origin}/konto/panel?view=stats'

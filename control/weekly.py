@@ -1,13 +1,13 @@
 """Weekly summary e-mail and fleet check.
 
 Every customer's bot (its own server, see docs/CUSTOMER_INSTANCES.md) answers GET /internal/summary with counts and health
-codes. This module asks each one, signed with that customer's SSO secret, and turns the answer into the Monday e-mail
+codes. This module asks each one, signed with that customer's SSO secret, and turns the answer into the Sunday-evening e-mail
 (control/mailer.py: weekly_spec). The same call is the fleet check: it proves per customer that the server is reachable,
 Tinder is connected and the data is fresh.
 
 Sending is safe to repeat and to run from several processes: an account is claimed in the database before anything is
 fetched, and marked as sent only after the mail was handed to the SMTP server. A bot that cannot be reached is retried on
-the next run (every half hour) for two days after Monday 08:00; then the week is skipped. Nothing here ever carries names or message text.
+the next run (every half hour) for two days after Sunday 20:00; then the week is skipped. Nothing here ever carries names or message text.
 """
 from __future__ import annotations
 
@@ -25,9 +25,9 @@ from control import mailer
 
 log = logging.getLogger('uvicorn.error')
 TRANSPORT = None  # tests inject an httpx.MockTransport here
-SLOT_HOUR = 8  # Monday, 08:00 Warsaw time: first message of the week; later runs catch up
+SLOT_WEEKDAY, SLOT_HOUR = 6, 20  # Sunday (Monday is 0), 20:00 Warsaw time: the summary arrives as the week starts; later runs catch up
 MIN_AGE_DAYS = 3  # a brand-new account has nothing to summarize yet
-WINDOW_HOURS = 48  # after Monday 08:00 an unreachable bot is retried for two days; then the week is skipped (no Friday surprises)
+WINDOW_HOURS = 48  # after Sunday 20:00 an unreachable bot is retried for two days; then the week is skipped (no Thursday surprises)
 FETCH_TIMEOUT = 15
 CLAIM_SECONDS = 600  # a claim older than this is abandoned (the process that made it died)
 
@@ -41,12 +41,12 @@ def _tz():
 
 
 def slot_start(now: float) -> float:
-    """The most recent Monday 08:00 (Warsaw) at or before `now`, as a Unix time. An account is due when it was not sent since then."""
+    """The most recent Sunday 20:00 (Warsaw) at or before `now`, as a Unix time. An account is due when it was not sent since then."""
     local = datetime.fromtimestamp(now, _tz())
-    monday = (local - timedelta(days=local.weekday())).replace(hour=SLOT_HOUR, minute=0, second=0, microsecond=0)
-    if monday > local:
-        monday -= timedelta(days=7)
-    return monday.timestamp()
+    slot = (local - timedelta(days=(local.weekday() - SLOT_WEEKDAY) % 7)).replace(hour=SLOT_HOUR, minute=0, second=0, microsecond=0)
+    if slot > local:
+        slot -= timedelta(days=7)
+    return slot.timestamp()
 
 
 def signed_headers(secret: str, audience: str, now: float | None = None, purpose: str = 'summary') -> dict:
@@ -100,7 +100,7 @@ def run(q, now: float, *, base_for, has_access, origin: str, force: bool = False
             results.append({**who, 'result': 'skipped: account too new'})
             continue
         if not force and now - slot > WINDOW_HOURS * 3600:
-            results.append({**who, 'result': 'skipped: outside the Monday window'})
+            results.append({**who, 'result': 'skipped: outside the weekly window'})
             continue
         if not force and float(acc.get('weekly_sent_at') or 0) >= slot:
             results.append({**who, 'result': 'skipped: already sent this week'})

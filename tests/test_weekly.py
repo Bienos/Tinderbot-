@@ -9,8 +9,7 @@ ADMIN={'Authorization':'Bearer '+'a'*32}
 REG={'email':'Ola@Example.com','password':'bardzo-tajne-haslo','name':'Ola','mode':'drafts','adult':True,'terms':True}
 SECRET_FOR={}
 BOX=[]   # mail captured by the fake SMTP server (sign-up mails are dropped, only the summaries matter here)
-MONDAY_10=datetime(2026,11,16,9,0,tzinfo=timezone.utc).timestamp()      # Monday 10:00 Warsaw
-WED_12=MONDAY_10+2*86400+3*3600
+SUN_21=datetime(2026,11,15,20,0,tzinfo=timezone.utc).timestamp()      # Sunday 21:00 Warsaw: the slot (20:00) has just passed
 
 def summary(**over):
     base={'version':1,'generated_at':'2026-11-16T09:00:00+00:00','period_days':7,
@@ -79,15 +78,17 @@ def account(c,email='ola@example.com',host='bot1.example',age_days=10,comped=Tru
     BOX.clear()
     return client
 
-def run(c,now=MONDAY_10,**kw):
+def run(c,now=SUN_21,**kw):
     return c.run_weekly(now,**kw)
 
 # ---- the weekly slot
-def test_slot_is_monday_8_warsaw():
+def test_slot_is_sunday_8pm_warsaw():
     from control.weekly import slot_start
-    monday8=datetime(2026,11,16,7,0,tzinfo=timezone.utc).timestamp()      # 08:00 Warsaw (UTC+1)
-    assert slot_start(monday8)==monday8 and slot_start(monday8+5*86400)==monday8      # the whole week points at the same slot
-    assert slot_start(monday8-60)==monday8-7*86400                                      # one minute earlier: last week's slot
+    sunday8pm=datetime(2026,11,15,19,0,tzinfo=timezone.utc).timestamp()   # 20:00 Warsaw (UTC+1)
+    assert slot_start(sunday8pm)==sunday8pm and slot_start(sunday8pm+6*86400+3*3600)==sunday8pm   # the whole week points at the same slot
+    assert slot_start(sunday8pm-60)==sunday8pm-7*86400                                     # one minute earlier: last week's slot
+    summer=datetime(2026,7,12,18,0,tzinfo=timezone.utc).timestamp()          # 20:00 Warsaw in summer (UTC+2)
+    assert slot_start(summer)==summer and slot_start(summer-60)==summer-7*86400
 
 # ---- the message
 def test_message_has_status_numbers_changes_and_one_link_into_statistics():
@@ -134,8 +135,8 @@ def test_sends_once_per_week_to_each_customer_with_a_signed_request(env,bots,smt
     msg=smtp[0];assert msg['List-Unsubscribe'].startswith('<https://winq.example/wypisz-sie?t=') and 'Twój tydzień' in msg['Subject']
     body=msg.get_body(preferencelist=('plain',)).get_content();assert 'konto/panel?view=stats' in body
     assert sorted(bots.calls)==['bot1.example','bot2.example']
-    assert [r['result'] for r in run(c,MONDAY_10+3600)]==['skipped: already sent this week']*2 and len(smtp)==2    # an hour later: nothing again
-    assert all(r['result']=='sent' for r in run(c,MONDAY_10+7*86400)) and len(smtp)==4                                # next Monday: again
+    assert [r['result'] for r in run(c,SUN_21+3600)]==['skipped: already sent this week']*2 and len(smtp)==2    # an hour later: nothing again
+    assert all(r['result']=='sent' for r in run(c,SUN_21+7*86400)) and len(smtp)==4                                # next Sunday: again
 
 def test_unreachable_bot_is_retried_and_only_marked_after_a_real_send(env,bots,smtp):
     c=env;account(c)
@@ -144,7 +145,7 @@ def test_unreachable_bot_is_retried_and_only_marked_after_a_real_send(env,bots,s
     row=c.q('SELECT weekly_sent_at,weekly_claim,weekly_note FROM accounts',fetch=True)[0]
     assert row['weekly_sent_at'] is None and row['weekly_claim'] is None and row['weekly_note'].startswith('failed')
     bots.answers.pop('bot1.example')                                                  # the bot is back
-    assert run(c,MONDAY_10+1800)[0]['result']=='sent' and len(smtp)==1
+    assert run(c,SUN_21+1800)[0]['result']=='sent' and len(smtp)==1
 
 def test_old_bot_without_the_endpoint_does_not_break_the_pass(env,bots,smtp):
     c=env;account(c);account(c,'jan@example.com','bot2.example')
@@ -156,10 +157,10 @@ def test_rules_who_gets_it(env,bots,smtp):
     c=env;account(c,'new@example.com','bot1.example',age_days=1)
     assert run(c)[0]['result']=='skipped: account too new'
     c.q('UPDATE accounts SET created=? WHERE email=?',(time.time()-9*86400,'new@example.com'))
-    assert run(c,WED_12+86400)[0]['result']=='skipped: outside the Monday window'          # Thursday: this week is over
-    assert run(c,WED_12-6*3600)[0]['result']=='sent'                                          # Wednesday morning: still catching up
+    assert run(c,SUN_21+48*3600)[0]['result']=='skipped: outside the weekly window'        # Tuesday 21:00: this week is over
+    assert run(c,SUN_21+46*3600)[0]['result']=='sent'                                         # Tuesday 19:00: still catching up
     c.q('UPDATE accounts SET weekly_summary=0')
-    assert run(c,MONDAY_10+7*86400)==[]                                                       # opted out: not even a candidate
+    assert run(c,SUN_21+7*86400)==[]                                                       # opted out: not even a candidate
 
 def test_billing_gate_and_withdrawn_accounts_get_nothing(env,bots,smtp,monkeypatch):
     c=env;account(c,comped=False)
@@ -179,13 +180,13 @@ def test_dry_run_and_force_and_single_account(env,bots,smtp):
     d=run(c,dry_run=True);assert all(r['result']=='dry run' and r['subject'].startswith('Twój tydzień') and r['health']=='ok' for r in d) and not smtp
     assert c.q('SELECT COUNT(*) n FROM accounts WHERE weekly_sent_at IS NOT NULL',fetch=True)[0]['n']==0
     assert [r['result'] for r in run(c,email='JAN@example.com')]==['sent'] and len(smtp)==1
-    assert run(c,MONDAY_10+86400*4,force=True,email='jan@example.com')[0]['result']=='sent'       # force: any day, even if already sent
+    assert run(c,SUN_21+86400*4,force=True,email='jan@example.com')[0]['result']=='sent'       # force: any day, even if already sent
 
 def test_two_processes_cannot_both_send(env,bots,smtp):
     c=env;account(c)
-    c.q('UPDATE accounts SET weekly_claim=?',(MONDAY_10-5,))                          # another process claimed it five seconds ago
+    c.q('UPDATE accounts SET weekly_claim=?',(SUN_21-5,))                          # another process claimed it five seconds ago
     assert run(c)[0]['result']=='skipped: another run has it' and not smtp
-    assert run(c,MONDAY_10+700)[0]['result']=='sent'                                  # an abandoned claim (older than 10 minutes) is taken over
+    assert run(c,SUN_21+700)[0]['result']=='sent'                                  # an abandoned claim (older than 10 minutes) is taken over
 
 # ---- the customer's controls
 def test_unsubscribe_link_one_click_and_account_toggle(env,bots,smtp):
@@ -195,7 +196,7 @@ def test_unsubscribe_link_one_click_and_account_toggle(env,bots,smtp):
     assert 'nieprawidłowy' in client.get('/wypisz-sie?t=nope').text and client.post('/wypisz-sie?t=nope').status_code==404
     assert client.get('/api/me').json()['weekly_summary'] is True
     done=client.post('/wypisz-sie?t='+token,data={'List-Unsubscribe':'One-Click'});assert done.status_code==200 and 'wypisaliśmy' in done.text
-    assert client.get('/api/me').json()['weekly_summary'] is False and run(c,MONDAY_10+7*86400)==[]
+    assert client.get('/api/me').json()['weekly_summary'] is False and run(c,SUN_21+7*86400)==[]
     assert client.post('/api/account/weekly',json={'enabled':True}).json()['weekly_summary'] is True
     assert client.get('/api/me').json()['weekly_summary'] is True
 
@@ -234,4 +235,4 @@ def test_fleet_check_reports_every_instance_and_flags_the_broken_ones(env,bots):
 def test_admin_accounts_lists_weekly_state(env,bots,smtp):
     c=env;account(c);run(c)
     item=tc(c).get('/admin/accounts',headers=ADMIN).json()['items'][0]
-    assert item['weekly_summary']==1 and item['weekly_sent_at']==MONDAY_10 and item['weekly_note']=='sent'
+    assert item['weekly_summary']==1 and item['weekly_sent_at']==SUN_21 and item['weekly_note']=='sent'

@@ -1093,7 +1093,7 @@ async def admin_status(request: Request):
 @app.post('/admin/weekly/run')
 async def admin_weekly_run(request: Request):
     """Run the weekly summary pass now. {"dry_run": true} composes and reports without sending or marking anything;
-    {"force": true} ignores the Monday window and the one-per-week rule; {"email": "..."} limits it to one account."""
+    {"force": true} ignores the weekly window and the one-per-week rule; {"email": "..."} limits it to one account."""
     _admin(request)
     body = await _json(request)
     kw = {'force': body.get('force') is True, 'dry_run': body.get('dry_run') is True, 'email': str(body['email']) if body.get('email') else None}
