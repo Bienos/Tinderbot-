@@ -275,10 +275,10 @@ def test_api_launch_progress_and_stop(store, monkeypatch):
     stub(monkeypatch)
     monkeypatch.setattr(application, 'model_configured', lambda: True)
     with client() as c:
-        r = c.post('/api/campaigns', json={'thread_ids': ['t4', 't1'], 'mode': 'draft'})
+        r = c.post('/api/campaigns', json={'thread_ids': ['t4', 't1'], 'mode': 'draft', 'only_with_bio': False})
         assert r.status_code == 200 and r.json()['accepted'] == ['t4'] and 't1' in r.json()['rejected']
         st = c.get('/api/state').json()['campaign']
-        assert st['running'] and st['items']['t4']['status'] == 'queued' and st['gap_seconds'] == 240 and st['free_slots'] is None
+        assert st['running'] and st['items']['t4']['status'] == 'queued' and st['gap_seconds'] == 300 and st['free_slots'] is None
         assert c.post('/api/campaigns/stop').json() == {'stopped': 1}
         assert c.get('/api/state').json()['campaign']['items']['t4']['status'] == 'skipped'
         assert c.post('/api/campaigns', json={'thread_ids': ['t1'], 'mode': 'draft'}).status_code == 409   # nothing to launch
@@ -317,3 +317,85 @@ def test_deleting_a_conversation_removes_its_campaign_row(store):
     campaigns.launch(['t4'], 'draft')
     rt.delete_thread('t4')
     assert not s.rows('SELECT * FROM campaign_items')
+
+
+# ---- pace profiles, sending window, bio filter, slot release -----------------------------------------------------
+
+def warsaw(hour, minute=0):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime(2026, 11, 16, hour, minute, tzinfo=ZoneInfo('Europe/Warsaw')).timestamp()
+
+
+def test_sending_window_follows_the_profile_in_local_time(monkeypatch):
+    monkeypatch.delenv('CAMPAIGN_WINDOW')
+    assert campaigns.in_window('balanced', warsaw(19)) and campaigns.in_window('balanced', warsaw(17))
+    assert not campaigns.in_window('balanced', warsaw(16, 59)) and not campaigns.in_window('balanced', warsaw(23))
+    assert not campaigns.in_window('balanced', warsaw(3))                       # the middle of the night
+    assert campaigns.in_window('fast', warsaw(11)) and not campaigns.in_window('careful', warsaw(11))
+    monkeypatch.setenv('CAMPAIGN_WINDOW', '22:00-06:00')                         # operator override, across midnight
+    assert campaigns.in_window('balanced', warsaw(23)) and campaigns.in_window('balanced', warsaw(3)) and not campaigns.in_window('balanced', warsaw(12))
+    monkeypatch.setenv('CAMPAIGN_WINDOW', 'always')
+    assert campaigns.in_window('careful', warsaw(3))
+
+
+def test_nothing_is_sent_outside_the_window_but_drafts_are_written(store, monkeypatch):
+    monkeypatch.delenv('CAMPAIGN_WINDOW')
+    monkeypatch.setattr(campaigns, 'in_window', lambda profile=None, now=None: False)
+    assert not campaigns.send_room('balanced')
+    campaigns.launch(['t4'], 'auto')
+    assert campaigns.claim_next() is None                                         # an automatic opener waits for the window
+    campaigns.stop()
+    campaigns.launch(['t4'], 'draft')
+    assert campaigns.claim_next()['thread_id'] == 't4'                            # a draft needs no window
+
+
+def test_profiles_set_the_pace_and_the_operator_can_override(monkeypatch):
+    assert [campaigns.gap_seconds(k) for k in ('careful', 'balanced', 'fast')] == [480, 300, 180]
+    assert [campaigns.daily_cap(k) for k in ('careful', 'balanced', 'fast')] == [8, 15, 30]
+    monkeypatch.setenv('CAMPAIGN_GAP_SECONDS', '60')
+    assert campaigns.gap_seconds('careful') == 60
+    assert campaigns.profile_of('nonsense') == campaigns.PROFILES['balanced']
+
+
+def test_each_campaign_uses_its_own_profile(store):
+    assert campaigns.launch(['t4'], 'auto', 'careful')['profile'] == 'careful'
+    assert campaigns.claim_next()['profile'] == 'careful'
+    with pytest.raises(ValueError):
+        campaigns.launch(['t1'], 'auto', 'reckless')
+
+
+def test_only_with_bio_filter(store):
+    with s.connect() as db:
+        db.execute("UPDATE threads SET source_seen=1 WHERE id='t4'")
+        db.execute("INSERT OR REPLACE INTO tinder_threads VALUES('t4',?)", (json.dumps({'profile': {'bio': 'Kocham góry'}}),))
+        db.execute("INSERT INTO threads(id,display_name,source_seen) VALUES('t9','Bez opisu',1)")
+    r = campaigns.launch(['t4', 't9'], 'draft', only_with_bio=True)
+    assert r['accepted'] == ['t4'] and 'Brak opisu' in r['rejected']['t9']
+    assert campaigns.launch(['t9'], 'draft', only_with_bio=False)['accepted'] == ['t9']
+
+
+def test_a_conversation_nobody_answered_gives_its_slot_back_sooner(store, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    monkeypatch.setenv('PLAN', 'winq')
+    monkeypatch.setattr(rt, 'eligible', lambda t, ctx=None: True)
+    def old(tid, sender, days):
+        add_empty(tid)
+        ts = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec='seconds')
+        with s.connect() as db:
+            db.execute('INSERT INTO messages(id,thread_id,sender,body,created_at,synced_at) VALUES(?,?,?,?,?,?)', (tid + '-m', tid, sender, 'hej', ts, ts))
+        return service.thread_by_id(tid)
+    silent, lively = old('q0', 'you', 6), old('q1', 'them', 6)
+    assert plans.admit(silent) is True                      # admitted first...
+    with s.connect() as db:
+        plans.ensure(db)
+    assert plans.free_slots() == 3                          # ...but nobody answered for 6 days: no slot held
+    assert plans.admit(lively) is True and plans.free_slots() == 2   # she did answer once: still active for 14 days
+    assert plans.admit(old('q2', 'you', 2)) is True and plans.free_slots() == 1   # a fresh unanswered opener holds a slot
+
+
+def test_status_describes_the_profiles_for_the_panel(store):
+    st = campaigns.status()
+    assert st['default_profile'] == 'balanced' and set(st['profiles']) == {'careful', 'balanced', 'fast'}
+    assert st['profiles']['balanced'] == {**st['profiles']['balanced'], 'gap_seconds': 300, 'per_day': 15, 'label': 'Zrównoważony'}
+    assert st['reserve'] == 5 and st['timezone'] == 'Europe/Warsaw'

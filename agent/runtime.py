@@ -50,7 +50,8 @@ def init():
         CREATE TABLE IF NOT EXISTS tinder_threads (thread_id TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS tinder_receipts (action_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, message_id TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS leases (name TEXT PRIMARY KEY, owner TEXT NOT NULL, expires REAL NOT NULL);
-        CREATE TABLE IF NOT EXISTS campaigns (id TEXT PRIMARY KEY, created TEXT NOT NULL, mode TEXT NOT NULL, stopped INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS campaigns (id TEXT PRIMARY KEY, created TEXT NOT NULL, mode TEXT NOT NULL, stopped INTEGER NOT NULL DEFAULT 0,
+            profile TEXT NOT NULL DEFAULT 'balanced');
         CREATE TABLE IF NOT EXISTS campaign_items (thread_id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, mode TEXT NOT NULL,
             status TEXT NOT NULL, note TEXT, position INTEGER NOT NULL, available REAL NOT NULL DEFAULT 0, updated REAL NOT NULL,
             attempts INTEGER NOT NULL DEFAULT 0);
@@ -60,6 +61,8 @@ def init():
         if 'automatic' not in actioncols:db.execute('ALTER TABLE actions ADD COLUMN automatic INTEGER NOT NULL DEFAULT 0')
         ctxcols={r[1] for r in db.execute('PRAGMA table_info(draft_context)')}
         if 'history_hash' not in ctxcols:db.execute('ALTER TABLE draft_context ADD COLUMN history_hash TEXT')
+        if 'profile' not in {r[1] for r in db.execute('PRAGMA table_info(campaigns)')}:
+            db.execute("ALTER TABLE campaigns ADD COLUMN profile TEXT NOT NULL DEFAULT 'balanced'")
         receiptcols={r[1] for r in db.execute('PRAGMA table_info(tinder_receipts)')}
         if 'next_check' not in receiptcols:db.execute('ALTER TABLE tinder_receipts ADD COLUMN next_check REAL NOT NULL DEFAULT 0')
         # Local simulator send IDs provide exactly-once behavior across browser failures.

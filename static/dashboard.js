@@ -571,7 +571,7 @@ function renderOnboarding(){const box=document.getElementById('onboard');if(!box
  card.append(startGuide(()=>renderOnboarding()));box.append(card)}
 
 /* ---------- Automatyzuj: agent pisze pierwszą wiadomość do wybranych nowych dopasowań ---------- */
-const CAMPAIGN={mode:null,sel:null,msg:null};
+const CAMPAIGN={mode:null,sel:null,msg:null,profile:null,bio:true};
 const CMP_STATUS={queued:'w kolejce',sent:'wysłano',review:'szkic czeka na Ciebie',started:'rozmowa ruszyła',skipped:'pominięto',failed:'nie udało się'};
 function fmtDur(sec){let m=Math.round(sec/60);if(m<2)return 'kilka minut';if(m<90)return m+' min';let h=Math.round(m/6)/10;return h+' godz.'}
 function autoLive(){return apLive(tinderConn())&&(!data.plan||data.plan.autopilot)}
@@ -596,14 +596,18 @@ function campaignWatch(p){clearInterval(CMP_TIMER);let last=JSON.stringify(data.
   if(document.activeElement&&p.contains(document.activeElement)&&document.activeElement.matches('input'))return;  // do not pull the list from under a click
   fillCampaign(p)},3000)}
 function fillCampaign(p){p.replaceChildren();
- const cs=data.campaign||{items:{},counts:{},gap_seconds:240},counts=cs.counts||{},live=autoLive();
+ const cs=data.campaign||{items:{},counts:{},profiles:{}},counts=cs.counts||{},live=autoLive(),profiles=cs.profiles||{};
  const waiting=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a));
  const free=cs.free_slots==null?Infinity:cs.free_slots;
- const eligible=waiting.filter(t=>!['queued'].includes(cs.items?.[t.id]?.status));
+ const eligible=waiting.filter(t=>cs.items?.[t.id]?.status!=='queued');
+ const hasBio=t=>!!(t.profile?.bio||'').trim();
  if(CAMPAIGN.mode===null||(CAMPAIGN.mode==='auto'&&!live))CAMPAIGN.mode=live?'auto':'draft';
- if(CAMPAIGN.sel===null){CAMPAIGN.sel=new Set(eligible.filter(t=>!cs.items?.[t.id]).slice(0,Math.min(free,eligible.length)).map(t=>t.id))}
- CAMPAIGN.sel=new Set([...CAMPAIGN.sel].filter(id=>eligible.some(t=>t.id===id)));
- p.append(el('p','','Agent napisze pierwszą wiadomość do wybranych nowych dopasowań, nawiązując do tego, co mają w opisie. Zaznacz osoby, wybierz tryb i kliknij Start. Do osób, które już coś napisały, nic nie wysyła.'));
+ if(!CAMPAIGN.profile||!profiles[CAMPAIGN.profile])CAMPAIGN.profile=cs.default_profile||'balanced';
+ const pickable=t=>!CAMPAIGN.bio||hasBio(t);
+ if(CAMPAIGN.sel===null)CAMPAIGN.sel=new Set(eligible.filter(t=>pickable(t)&&!cs.items?.[t.id]).slice(0,Math.min(free,eligible.length)).map(t=>t.id));
+ CAMPAIGN.sel=new Set([...CAMPAIGN.sel].filter(id=>{let t=eligible.find(x=>x.id===id);return t&&pickable(t)}));
+ const redraw=()=>fillCampaign(p);
+ p.append(el('p','','Agent napisze pierwszą wiadomość do wybranych nowych dopasowań, nawiązując do tego, co mają w opisie. Do osób, które już coś napisały, nic nie wysyła.'));
  if(CAMPAIGN.msg)p.append(el('div','callout ok',CAMPAIGN.msg));
  /* trwa / wynik */
  const done=Object.values(counts).reduce((a,b)=>a+b,0);
@@ -614,35 +618,48 @@ function fillCampaign(p){p.replaceChildren();
   for(let [id,v] of notes.slice(0,6)){let th=data.threads.find(x=>x.id===id);box.append(el('div','gdesc',(th?th.display_name:'?')+': '+v.note))}
   let row=el('div','btnrow');
   if(counts.review){let q=el('button','primary','Przejrzyj szkice po kolei ('+counts.review+')');q.onclick=()=>{closePanel();showQueue()};row.append(q)}
-  if(cs.running){let st=el('button','secondary danger','Zatrzymaj automatyzację');st.onclick=async()=>{if(!confirm('Zatrzymać automatyzację? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;st.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();fillCampaign(p)}catch(e){st.disabled=false}};row.append(st)}
+  if(cs.running){let st=el('button','secondary danger','Zatrzymaj automatyzację');st.onclick=async()=>{if(!confirm('Zatrzymać automatyzację? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;st.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();redraw()}catch(e){st.disabled=false}};row.append(st)}
   if(row.children.length)box.append(row);p.append(box)}
  if(!data.llm_enabled){p.append(el('div','callout warn','Podłącz model AI w ustawieniach serwera, żeby agent mógł pisać pierwsze wiadomości.'));return}
  if(!eligible.length){p.append(el('div','roster-empty','Nie ma teraz nowych dopasowań bez wiadomości. Gdy pojawią się nowe, wrócisz tu i klikniesz Start.'));return}
- /* tryb */
- let modes=el('div','presets');
- const modeBtn=(key,label,off)=>{let b=el('button','chipbtn'+(CAMPAIGN.mode===key?' on':''),label);b.type='button';b.disabled=!!off;b.onclick=()=>{CAMPAIGN.mode=key;fillCampaign(p)};return b};
- modes.append(modeBtn('auto','Wysyłaj sam',!live),modeBtn('draft','Tylko szkice, ja klikam Wyślij'));
- p.append(group('Kto pisze pierwszy?',CAMPAIGN.mode==='auto'?'Agent napisze i wyśle sam, po jednej wiadomości, w odstępach.':'Agent przygotuje szkice. Nic nie wyjdzie bez Twojego kliknięcia.',modes));
- if(!live){let w=el('div','callout warn',autoWhy());if(!(data.plan&&!data.plan.autopilot)){let b=el('button','linkish','Włącz autopilota →');b.onclick=()=>{closePanel();showAutopilot()};w.append(document.createTextNode(' '),b)}p.append(w)}
- /* lista */
- let head=el('div','row');let all=el('label','switchrow');let cap=Math.min(free,eligible.length);
- let allIn=el('input','');allIn.type='checkbox';allIn.checked=CAMPAIGN.sel.size>0&&CAMPAIGN.sel.size>=cap;
- allIn.onchange=()=>{CAMPAIGN.sel=allIn.checked?new Set(eligible.slice(0,cap).map(t=>t.id)):new Set();fillCampaign(p)};
- let lab=el('span','glabel','Zaznacz wszystkich ('+cap+')');all.append(allIn,lab);all.style.justifyContent='flex-start';all.style.gap='10px';allIn.style.cssText='position:static;opacity:1;pointer-events:auto;width:18px;height:18px';
+ /* 1. kogo */
+ let head=el('div','row cmphead');p.append(el('div','cmpstep','1. Kogo'));
+ let bioRow=el('label','cmpopt');let bioIn=el('input','');bioIn.type='checkbox';bioIn.checked=CAMPAIGN.bio;bioIn.onchange=()=>{CAMPAIGN.bio=bioIn.checked;CAMPAIGN.sel=null;redraw()};
+ bioRow.append(bioIn,document.createTextNode(' Tylko osoby z opisem (agent ma wtedy do czego się odnieść)'));p.append(bioRow);
+ let cap=Math.min(free,eligible.filter(pickable).length);
+ let all=el('label','cmpopt');let allIn=el('input','');allIn.type='checkbox';allIn.checked=CAMPAIGN.sel.size>0&&CAMPAIGN.sel.size>=cap;
+ allIn.onchange=()=>{CAMPAIGN.sel=allIn.checked?new Set(eligible.filter(pickable).slice(0,cap).map(t=>t.id)):new Set();redraw()};
+ all.append(allIn,document.createTextNode(' Zaznacz wszystkich ('+cap+')'));
  head.append(all,el('span','gdesc','Wybrano '+CAMPAIGN.sel.size+' z '+eligible.length+(cs.free_slots!=null?' · wolnych miejsc w pakiecie: '+cs.free_slots:'')));p.append(head);
  let list=el('div','cmplist');
- for(let t of eligible){let it=cs.items?.[t.id];let r=el('label','cmprow');let cb=el('input','');cb.type='checkbox';cb.checked=CAMPAIGN.sel.has(t.id);
-  cb.onchange=()=>{if(cb.checked&&CAMPAIGN.sel.size>=free){cb.checked=false;note.textContent='Pakiet '+data.plan.label+' ma wolnych miejsc: '+cs.free_slots+'.';return}cb.checked?CAMPAIGN.sel.add(t.id):CAMPAIGN.sel.delete(t.id);fillCampaign(p)};
-  let who=el('div','cmpwho');who.append(el('b','',t.display_name+(t.profile?.age?', '+t.profile.age:'')),el('span','muted',t.profile?.bio?t.profile.bio.slice(0,90):'brak opisu: otwarcie będzie ogólne'));
+ for(let t of eligible){let it=cs.items?.[t.id];let ok=pickable(t);let r=el('label','cmprow'+(ok?'':' off'));let cb=el('input','');cb.type='checkbox';cb.checked=CAMPAIGN.sel.has(t.id);cb.disabled=!ok;
+  cb.onchange=()=>{if(cb.checked&&CAMPAIGN.sel.size>=free){cb.checked=false;note.textContent='Pakiet '+data.plan.label+' ma wolnych miejsc: '+cs.free_slots+'.';return}cb.checked?CAMPAIGN.sel.add(t.id):CAMPAIGN.sel.delete(t.id);redraw()};
+  let who=el('div','cmpwho');who.append(el('b','',t.display_name+(t.profile?.age?', '+t.profile.age:'')),el('span','muted',hasBio(t)?t.profile.bio.slice(0,90):'brak opisu: otwarcie byłoby ogólne'));
   r.append(cb,avatarFor(t,'queue'),who);if(it)r.append(el('span','qchip',CMP_STATUS[it.status]||it.status));list.append(r)}
  p.append(list);let note=el('div','mresult');p.append(note);
- /* tempo */
- let n=CAMPAIGN.sel.size;
- p.append(el('div','gdesc',CAMPAIGN.mode==='auto'?'Wysyłka jest rozłożona w czasie: jedna wiadomość co ok. '+fmtDur(cs.gap_seconds)+', a część limitu Tindera zostaje na odpowiedzi. '+(n?n+' wiadomości potrwa ok. '+fmtDur(n*cs.gap_seconds)+'.':''):'Szkice powstaną w kilka minut. Wyślesz je po kolei jednym przyciskiem.'));
- /* start */
+ /* 2. jak */
+ p.append(el('div','cmpstep','2. Jak'));
+ let modes=el('div','presets');
+ const modeBtn=(key,label,off)=>{let b=el('button','chipbtn'+(CAMPAIGN.mode===key?' on':''),label);b.type='button';b.disabled=!!off;b.onclick=()=>{CAMPAIGN.mode=key;redraw()};return b};
+ modes.append(modeBtn('auto','Agent wysyła sam',!live),modeBtn('draft','Szkice dla mnie'));p.append(group('Kto pisze pierwszy',CAMPAIGN.mode==='auto'?'Agent napisze i wyśle sam, po jednej wiadomości.':'Agent przygotuje szkice. Nic nie wyjdzie bez Twojego kliknięcia.',modes));
+ if(!live){let w=el('div','callout warn',autoWhy());if(!(data.plan&&!data.plan.autopilot)){let b=el('button','linkish','Włącz autopilota →');b.onclick=()=>{closePanel();showAutopilot()};w.append(document.createTextNode(' '),b)}p.append(w)}
+ const pf=profiles[CAMPAIGN.profile]||{};
+ if(CAMPAIGN.mode==='auto'){
+  let tempo=el('div','presets');for(let [k,v] of Object.entries(profiles)){let b=el('button','chipbtn'+(CAMPAIGN.profile===k?' on':''),v.label);b.type='button';b.onclick=()=>{CAMPAIGN.profile=k;redraw()};tempo.append(b)}
+  p.append(group('Tempo',pf.hint||'',tempo))}
+ /* 3. podsumowanie */
+ let n=CAMPAIGN.sel.size;p.append(el('div','cmpstep','3. Podsumowanie'));
+ let sum=el('div','cmpsum');
+ if(CAMPAIGN.mode==='auto'&&pf.gap_seconds!==undefined){
+  const win=pf.window?(()=>{let [a,b]=pf.window.map(x=>{let [h,m]=x.split(':');return +h+m/60});return (b>a?b-a:24-a+b)*3600})():86400;
+  const perDay=Math.max(1,Math.min(pf.per_day||n,Math.floor(win/Math.max(1,pf.gap_seconds))));const days=Math.max(1,Math.ceil(n/perDay));
+  sum.append(el('div','',(n?'Wysyłka '+n+' '+pl(n,'wiadomość','wiadomości','wiadomości'):'Zaznacz osoby powyżej')+(n?(days===1?', skończy się dziś (jeśli zaczniesz w oknie).':', rozłożona na około '+days+' '+pl(days,'dzień','dni','dni')+'.'):'.')),
+   el('div','muted','Co '+fmtDur(pf.gap_seconds)+', do '+pf.per_day+' dziennie'+(pf.window?', w godzinach '+pf.window[0]+'–'+pf.window[1]:'')+' ('+(cs.timezone||'Europe/Warsaw')+'). '+(cs.reserve||0)+' wysyłek na godzinę zostaje na odpowiedzi.'))}
+ else sum.append(el('div','',n?'Przygotuję '+n+' '+pl(n,'szkic','szkice','szkiców')+'. Wyślesz je po kolei jednym przyciskiem.':'Zaznacz osoby powyżej.'));
+ p.append(sum);
  let go=el('button','primary','Start · '+n+' '+pl(n,'osoba','osoby','osób'));go.disabled=!n;
  go.onclick=async()=>{go.disabled=true;note.className='mresult';note.textContent='Uruchamiam…';
-  try{let r=await api('/api/campaigns','POST',{thread_ids:[...CAMPAIGN.sel],mode:CAMPAIGN.mode});CAMPAIGN.sel=null;let rej=Object.values(r.rejected||{});
-   CAMPAIGN.msg='Ruszyło: '+r.accepted.length+(rej.length?'. Pominięto '+rej.length+': '+rej[0]:'.');await refresh();fillCampaign(p)}
+  try{let r=await api('/api/campaigns','POST',{thread_ids:[...CAMPAIGN.sel],mode:CAMPAIGN.mode,profile:CAMPAIGN.profile,only_with_bio:CAMPAIGN.bio});CAMPAIGN.sel=null;let rej=Object.values(r.rejected||{});
+   CAMPAIGN.msg='Ruszyło: '+r.accepted.length+(rej.length?'. Pominięto '+rej.length+': '+rej[0]:'.');await refresh();redraw()}
   catch(e){note.className='mresult err';note.textContent=ERR_PL[e.message]||e.message;go.disabled=false}};
  let foot=el('div','mfoot');foot.append(go);p.append(foot)}

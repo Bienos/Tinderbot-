@@ -11,6 +11,11 @@ def isolate_from_host_settings(monkeypatch):
     for name in HOST_SETTINGS:monkeypatch.delenv(name,raising=False)
 
 @pytest.fixture(autouse=True)
+def automation_window_always_open(monkeypatch):
+    # The sending window of Automatyzuj depends on the clock; tests of sending must not. Window tests set their own.
+    monkeypatch.setenv('CAMPAIGN_WINDOW','always')
+
+@pytest.fixture(autouse=True)
 def disable_operator_startup_check(monkeypatch):
     # A production troubleshooting flag must not add real network calls to tests.
     monkeypatch.setenv('TINDER_STARTUP_CHECK','false')

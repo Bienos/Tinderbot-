@@ -446,11 +446,13 @@ class Launch(BaseModel):
     model_config=ConfigDict(extra='forbid')
     thread_ids:list[str]=Field(min_length=1,max_length=100)
     mode:__import__('typing').Literal['auto','draft']='draft'
+    profile:__import__('typing').Literal['careful','balanced','fast']='balanced'
+    only_with_bio:bool=True
 @app.post('/api/campaigns')
 def campaign_launch(body:Launch):
     """Start a campaign: the agent writes the first message to the chosen new matches (and sends it in 'auto' mode)."""
     if not model_configured():raise HTTPException(409,'Podłącz model AI, żeby agent mógł pisać pierwsze wiadomości.')
-    r=campaigns.launch(body.thread_ids,body.mode)
+    r=campaigns.launch(body.thread_ids,body.mode,body.profile,body.only_with_bio)
     if not r['accepted']:raise HTTPException(409,next(iter(r['rejected'].values()),'Nie ma czego uruchomić.'))
     service.WAKE.set();return r
 @app.post('/api/campaigns/stop')

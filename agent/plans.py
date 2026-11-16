@@ -23,6 +23,7 @@ PLANS = {
     'casanova': {'label': 'Casanova', 'conversations': 30, 'autopilot': True, 'advanced_stats': True},
 }
 ACTIVE_DAYS = 14
+UNANSWERED_DAYS = 5  # a conversation she never answered gives its slot back sooner than a lively one that went quiet
 DATE_KINDS = {'date_suggested', 'date_tentative', 'date_confirmed'}
 
 
@@ -54,7 +55,7 @@ def ensure(db) -> None:
     db.execute('CREATE TABLE IF NOT EXISTS plan_slots (thread_id TEXT PRIMARY KEY, admitted TEXT NOT NULL)')
 
 
-def _recent(ts: str | None) -> bool:
+def _recent(ts: str | None, days: int = ACTIVE_DAYS) -> bool:
     if not ts:
         return False
     try:
@@ -63,7 +64,7 @@ def _recent(ts: str | None) -> bool:
         return True  # an unreadable date must not push a conversation out
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
-    return when >= datetime.now(timezone.utc) - timedelta(days=ACTIVE_DAYS)
+    return when >= datetime.now(timezone.utc) - timedelta(days=days)
 
 
 def _date_stage(db, thread_id: str) -> bool:
@@ -87,6 +88,8 @@ def _holds_slot(db, thread_id: str) -> bool:
         # Nothing written yet (a first message is on its way): the slot counts from the day it was taken.
         row = db.execute('SELECT admitted FROM plan_slots WHERE thread_id=?', (thread_id,)).fetchone()
         return bool(row) and _recent(row['admitted'])
+    if not db.execute("SELECT 1 FROM messages WHERE thread_id=? AND sender='them' LIMIT 1", (thread_id,)).fetchone():
+        return _recent(last, UNANSWERED_DAYS)  # only our messages so far (an opener nobody answered)
     return _recent(last)
 
 
