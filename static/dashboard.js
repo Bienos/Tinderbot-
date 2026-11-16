@@ -622,6 +622,7 @@ function fillCampaign(p){p.replaceChildren();
   if(row.children.length)box.append(row);p.append(box)}
  if(!data.llm_enabled){p.append(el('div','callout warn','Podłącz model AI w ustawieniach serwera, żeby agent mógł pisać pierwsze wiadomości.'));return}
  if(!eligible.length){p.append(el('div','roster-empty','Nie ma teraz nowych dopasowań bez wiadomości. Gdy pojawią się nowe, wrócisz tu i klikniesz Start.'));return}
+ {let c=tinderConn();if(c&&c.enabled&&c.blocked_until>Date.now()/1000)p.append(el('div','callout warn','Tinder jest chwilowo wstrzymany do '+clockText(c.blocked_until)+'. Szkice powstają normalnie, a wysyłka ruszy po przerwie.'))}
  /* 1. kogo */
  let head=el('div','row cmphead');p.append(el('div','cmpstep','1. Kogo'));
  let bioRow=el('label','cmpopt');let bioIn=el('input','');bioIn.type='checkbox';bioIn.checked=CAMPAIGN.bio;bioIn.onchange=()=>{CAMPAIGN.bio=bioIn.checked;CAMPAIGN.sel=null;redraw()};

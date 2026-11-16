@@ -142,8 +142,9 @@ def eligible(thread,ctx=None):
     if thread.get('platform') == 'tinder':
         key=('tinder_ok',thread['connection_id'])
         if key not in ctx:
-            from agent.tinder import connection, TinderError
+            from agent.tinder import connection, TinderError, TinderRateLimited
             try: connection(thread['connection_id']);ctx[key]=True
+            except TinderRateLimited: ctx[key]=True  # a pause in network traffic: drafts need no Tinder request, only sending does
             except TinderError: ctx[key]=False
         if not ctx[key]:return False
     return not cfg['paused'] and not thread['user_paused'] and not thread['user_archived'] and thread['source_visibility']=='available'

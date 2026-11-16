@@ -570,3 +570,34 @@ async def test_launch_refuses_a_match_that_already_has_messages(source,monkeypat
     await setup_thread(source,grant=False)
     r=campaigns.launch([TID,TID_B],'draft')
     assert r['accepted']==[TID_B] and 'już się zaczęła' in r['rejected'][TID]
+
+
+async def test_a_request_pause_only_blocks_sending_not_drafting(source,monkeypatch):
+    """Our own request budget (or Tinder's Retry-After) pauses network traffic. Drafts need no Tinder request, so they keep coming."""
+    import time
+    from agent import campaigns
+    source.owner_bio='Czasem odpisuje za mnie asystent AI'
+    await setup_thread(source,grant=False);_bio_mode();model_stub(monkeypatch);opener_stub(monkeypatch)
+    def pause(seconds):
+        with s.connect() as db:
+            v=json.loads(db.execute('SELECT value FROM connections WHERE id=?',(CID,)).fetchone()['value'])
+            v.update({'blocked_until':time.time()+seconds,'error':'local_request_budget'} if seconds else {'blocked_until':0,'error':None})
+            db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(v),CID))
+    pause(600)
+    t=service.thread_by_id(TID)
+    assert rt.eligible(t) and tinder.paused_for(CID)>500           # a pause is not a revocation
+    # an incoming message still gets its draft; nothing is sent
+    rt.enqueue(TID,s.messages(TID)[-1]['id']);await service.run_jobs()
+    reply=[d for d in s.all_drafts() if d['thread_id']==TID][0]
+    assert reply['status']=='pending' and not source.posts
+    with pytest.raises(PermissionError,match='wstrzymane'):await service.execute(reply['id'])
+    # a first message is written and then waits for the pause to end instead of failing
+    assert campaigns.launch([TID_B],'auto')['accepted']==[TID_B]
+    await drain()
+    assert not source.b_posts and campaign_item()['status']=='queued' and 'wstrzymany' in campaign_item()['note']
+    opener=[d for d in s.all_drafts() if d['thread_id']==TID_B][0];assert opener['status']=='pending'
+    # the pause ends: the same draft goes out, once
+    pause(0)
+    with s.connect() as db:db.execute("UPDATE campaign_items SET available=0")
+    await drain()
+    assert source.b_posts==[{'message':OPENER}] and campaign_item()['status']=='sent'

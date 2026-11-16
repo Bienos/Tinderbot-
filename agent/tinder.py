@@ -361,6 +361,15 @@ def connection(connection_id: str, *, owner_check: bool = False) -> tuple[dict, 
     return row, value
 
 
+def paused_for(connection_id: str) -> float:
+    """Seconds this connection must stay quiet (our own request budget, or Tinder asked for a pause). 0 when it may talk."""
+    rows = s.rows('SELECT value FROM connections WHERE id=?', (connection_id,))
+    try:
+        return max(0.0, float(json.loads(rows[0]['value']).get('blocked_until', 0)) - time.time()) if rows else 0.0
+    except (ValueError, TypeError):
+        return 0.0
+
+
 def status_update(connection_id: str, *, error=None, delay=0, disable=False, polled=False):
     with s.connect() as db:
         row = db.execute('SELECT value,enabled FROM connections WHERE id=?', (connection_id,)).fetchone()

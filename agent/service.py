@@ -6,7 +6,7 @@ from agent.adapters import adapter,StaleAction
 from agent.engine import generate,should_draft
 from agent.llm import configured as model_configured
 from agent.outcomes import detect,semantic
-from agent.tinder import TinderRejected
+from agent.tinder import TinderRejected,TinderRateLimited
 from agent.dispatch import DispatchDenied
 from agent.limits import check_send_budget,BudgetExceeded
 
@@ -154,6 +154,10 @@ async def process_opener(item):
     d=s.rows('SELECT * FROM drafts WHERE thread_id=? AND anchor_message_id=?',(tid,s.OPENER_ANCHOR))[0]
     t=thread_by_id(tid)
     if item['mode']=='auto' and t and rt.auto_allowed(t):
+        if t['platform']=='tinder':
+            from agent.tinder import paused_for
+            wait=paused_for(t['connection_id'])
+            if wait>0:campaigns.requeue(tid,min(900,wait+30),'Tinder jest chwilowo wstrzymany. Wyślę po przerwie.');return  # the draft is kept
         try:result=await execute(d['id'],automatic=True)
         except BudgetExceeded:campaigns.requeue(tid,900,'Limit wysyłek Tindera. Wznowię, gdy się zwolni.');return
         except (DispatchDenied,PermissionError) as exc:campaigns.finish(tid,'failed',str(exc));return
@@ -189,7 +193,10 @@ async def execute(draft_id,automatic=False):
     if t['platform']!='simulator':
         if not d['generator'].startswith('LLM-reviewed:'):raise PermissionError('Live replies require a reviewed model response')
         if automatic and not rt.auto_consent(t):raise PermissionError('Consent, disclosure and owner grant required')
-    a=adapter(t);fresh=await a.snapshot(t);ingest(t,fresh)
+    a=adapter(t)
+    try:fresh=await a.snapshot(t)
+    except TinderRateLimited:raise PermissionError('Połączenie z Tinderem jest chwilowo wstrzymane. Spróbuj po przerwie.')
+    ingest(t,fresh)
     if s.anchor_of(fresh)!=d['anchor_message_id']:
         s.set_draft_status(d['id'],'stale');rt.metric('stale_drafts');raise StaleAction('New message invalidates draft')
     if context[0].get('history_hash')!=rt.history_hash(s.messages(t['id'])):
