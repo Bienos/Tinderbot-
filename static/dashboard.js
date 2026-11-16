@@ -342,7 +342,7 @@ async function logoutNow(){try{await api('/auth/logout','POST')}catch(e){}locati
 function renderRoster(){let box=document.getElementById('roster');box.replaceChildren();if(!data)return;
 let todo=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a)),reply=data.threads.filter(t=>t.state==='needs_reply').sort((a,b)=>tsOf(b)-tsOf(a));
 document.getElementById('roster-title').textContent='Do napisania · '+todo.length+' nowych'+(reply.length?' · '+reply.length+' czeka na Twoją odpowiedź':'');
-let cb=document.getElementById('campaign-btn');if(cb){let run=!!data.campaign?.running;cb.hidden=!todo.length&&!run;cb.textContent=run?'Kampania · trwa':'Kampania';cb.onclick=showCampaign}
+let cb=document.getElementById('campaign-btn');if(cb){let run=!!data.campaign?.running;cb.hidden=false;cb.textContent=run?'Kampania · trwa':todo.length?'Kampania ('+todo.length+')':'Kampania';cb.onclick=showCampaign}
 let qn=pendingQueue().length,qb=document.getElementById('queue-btn');if(qb){qb.hidden=!qn;qb.textContent='Odpisz po kolei ('+qn+')'}
 if(!todo.length&&!reply.length){box.append(el('div','roster-empty','Wszystko odpisane. Nowe dopasowania pojawią się tutaj.'));return}
 for(let t of [...todo,...reply]){let b=el('button','rost'+(selected===t.id?' sel':''));let u=safeImg(t.profile?.photos?.[0]);
