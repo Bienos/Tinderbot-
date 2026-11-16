@@ -271,8 +271,8 @@ def test_password_reset_flow(client):
     r=client.post('/api/password/forgot',json={'email':'nobody@example.com'})
     assert r.status_code==404 and 'Nie ma konta' in r.json()['detail'] and not [m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło']
     assert client.post('/api/password/forgot',json={'email':'ola@example.com'}).json()=={'ok':True}
-    link=[m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło'][-1]['text'].split('\n')[1]
-    token=link.split('t=',1)[1]
+    import re
+    token=re.search(r'nowe-haslo\?t=([\w-]+)',[m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło'][-1]['text']).group(1)
     assert client.post('/api/password/reset',json={'token':token,'password':'krotkie'}).status_code==422
     assert client.post('/api/password/reset',json={'token':token,'password':'nowe-dlugie-haslo'}).json()=={'ok':True}
     assert client.post('/api/password/reset',json={'token':token,'password':'nowe-dlugie-haslo'}).status_code==400   # single use
@@ -645,3 +645,67 @@ def test_register_stores_optional_signup_source(client):
     assert client.post('/api/register',json={**base,'email':'src2@example.com','source':'<script>'}).status_code==200
     rows={r['email']:r['source'] for r in c.q('SELECT email,source FROM accounts',fetch=True)}
     assert rows['src@example.com']=='tiktok' and rows['src2@example.com'] is None
+
+
+def test_every_customer_mail_has_html_text_footer_and_no_placeholders(monkeypatch):
+    from control import mailer
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://winq.site');monkeypatch.setenv('MAIL_FROM','kontakt@winq.site')
+    monkeypatch.setenv('LEGAL_NAME','Jan Kowalski');monkeypatch.setenv('LEGAL_ADDRESS','ul. Testowa 1, 00-001 Warszawa');monkeypatch.setenv('LEGAL_ID','NIP 1234567890')
+    mailer.SENT.clear();o='https://winq.site'
+    mailer.welcome('a@b.pl',o);mailer.payment_ok('a@b.pl',o);mailer.panel_ready('a@b.pl',o);mailer.password_reset('a@b.pl',o+'/nowe-haslo?t=abc')
+    mailer.password_changed('a@b.pl',o);mailer.payment_failed('a@b.pl',o);mailer.subscription_canceled('a@b.pl',o)
+    mailer.withdrawal_confirmed('a@b.pl',o);mailer.account_deleted('a@b.pl')
+    assert len(mailer.SENT)==9 and len({m['subject'] for m in mailer.SENT})==9
+    for m in mailer.SENT:
+        assert '<table' in m['html'] and 'kontakt@winq.site' in m['html'] and 'kontakt@winq.site' in m['text']
+        assert 'Jan Kowalski' in m['html'] and 'NIP 1234567890' in m['text']
+        assert 'https://winq.site/regulamin' in m['html'] and 'https://winq.site/prywatnosc' in m['text']
+        assert '{{' not in m['html'] and '[adres]' not in m['html'] and 'None' not in m['text']
+    reset=[m for m in mailer.SENT if m['subject']=='Ustaw nowe hasło'][0]
+    assert 'href="https://winq.site/nowe-haslo?t=abc"' in reset['html'] and 'https://winq.site/nowe-haslo?t=abc' in reset['text']
+
+
+def test_mail_escapes_html_and_skips_unfilled_seller_fields(monkeypatch):
+    from control import mailer
+    monkeypatch.setenv('PUBLIC_ORIGIN','https://winq.site');monkeypatch.setenv('LEGAL_NAME','[imię i nazwisko lub firma]');monkeypatch.delenv('LEGAL_ADDRESS',raising=False)
+    mailer.SENT.clear();mailer.safe_send('o@b.pl','Test <b>','Klient <script>alert(1)</script> odstąpił')
+    m=mailer.SENT[0]
+    assert '<script>' not in m['html'] and '&lt;script&gt;' in m['html'] and '[imię' not in m['html']
+
+
+def test_mail_goes_out_as_html_with_reply_to(monkeypatch):
+    from control import mailer
+    sent=[]
+    class FakeSMTP:
+        def __init__(self,*a,**k):pass
+        def __enter__(self):return self
+        def __exit__(self,*a):return False
+        def starttls(self,**k):pass
+        def login(self,*a):pass
+        def send_message(self,msg):sent.append(msg)
+    monkeypatch.setattr(mailer.smtplib,'SMTP',FakeSMTP)
+    for k,v in {'SMTP_HOST':'smtp.example.com','SMTP_USERNAME':'u','SMTP_PASSWORD':'p','MAIL_FROM':'kontakt@winq.site','PUBLIC_ORIGIN':'https://winq.site'}.items():monkeypatch.setenv(k,v)
+    assert mailer.send_spec('x@y.pl',{'subject':'S','heading':'H','paragraphs':['p']}) is True
+    msg=sent[0]
+    assert msg['From']=='Winq <kontakt@winq.site>' and msg['Reply-To']=='kontakt@winq.site'
+    assert msg.get_body(('plain',)) is not None and msg.get_body(('html',)) is not None
+
+
+def test_state_change_mails_from_stripe_events_are_sent_once(client,monkeypatch):
+    pytest.importorskip('stripe')
+    import json as _j
+    from control import app as capp,mailer
+    class Ev:
+        @staticmethod
+        def construct_event(*a,**k):return {}
+    monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_t');monkeypatch.setattr('stripe.Webhook',Ev)
+    client.post('/api/register',json=REG)
+    capp.q("UPDATE accounts SET stripe_customer='cus_1', plan_status='active' WHERE email=?",(REG['email'].lower(),))
+    mailer.SENT.clear()
+    def event(kind,status):
+        return client.post('/stripe/webhook',content=_j.dumps({'type':kind,'data':{'object':{'customer':'cus_1','status':status}}}),headers={'stripe-signature':'x'})
+    assert event('customer.subscription.updated','past_due').status_code==200
+    assert event('customer.subscription.updated','past_due').status_code==200   # Stripe repeats events
+    assert event('customer.subscription.deleted','canceled').status_code==200
+    subjects=[m['subject'] for m in mailer.SENT]
+    assert subjects==['Nie udało się pobrać płatności','Subskrypcja została anulowana'],subjects
