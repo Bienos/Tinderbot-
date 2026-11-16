@@ -89,3 +89,10 @@ async def test_autopilot_is_refused_below_flirt(store,monkeypatch):
         assert c.put('/api/tinder/connections/'+cid+'/automation',json={'enabled':True}).status_code==200
         assert rt.auto_allowed(service.thread_by_id(tid))
         monkeypatch.delenv('PLAN');assert c.get('/api/state').json()['plan'] is None
+
+
+def test_only_casanova_has_advanced_stats(store,monkeypatch):
+    got={}
+    for name in ('winq','flirt','casanova'):
+        monkeypatch.setenv('PLAN',name);got[name]=plans.status()['advanced_stats']
+    assert got=={'winq':False,'flirt':False,'casanova':True}

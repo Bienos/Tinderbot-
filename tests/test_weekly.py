@@ -236,3 +236,13 @@ def test_admin_accounts_lists_weekly_state(env,bots,smtp):
     c=env;account(c);run(c)
     item=tc(c).get('/admin/accounts',headers=ADMIN).json()['items'][0]
     assert item['weekly_summary']==1 and item['weekly_sent_at']==SUN_21 and item['weekly_note']=='sent'
+
+def test_verified_results_are_left_out_for_plans_without_advanced_statistics():
+    from control import mailer
+    def labels(plan):
+        s=summary();s['plan']=plan
+        return [x['label'] for x in mailer.weekly_spec(s,'https://winq.example','https://winq.example/wypisz-sie?t=x')['stats']]
+    basic=['Nowe dopasowania','Wiadomości od nich','Odpowiedzi na Twoje wiadomości']
+    assert labels({'name':'flirt','advanced_stats':False})==basic
+    assert labels({'name':'casanova','advanced_stats':True})==basic+['Spotkania i kontakty']
+    assert labels(None)==basic+['Spotkania i kontakty']             # an older bot or the owner's own: nothing is limited

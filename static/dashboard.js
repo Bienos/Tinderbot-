@@ -167,7 +167,12 @@ if(tab==='style'){
  let extra=el('div','extrafacts');const addRow=(k,v)=>{let r=el('div','kvrow');let ki=el('input','inp');ki.placeholder='Co (np. pies)';ki.value=k;ki.maxLength=60;let vi=el('input','inp');vi.placeholder='Fakt (np. mam labradora Burka)';vi.value=v;vi.maxLength=300;r.append(ki,vi);extra.append(r);fields.extra.push([ki,vi])};
  for(let k of Object.keys(profile).filter(k=>!known.has(k)))addRow(k,profile[k]);
  let add=el('button','secondary','Dodaj własny fakt');add.type='button';add.onclick=()=>addRow('','');
- let fwrap=el('div','');fwrap.append(fl,extra,add);body.append(group('Fakty o Tobie','Tylko to, co sam tu wpiszesz, Winq może powiedzieć o Tobie. Niczego nie dopisuje ze starych wiadomości. Im więcej prawdziwych szczegółów, tym mniej odpowiedzi „do sprawdzenia”.',fwrap));
+ let pull=el('button','secondary','Pobierz zainteresowania z Tindera');pull.type='button';const tc=tinderConn();if(!tc)pull.disabled=true;
+ let pres=el('div','mresult');pull.onclick=async()=>{pull.disabled=true;pres.className='mresult';pres.textContent='Czytam Twój profil na Tinderze…';
+  try{const r=await api('/api/tinder/connections/'+encodeURIComponent(tc.id)+'/sync-profile','POST');await refresh();cfg=data.settings;
+   if(r.filled){showSettings('style')}else{pres.className='mresult ok';pres.textContent=r.interests.length?'Masz już wpisane zainteresowania, więc ich nie zmieniam. Na Tinderze: '+r.interests.join(', '):'Nie widzę zainteresowań w Twoim profilu na Tinderze.';pull.disabled=false}}
+  catch(e){pres.className='mresult err';pres.textContent=ERR_PL[e.message]||e.message;pull.disabled=false}};
+ let fwrap=el('div','');fwrap.append(fl,pull,pres,extra,add);body.append(group('Fakty o Tobie','Tylko to, co sam tu wpiszesz, Winq może powiedzieć o Tobie. Niczego nie dopisuje ze starych wiadomości. Im więcej prawdziwych szczegółów, tym mniej odpowiedzi „do sprawdzenia”.',fwrap));
  let fb=el('textarea','inp');fb.rows=4;fb.placeholder='np. Nigdy nie używaj wykrzykników\nNie pytaj o pracę w pierwszych wiadomościach';fb.value=cfg.feedback.join('\n');fields.feedback=fb;body.append(group('Twoje zasady','Jedna zasada w linii. Winq przestrzega ich w każdej wiadomości.',fb));}
 if(tab==='tinder')buildTinder();
 if(tab==='accounts'){
@@ -382,7 +387,7 @@ function heroBlock(m,st,sent){let c=el('section','hero');let L=el('div','hleft')
  tx.append(el('p','hsub',r==null?'Potrzeba co najmniej 5 Twoich wiadomości z czasem na odpowiedź. Zmień zakres na „Cały okres” albo wróć po kolejnej synchronizacji.':'Na '+m.cur.answered+' z '+m.cur.asked+' '+pl(m.cur.asked,'Twojej wiadomości','Twoich wiadomości','Twoich wiadomości')+' przyszła odpowiedź ('+rangeLabel(m.range)+'). Liczymy tylko wiadomości starsze niż 6 godzin, żeby nie karać świeżych.'));
  if(sent>0){let h=sent/60;let pill=el('div','hsaved');pill.append(el('b','','≈ '+(h<1?Math.round(sent)+' min':n1(h)+' godz.')),document.createTextNode(' pisania zaoszczędzone przez Winq · '+sent+' '+pl(sent,'wiadomość wysłana','wiadomości wysłane','wiadomości wysłanych')+' (szacunek: 1 min na wiadomość)'));tx.append(pill)}
  L.append(tx);
- let f=st.funnel||{},steps=[['Dopasowania',f.matches||0],['Rozmowy',f.conversations||0],['Spotkania',f.confirmed||0]];
+ let f=st.funnel||{},steps=[['Dopasowania',f.matches||0],['Rozmowy',f.conversations||0],...(statsAdv()?[['Spotkania',f.confirmed||0]]:[])];
  for(let [i,[lab,v]] of steps.entries()){let s=el('div','hstep');let b=el('b','',''),sm=el('small','',lab);s.append(b,sm);countUp(b,v);if(i)s.append(el('span','hconv',steps[i-1][1]?'↳ '+rate(v,steps[i-1][1])+'%':''));R.append(s)}
  c.append(L,R);return c}
 
@@ -397,12 +402,12 @@ function insightsBlock(m,st,sent){let list=[],th=data.threads,c=m.cur;
  let needs=th.filter(t=>t.state==='needs_reply');
  if(needs.length)list.push({p:1,i:'💬',tone:'hot',h:needs.length+' '+pl(needs.length,'osoba czeka','osoby czekają','osób czeka')+' na odpowiedź',t:names(needs)+'. Im szybciej odpiszesz, tym większa szansa na ciąg dalszy.'});
  let inv=th.filter(t=>t.plan?.stage==='invite');if(inv.length)list.push({p:2,i:'🔥',tone:'hot',h:inv.length+' '+pl(inv.length,'rozmowa jest','rozmowy są','rozmów jest')+' w oknie na zaproszenie',t:names(inv)+': sygnały zainteresowania są dobre, warto zaproponować spotkanie.'});
- if(m.heatN>=8){let best=[...m.parts].sort((a,b)=>b.n-a.n)[0],share=Math.round(100*best.n/m.heatN),bd=m.dayTot.indexOf(Math.max(...m.dayTot));list.push({p:3,i:'🕘',h:share+'% wiadomości od nich przychodzi '+best.label+' ('+best.a+'–'+best.b+')',t:'Najaktywniejsze są '+DAYS_LONG[bd]+'. Wtedy najłatwiej złapać rozmowę „na żywo”.'})}
- let q=m.byQ;if(q[0].rate!=null&&q[1].rate!=null&&Math.abs(q[0].rate-q[1].rate)>=10){let w=q[0].rate>q[1].rate;list.push({p:4,i:'❓',h:(w?'Pytanie na końcu':'Wiadomość bez pytania')+' dostaje odpowiedź częściej',t:'Z pytaniem: '+q[0].rate+'% (n='+q[0].n+'), bez: '+q[1].rate+'% (n='+q[1].n+').'})}
- let ls=m.byLen.filter(x=>x.rate!=null);if(ls.length>=2){let b=[...ls].sort((a,b)=>b.rate-a.rate),w=b[b.length-1];if(b[0].rate-w.rate>=12)list.push({p:5,i:'✍️',h:'Najlepiej działają wiadomości: '+b[0].label,t:b[0].rate+'% odpowiedzi wobec '+w.rate+'% dla „'+w.label+'”.'})}
+ if(statsAdv()&&m.heatN>=8){let best=[...m.parts].sort((a,b)=>b.n-a.n)[0],share=Math.round(100*best.n/m.heatN),bd=m.dayTot.indexOf(Math.max(...m.dayTot));list.push({p:3,i:'🕘',h:share+'% wiadomości od nich przychodzi '+best.label+' ('+best.a+'–'+best.b+')',t:'Najaktywniejsze są '+DAYS_LONG[bd]+'. Wtedy najłatwiej złapać rozmowę „na żywo”.'})}
+ let q=m.byQ;if(statsAdv()&&q[0].rate!=null&&q[1].rate!=null&&Math.abs(q[0].rate-q[1].rate)>=10){let w=q[0].rate>q[1].rate;list.push({p:4,i:'❓',h:(w?'Pytanie na końcu':'Wiadomość bez pytania')+' dostaje odpowiedź częściej',t:'Z pytaniem: '+q[0].rate+'% (n='+q[0].n+'), bez: '+q[1].rate+'% (n='+q[1].n+').'})}
+ let ls=m.byLen.filter(x=>x.rate!=null);if(statsAdv()&&ls.length>=2){let b=[...ls].sort((a,b)=>b.rate-a.rate),w=b[b.length-1];if(b[0].rate-w.rate>=12)list.push({p:5,i:'✍️',h:'Najlepiej działają wiadomości: '+b[0].label,t:b[0].rate+'% odpowiedzi wobec '+w.rate+'% dla „'+w.label+'”.'})}
  if(c.theirMed!=null&&c.theirDelays.length>=3)list.push({p:6,i:'⏱️',h:'Odpowiadają zwykle w ciągu '+dur(c.theirMed),t:c.yourMed!=null?'Ty (z agentem) reagujesz po ok. '+dur(c.yourMed)+'.':'Tak wygląda mediana z ostatnich wymian.'});
  if(m.ghosted.length)list.push({p:7,i:'👻',tone:'cold',h:m.ghosted.length+' '+pl(m.ghosted.length,'rozmowa ucichła','rozmowy ucichły','rozmów ucichło')+' po Twojej wiadomości (3 dni +)',t:names(m.ghosted)+'. Możesz je odpuścić albo zagadać o czymś nowym.'});
- let ag=m.byAge.filter(x=>x.rate!=null);if(ag.length>=2){let b=[...ag].sort((a,b)=>b.rate-a.rate);if(b[0].rate-b[b.length-1].rate>=20)list.push({p:8,i:'🎯',h:'Najlepsza odpowiedzialność: '+b[0].label,t:b[0].rate+'% rozmów z odpowiedzią (n='+b[0].n+'), najsłabiej '+b[b.length-1].label+': '+b[b.length-1].rate+'%.'})}
+ let ag=m.byAge.filter(x=>x.rate!=null);if(statsAdv()&&ag.length>=2){let b=[...ag].sort((a,b)=>b.rate-a.rate);if(b[0].rate-b[b.length-1].rate>=20)list.push({p:8,i:'🎯',h:'Najlepsza odpowiedzialność: '+b[0].label,t:b[0].rate+'% rozmów z odpowiedzią (n='+b[0].n+'), najsłabiej '+b[b.length-1].label+': '+b[b.length-1].rate+'%.'})}
  list.sort((a,b)=>a.p-b.p);list=list.slice(0,6);
  let card=secCard('Co zauważył Winq','Wnioski z Twoich rozmów. Pojawiają się dopiero, gdy jest dość danych, żeby nie zgadywać.','insights');
  if(!list.length){card.append(el('p','sempty','Za mało danych na wnioski. Pierwsze pojawią się po ok. 20 wymienionych wiadomościach.'));return card}
@@ -474,12 +479,12 @@ function depthBlock(m){let card=secCard('Jak głęboko sięgają rozmowy','Liczb
  card.append(cols);return card}
 
 function opsBlock(st){let sent=0,auto=0,manual=0,uncertain=0;for(let a of st.actions){if(a.status==='sent'){sent+=a.n;if(a.automatic)auto+=a.n;else manual+=a.n}if(a.status==='uncertain')uncertain+=a.n}
- let d=el('details','more opsd');d.append(el('summary','','Pod maską: praca agenta, szkice i rezultaty'));let g=el('div','grid2');let how=el('div','cardx');how.append(el('h2','','Jak to działa'));
+ let d=el('details','more opsd');d.append(el('summary','','Pod maską: praca agenta, szkice'+(statsAdv()?' i rezultaty':'')));let g=el('div','grid2');let how=el('div','cardx');how.append(el('h2','','Jak to działa'));
  how.append(kv('Wysłane automatycznie',auto),kv('Wysłane po Twoim zatwierdzeniu',manual),kv('Szkice oczekujące',st.drafts.pending||0),kv('Szkice odrzucone',st.drafts.rejected||0),kv('Szkice nieaktualne',st.drafts.stale||0),kv('Wysyłki niepewne (do sprawdzenia)',uncertain),kv('Tryb',data.settings.mode),kv('Agent',data.settings.paused?'wstrzymany':(data.worker.running?'działa':'wyłączony')));
  if(st.tinder_requests)how.append(kv('Zapytania do Tinder (min / godz.)',st.tinder_requests.minute+' / '+st.tinder_requests.hour));
- let res=el('div','cardx');res.append(el('h2','','Zweryfikowane rezultaty'));let ks=Object.keys(st.outcomes);if(!ks.length)res.append(el('div','fact muted','Brak jeszcze rezultatów. Pojawią się, gdy rozmowa zawiera sprawdzalny kontakt lub plan spotkania.'));for(let k of ks)res.append(kv(OUTCOME_NAMES[k]||k,st.outcomes[k]));
- res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiting:'Czekasz na odpowiedź',new_match:'Nowe dopasowania',paused:'Wstrzymane',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia',not_synced:'Niezsynchronizowane'};for(let k of Object.keys(st.by_state))res.append(kv(sn[k]||k,st.by_state[k]));
- g.append(how,res);d.append(g);let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));d.append(act);return {node:d,sent}}
+ let out=el('div','cardx');out.append(el('h2','','Zweryfikowane rezultaty'));let ks=Object.keys(st.outcomes);if(!ks.length)out.append(el('div','fact muted','Brak jeszcze rezultatów. Pojawią się, gdy rozmowa zawiera sprawdzalny kontakt lub plan spotkania.'));for(let k of ks)out.append(kv(OUTCOME_NAMES[k]||k,st.outcomes[k]));
+ let res=el('div','cardx');res.append(el('h2','','Stan rozmów'));let sn={needs_reply:'Do odpowiedzi',waiting:'Czekasz na odpowiedź',new_match:'Nowe dopasowania',paused:'Wstrzymane',archived:'Archiwum',unavailable_unknown:'Dostęp niepewny',needs_review:'Do sprawdzenia',not_synced:'Niezsynchronizowane'};for(let k of Object.keys(st.by_state))res.append(kv(sn[k]||k,st.by_state[k]));
+ g.append(how,res);d.append(g);if(statsAdv())d.append(out);let act=el('div','cardx');act.append(el('h2','','Ostatnia aktywność'));for(let a of data.activity.slice(0,10))act.append(kv(a.event+(a.thread_id?' · '+(data.threads.find(t=>t.id===a.thread_id)?.display_name||''):''),a.ts.slice(5,16).replace('T',' ')));d.append(act);return {node:d,sent}}
 
 /* Czy dane są świeże i połączenie działa: bez tego liczby mogłyby być spokojnie nieaktualne. */
 function linkStatus(){let cons=data.tinder?.connections||[],now=Date.now(),box=el('div','linkst');let c=cons[0];
@@ -492,6 +497,10 @@ function linkStatus(){let cons=data.tinder?.connections||[],now=Date.now(),box=e
  if(data.settings?.paused)return put('warn','Agent jest wstrzymany. Ostatnia synchronizacja: '+ago+'.');
  if(min>30)return put('warn','Ostatnia synchronizacja była '+ago+'. Statystyki mogą być nieaktualne.');
  return put('ok','Połączono z Tinderem. Ostatnia synchronizacja: '+ago+'.')}
+/* Podstawowe statystyki (kafelki, odpowiedzi, stan połączenia, gorące rozmowy) dostaje każdy pakiet. Zaawansowane (lejek do randki,
+   mapa zainteresowania, aktywność dzień po dniu, co działa, zweryfikowane rezultaty) tylko Casanova: data.plan.advanced_stats. */
+const statsAdv=()=>!data.plan||data.plan.advanced_stats;
+function statsLock(){let c=el('section','cardx statslock');c.append(el('h2','','Zaawansowane statystyki w pakiecie Casanova'),el('p','muted','Zobacz, gdzie rozmowy zamieniają się w randki: lejek od dopasowania do umówionego spotkania, mapę zainteresowania, godziny największej aktywności, to co działa w Twoich wiadomościach i zweryfikowane rezultaty (randki, Instagram, numery).'));c.append(upgradeLink('Zobacz pakiety'));return c}
 function renderStats(){let root=document.getElementById('stats-view');root.replaceChildren();if(!data){root.textContent='Ładowanie...';return}let st=data.stats;if(!st){root.textContent='Brak statystyk.';return}
  root.classList.toggle('anim',S.anim&&!REDUCED);
  let head=el('div','stathead');let ttl=el('div','');ttl.append(el('h2','sttitle','Statystyki'),el('p','stsub','Wszystko, co Winq widzi w Twoich rozmowach, policzone na bieżąco z synchronizacji.'));
@@ -500,10 +509,12 @@ function renderStats(){let root=document.getElementById('stats-view');root.repla
  if(!data.threads.length){root.append(el('p','sempty big','Brak danych do analizy. Po pierwszej synchronizacji z Tinderem pojawią się tu Twoje statystyki.'));return}
  let m=computeStats(S.range),ops=opsBlock(st);
  root.append(heroBlock(m,st,ops.sent),kpiRow(m),insightsBlock(m,st,ops.sent));
- let two=el('div','sgrid');two.append(constellation(m),hotBlock());root.append(two);
- let two2=el('div','sgrid even');two2.append(funnelBlock(st),worksBlock(m));root.append(two2);
- root.append(heatBlock(m));
- let two3=el('div','sgrid even');two3.append(speedBlock(m),depthBlock(m));root.append(two3);
+ if(statsAdv()){
+  let two=el('div','sgrid');two.append(constellation(m),hotBlock());root.append(two);
+  let two2=el('div','sgrid even');two2.append(funnelBlock(st),worksBlock(m));root.append(two2);
+  root.append(heatBlock(m));
+  let two3=el('div','sgrid even');two3.append(speedBlock(m),depthBlock(m));root.append(two3)}
+ else{root.append(hotBlock(),statsLock())}
  root.append(ops.node);S.anim=false}
 document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
 

@@ -759,7 +759,7 @@ def test_free_trial_wording_follows_trial_days(client,monkeypatch):
     page=client.get('/').text
     assert 'Pierwsze 3 dni za darmo, potem 49 zł / mies.' in page and '{{TRIAL' not in page and 'nic nie zapłacisz' in page
     terms=client.get('/regulamin').text
-    assert 'Okres próbny: pierwsze 3 dni' in terms and '{{TRIAL' not in terms
+    assert 'Pierwsze 3 dni Subskrypcji są bezpłatne (okres próbny)' in terms and '{{TRIAL' not in terms
     assert client.get('/rejestracja').status_code==200
     client.post('/api/register',json=REG)
     assert client.get('/api/me').json()['trial_days']==3
@@ -784,7 +784,7 @@ def test_landing_shows_three_plans_only_when_all_payment_links_exist(client,monk
     for k,v in PLAN_LINKS.items():monkeypatch.setenv(k,v)
     page=client.get('/').text
     assert 'class="tiers"' in page and 'class="ticket"' not in page and '{{' not in page
-    for needle in ('Winq</h3>','Flirt</h3>','Casanova</h3>','19 zł','69 zł','169 zł','Najczęściej wybierany','Do 10 aktywnych rozmów','Pierwsze 3 dni w każdym pakiecie za darmo','href="/rejestracja?plan=flirt"'):
+    for needle in ('Winq</h3>','Flirt</h3>','Casanova</h3>','19 zł','69 zł','169 zł','Najczęściej wybierany','Do 10 aktywnych rozmów','Pierwsze 3 dni w każdym pakiecie za darmo','href="/rejestracja?plan=flirt&amp;period=1"'):
         assert needle in page,needle
     assert 'Trzy pakiety: Winq 19 zł, Flirt 69 zł, Casanova 169 zł miesięcznie.' in page and 'Jeden plan w subskrypcji' not in page
     terms=client.get('/regulamin').text
@@ -851,3 +851,63 @@ def test_switching_plan_in_stripe_changes_the_plan_and_the_running_bot(client,mo
     assert switch('price_unknown').status_code==200 and client.get('/api/me').json()['plan']=='flirt'   # an unknown price changes nothing
     assert switch('price_winq').status_code==200 and client.get('/api/me').json()['plan']=='winq'        # downgrade works the same way
     assert ('PUT','/v1/services/srv-new/env-vars/PLAN',{'value':'winq'}) in calls
+
+
+PERIOD_LINKS={f'STRIPE_LINK_{s}_{n}':f'https://buy.stripe.com/{s.lower()}{n}' for s in ('WINQ','FLIRT','CASANOVA') for n in ('6','12')}
+
+
+def test_six_and_twelve_month_plans_show_the_saving_and_use_their_own_links(client,monkeypatch):
+    pytest.importorskip('stripe')
+    from urllib.parse import urlparse,parse_qs
+    monkeypatch.setenv('TRIAL_DAYS','3');monkeypatch.setenv('STRIPE_PAYMENT_LINK','https://buy.stripe.com/t');monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_p')
+    for k,v in {**PLAN_LINKS}.items():monkeypatch.setenv(k,v)
+    for k in PERIOD_LINKS:monkeypatch.delenv(k,raising=False)
+    assert 'class="period"' not in client.get('/').text                          # only monthly until every longer link exists
+    for k,v in PERIOD_LINKS.items():monkeypatch.setenv(k,v)
+    page=client.get('/').text
+    assert 'class="period"' in page and '3 miesiące gratis' in page and '1 miesiąc gratis' in page and 'Weź rok i trzy miesiące masz gratis' in page
+    assert 'pricing.js' in page and 'data-period="12"' in page
+    assert '51,75 zł' in page and '3 miesiące gratis · −207 zł' in page and 'za 12 miesięcy' not in page and 'js-sub' not in page   # Flirt, year: 9 of 12 months, 69 zł a month
+    assert '14,25 zł' in page and '126,75 zł' in page and '<s class="tier-was js-was">69 zł</s>' in page
+    assert 'Płacisz raz' not in page and 'tier-strip' not in page and 'płacisz za 5 miesięcy' in client.get('/regulamin').text
+    client.post('/api/register',json=REG)
+    plans=client.get('/api/me').json()['plans']
+    flirt=[p for p in plans if p['slug']=='flirt'][0]['periods']
+    assert [(p['key'],p['total'],p['regular']) for p in flirt]==[('1',69,69),('6',345,414),('12',621,828)]
+    assert client.post('/api/billing/checkout',json={'start_now':True,'plan':'flirt','period':'3'}).status_code==422
+    url=client.post('/api/billing/checkout',json={'start_now':True,'plan':'flirt','period':'12'}).json()['url']
+    assert url.startswith('https://buy.stripe.com/flirt12?')
+    assert client.post('/api/billing/checkout',json={'start_now':True,'plan':'winq','period':'6'}).json()['url'].startswith('https://buy.stripe.com/winq6?')
+    assert client.post('/api/billing/checkout',json={'start_now':True,'plan':'winq'}).json()['url'].startswith('https://buy.stripe.com/w?')   # no period = monthly
+
+
+def test_period_follows_the_stripe_price(client,monkeypatch):
+    pytest.importorskip('stripe')
+    import json
+    from urllib.parse import urlparse,parse_qs
+    from control import provision
+    _provision_env(monkeypatch);calls=[];monkeypatch.setattr(provision,'TRANSPORT',_render_mock(calls))
+    for k,v in {**PLAN_LINKS,**PERIOD_LINKS}.items():monkeypatch.setenv(k,v)
+    for s in ('WINQ','FLIRT','CASANOVA'):
+        for n,suffix in (('1',''),('6','_6'),('12','_12')):monkeypatch.setenv(f'STRIPE_PRICE_{s}{suffix}',f'price_{s.lower()}{n}')
+    client.post('/api/register',json=REG)
+    aid=parse_qs(urlparse(client.post('/api/billing/checkout',json={'start_now':True,'plan':'flirt','period':'12'}).json()['url']).query)['client_reference_id'][0]
+    ev=json.dumps({'type':'checkout.session.completed','data':{'object':{'mode':'subscription','client_reference_id':aid,'customer':'cus_y'}}})
+    client.post('/stripe/webhook',content=ev,headers=_signed(ev,'whsec_p'))
+    me=client.get('/api/me').json();assert me['plan']=='flirt' and me['plan_period']=='12'
+    def switch(price):
+        e=json.dumps({'type':'customer.subscription.updated','data':{'object':{'customer':'cus_y','status':'active','items':{'data':[{'price':{'id':price}}]}}}})
+        client.post('/stripe/webhook',content=e,headers=_signed(e,'whsec_p'))
+    switch('price_flirt6');me=client.get('/api/me').json();assert me['plan']=='flirt' and me['plan_period']=='6'
+    assert not [c for c in calls if c[1].endswith('/env-vars/PLAN')]                  # same plan, longer or shorter period: bot untouched
+    switch('price_casanova12');me=client.get('/api/me').json();assert me['plan']=='casanova' and me['plan_period']=='12'
+    assert ('PUT','/v1/services/srv-new/env-vars/PLAN',{'value':'casanova'}) in calls
+
+
+def test_admin_can_send_every_sample_mail_to_check_the_look(client):
+    from control import mailer
+    mailer.SENT.clear()
+    assert client.post('/admin/mail/test',json={'to':'a@b.pl'}).status_code==401                      # admin token required
+    assert client.post('/admin/mail/test',json={'to':'nope'},headers=ADMIN).status_code==422
+    r=client.post('/admin/mail/test',json={'to':'a@b.pl'},headers=ADMIN);assert r.status_code==200 and r.json()['sending']==9
+    assert len(mailer.SENT)==9 and len({m['subject'] for m in mailer.SENT})==9 and {m['to'] for m in mailer.SENT}=={'a@b.pl'}

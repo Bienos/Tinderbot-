@@ -119,7 +119,7 @@ def _health(now: float) -> dict:
 
 
 def weekly(now: float | None = None, days: int = 7) -> dict:
-    from agent import strategy, runtime as rt
+    from agent import strategy, plans, runtime as rt
     now = time.time() if now is None else now
     span = days * DAY
     threads, notes = _load(now)
@@ -145,4 +145,5 @@ def weekly(now: float | None = None, days: int = 7) -> dict:
     return {'version': 1, 'generated_at': datetime.fromtimestamp(now, timezone.utc).isoformat(timespec='seconds'), 'period_days': days,
             'this': this, 'prev': prev,
             'now': {'needs_reply': needs, 'invite_window': invite, 'conversations': conversations, 'matches_total': len(threads)},
+            'plan': {'name': plans.current()[0], 'advanced_stats': plans.current()[1] is None or bool(plans.current()[1].get('advanced_stats'))},
             'health': _health(now)}

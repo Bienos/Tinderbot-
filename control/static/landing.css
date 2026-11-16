@@ -406,5 +406,20 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .plan-opt p{margin:6px 0 10px;font-size:14px;color:var(--text);line-height:1.5}
 .plan-opt .btn{padding:11px 22px;font-size:15px}.plan-opt .btn[disabled]{opacity:.45;cursor:not-allowed}
 
+/* pricing: period switch and the value of longer plans */
+.period-lead{text-align:center;font-size:20px;color:var(--text);margin:0 0 16px}.period-lead b{color:var(--ink)}
+.period{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px;width:max-content;max-width:100%;margin:0 auto 34px;box-shadow:0 14px 30px -22px rgba(42,15,34,.4)}
+.period button{font:inherit;font-weight:700;font-size:15px;color:var(--muted);background:none;border:0;border-radius:999px;padding:11px 22px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.period button i{font-style:normal;font-size:12px;font-weight:700;background:rgba(253,38,122,.1);color:var(--ember);border-radius:999px;padding:3px 9px}
+.period button.on{background:var(--fire);color:#fff;box-shadow:0 10px 24px -10px rgba(253,38,122,.7)}.period button.on i{background:rgba(255,255,255,.25);color:#fff}
+.tier-save{margin:0 0 10px;display:inline-block;align-self:flex-start;background:rgba(31,157,85,.12);color:#16834a;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:700}
+.tier-save[hidden]{display:none}
+@media(max-width:560px){.period button{padding:10px 14px;font-size:14px}.period button i{display:none}.period-lead{font-size:17px}}
+.period.acc{width:auto;border-radius:18px;margin:0 0 6px;justify-content:flex-start;padding:5px}.period.acc button{padding:8px 13px;font-size:13px;text-align:left}
+
+.tier-was{color:var(--muted);font-size:18px;font-weight:600;margin-left:6px;text-decoration:line-through;text-decoration-color:rgba(253,38,122,.7)}.tier-was[hidden]{display:none}
+.tier-price{flex-wrap:wrap}.tier-price b{white-space:nowrap}
+.tier-was{order:-1;flex-basis:100%;margin:0 0 2px;line-height:1.1}
+
 /* account page: weekly summary preference */
 .weekly-pref{display:flex;align-items:flex-start;gap:8px;margin-top:18px;font-size:13px;line-height:1.45;text-align:left;cursor:pointer}.weekly-pref input{margin-top:2px;accent-color:#fd267a}

@@ -88,3 +88,9 @@ def test_sso_next_stats_opens_the_statistics_tab(store,monkeypatch):
     with TestClient(app) as c:
         assert 'url=/#stats"' in c.get('/auth/sso',params={'t':token(),'next':'stats'}).text
         assert 'url=/"' in c.get('/auth/sso',params={'t':token(),'next':'https://evil.example'}).text   # only a known view is accepted
+
+@pytest.mark.parametrize('plan,advanced',[('winq',False),('flirt',False),('casanova',True),('',True)])
+def test_summary_reports_whether_the_plan_has_advanced_statistics(filled,monkeypatch,plan,advanced):
+    from agent import summary
+    monkeypatch.setenv('PLAN',plan)                                   # no plan (the owner's own bot): nothing is limited
+    d=summary.weekly(filled)['plan'];assert d['advanced_stats'] is advanced and d['name']==(plan or None)

@@ -258,7 +258,7 @@ def welcome(to: str, origin: str) -> None:
     _safe(to, {'subject': 'Witaj w Winq', 'preheader': 'Twoje konto jest gotowe. Zostały trzy proste kroki.',
                'heading': 'Witaj w Winq! 👋',
                'paragraphs': ['Twoje konto jest gotowe. Winq to Twój asystent do rozmów na Tinderze: pisze szkice odpowiedzi w Twoim stylu, '
-                              'a gdy zechcesz, odpisuje sam.', 'Tak zaczniesz:'],
+                              'a gdy zechcesz, odpisuje sam.', 'Zaczniesz tak.'],
                'steps': [(f'Zacznij {_days(_trial())} za darmo' if _trial() else 'Wykup dostęp', 'Na stronie konta. Anulujesz w każdej chwili.'),
                          ('Przygotujemy Twój osobny serwer', 'Zwykle w kilka minut. Napiszemy, gdy będzie gotowy.'),
                          ('Połącz Tinder i włącz autopilota', 'Panel poprowadzi Cię krok po kroku.')],
@@ -285,7 +285,7 @@ def payment_ok(to: str, origin: str) -> None:
 def panel_ready(to: str, origin: str) -> None:
     _safe(to, {'subject': 'Twój panel jest gotowy', 'preheader': 'Połącz konto Tinder i włącz autopilota. To około 3 minuty.',
                'heading': 'Twój panel jest gotowy 🚀',
-               'paragraphs': ['Zaloguj się i kliknij „Otwórz mój panel”. Zostały cztery krótkie kroki, razem około 3 minut:'],
+               'paragraphs': ['Zaloguj się i kliknij „Otwórz mój panel”. Zostały cztery krótkie kroki, razem około 3 minut.'],
                'steps': [('Połącz konto Tinder', 'Ustawienia, Tinder. Wklejasz token, instrukcja jest przy polu.'),
                          ('Wybierz styl', 'Jedno kliknięcie. Zmienisz go, kiedy chcesz.'),
                          ('Dopisz „AI” w bio na Tinderze', 'Osoby, z którymi piszesz, mają wiedzieć, że pomaga Ci asystent.'),
@@ -407,6 +407,8 @@ def weekly_spec(summary: dict, origin: str, unsubscribe: str) -> dict:
          'note': (f"{this.get('meetings', 0)} {_plural(this.get('meetings', 0), 'potwierdzone spotkanie', 'potwierdzone spotkania', 'potwierdzonych spotkań')}, "
                   f"{this.get('contacts', 0)} {_plural(this.get('contacts', 0), 'podany kontakt', 'podane kontakty', 'podanych kontaktów')}")
          if this.get('meetings', 0) + this.get('contacts', 0) else 'jeszcze nic w tym tygodniu'}]
+    if (summary.get('plan') or {}).get('advanced_stats') is False:
+        stats = stats[:3]  # verified results (meetings, contacts) belong to the advanced statistics of the Casanova plan
     paras = ['Tak wyglądały ostatnie 7 dni na Twoim koncie.']
     needs, invite = now.get('needs_reply', 0), now.get('invite_window', 0)
     if needs:
