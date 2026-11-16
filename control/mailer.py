@@ -36,6 +36,9 @@ def configured() -> bool:
     return bool(os.getenv('SMTP_HOST')) and (not os.getenv('SMTP_USERNAME') or bool(os.getenv('SMTP_PASSWORD')))
 
 
+TRIAL_PERIOD = '12'  # only the yearly package has a free trial (same as catalog.TRIAL_PERIOD)
+
+
 def _trial() -> int:
     try:
         return max(0, min(30, int(os.getenv('TRIAL_DAYS', '0') or 0)))
@@ -259,14 +262,14 @@ def welcome(to: str, origin: str) -> None:
                'heading': 'Witaj w Winq! 👋',
                'paragraphs': ['Twoje konto jest gotowe. Winq to Twój asystent do rozmów na Tinderze: pisze szkice odpowiedzi w Twoim stylu, '
                               'a gdy zechcesz, odpisuje sam.', 'Zaczniesz tak.'],
-               'steps': [(f'Zacznij {_days(_trial())} za darmo' if _trial() else 'Wykup dostęp', 'Na stronie konta. Anulujesz w każdej chwili.'),
+               'steps': [('Wykup dostęp', (f'Na stronie konta. W pakiecie rocznym pierwsze {_days(_trial())} za darmo. ' if _trial() else 'Na stronie konta. ') + 'Anulujesz w każdej chwili.'),
                          ('Przygotujemy Twój osobny serwer', 'Zwykle w kilka minut. Napiszemy, gdy będzie gotowy.'),
                          ('Połącz Tinder i włącz autopilota', 'Panel poprowadzi Cię krok po kroku.')],
                'button': ('Przejdź do konta', f'{origin}/konto')})
 
 
-def payment_ok(to: str, origin: str) -> None:
-    n = _trial()
+def payment_ok(to: str, origin: str, period: str = '1') -> None:
+    n = _trial() if str(period or '1') == TRIAL_PERIOD else 0
     if n:
         _safe(to, {'subject': 'Okres próbny rozpoczęty', 'preheader': f'Masz {_days(n)} za darmo. Dziś nic nie pobraliśmy.',
                    'heading': f'Masz {_days(n)} za darmo 🎉',

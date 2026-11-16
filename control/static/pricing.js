@@ -5,5 +5,6 @@ function show(key){wrap.dataset.period=key;tabs.forEach(function(b){var on=b.dat
   card.querySelector('.js-per').textContent=f.per;
   var w=card.querySelector('.js-was');w.textContent=f.was;w.hidden=!f.was;
   var s=card.querySelector('.js-save');s.textContent=f.badge;s.hidden=!f.badge;
+  var t=card.querySelector('.js-trial');if(t){t.textContent=f.trial||'';t.hidden=!f.trial}
   var a=card.querySelector('.js-cta');a.href='/rejestracja?plan='+encodeURIComponent(card.dataset.slug)+'&period='+encodeURIComponent(key)})}
 tabs.forEach(function(b){b.addEventListener('click',function(){show(b.dataset.period)})});show(wrap.dataset.period||'1')})();

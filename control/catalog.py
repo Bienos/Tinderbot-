@@ -32,6 +32,11 @@ PERIODS = [{'key': '1', 'months': 1, 'free': 0, 'label': 'Miesięcznie'},
            {'key': '12', 'months': 12, 'free': 3, 'label': 'Rok'}]
 
 
+# The free trial (TRIAL_DAYS) belongs to this period only: the yearly package. The matching Stripe payment links
+# (STRIPE_LINK_*_12) carry the trial; the monthly and 6-month links must not.
+TRIAL_PERIOD = '12'
+
+
 def period(key: str | None) -> dict | None:
     return next((p for p in PERIODS if p['key'] == str(key or '1').strip()), None)
 

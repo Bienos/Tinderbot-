@@ -414,6 +414,8 @@ body.split{height:100vh;min-height:0;overflow:hidden}
 .period button.on{background:var(--fire);color:#fff;box-shadow:0 10px 24px -10px rgba(253,38,122,.7)}.period button.on i{background:rgba(255,255,255,.25);color:#fff}
 .tier-save{margin:12px 0 0;display:inline-block;align-self:flex-start;background:rgba(31,157,85,.12);color:#16834a;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:700}
 .tier-save[hidden]{display:none}
+.tier-trialtag{margin:8px 0 0;display:inline-block;align-self:flex-start;background:rgba(253,38,122,.1);color:var(--ember);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:700}
+.tier-trialtag[hidden]{display:none}
 @media(max-width:560px){.period button{padding:10px 14px;font-size:14px}.period button i{display:none}.period-lead{font-size:17px}}
 .period.acc{width:auto;border-radius:18px;margin:0 0 6px;justify-content:flex-start;padding:5px}.period.acc button{padding:8px 13px;font-size:13px;text-align:left}
 
