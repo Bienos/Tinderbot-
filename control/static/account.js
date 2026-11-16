@@ -80,13 +80,20 @@ if(card){fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{docu
  else{mark(2);h.textContent=paidNow?'Płatność przyjęta. Dziękujemy!':'Przygotowujemy Twój serwer';p.textContent=me.provision_state==='running'?'Stawiamy Twój osobny serwer. To zwykle trwa kilka minut, a ta strona odświeży się sama.':'Stawiamy Twój osobny serwer. Ta strona odświeży się sama, a gdy panel będzie gotowy, napiszemy też mailem.';const s=document.createElement('div');s.className='queue';s.innerHTML='<span></span><span></span><span></span>';card.append(s);watch(me)}
  if(me.withdrawn){const w=document.createElement('p');w.className='muted';w.textContent='Odstąpiłeś od umowy. Zwrot jest w drodze.';card.append(w)}
  if(me.plans&&me.plans.length&&me.plan){const cur=me.plans.find(x=>x.slug===me.plan);if(cur){const w=document.createElement('p');w.className='muted';const pp=(cur.periods||[]).find(x=>x.key===(me.plan_period||'1'));w.textContent='Twój pakiet to '+cur.name+(pp&&pp.months>1?' ('+pp.label.toLowerCase()+')':'')+', do '+cur.conversations+' aktywnych rozmów.';card.append(w)}}
- if(me.panel_ready){const lab=document.createElement('label');lab.className='muted weekly-pref';const cb=document.createElement('input');cb.type='checkbox';cb.checked=me.weekly_summary!==false;cb.addEventListener('change',()=>{cb.disabled=true;post('/api/account/weekly',{enabled:cb.checked}).catch(()=>{cb.checked=!cb.checked}).finally(()=>{cb.disabled=false})});lab.append(cb,document.createTextNode(' Cotygodniowe podsumowanie e-mailem (status i liczby, bez treści rozmów)'));card.append(lab)}
- if(me.can_manage_billing)card.append(btn(me.plans&&me.plans.length?'Zmień pakiet lub zarządzaj subskrypcją':'Zarządzaj subskrypcją','linkbtn',()=>go('/api/billing/portal')));
- if(me.can_manage_billing&&me.has_access&&me.cancel_reasons)card.append(btn('Chcę zrezygnować','linkbtn cancel-link',()=>cancelFlow(me)));
+ if(me.can_manage_billing)card.append(btn('Zmień pakiet','linkbtn',()=>go('/api/billing/portal')));
+ if(new URLSearchParams(location.search).get('rezygnacja')==='1'&&me.can_manage_billing&&me.has_access&&me.cancel_reasons)cancelFlow(me);  // the link in Ustawienia konta lands here
 }).catch(()=>location.href='/zaloguj')}
 document.querySelectorAll('[data-toggle=password]').forEach(b=>b.addEventListener('click',()=>{const i=b.previousElementSibling;const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ukryj':'Pokaż'}));
 
 // Withdrawal from the contract lives with the other account actions (Zaawansowane ustawienia konta), not on the status page.
+// Weekly e-mail, subscription management and cancelling also live here, not on the status page.
+const prefsZone=document.getElementById('prefs-zone');
+if(prefsZone)fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{
+ const err=document.createElement('p');err.className='err';err.setAttribute('role','alert');
+ if(me.panel_ready){const lab=document.createElement('label');lab.className='muted weekly-pref';const cb=document.createElement('input');cb.type='checkbox';cb.checked=me.weekly_summary!==false;cb.addEventListener('change',()=>{cb.disabled=true;post('/api/account/weekly',{enabled:cb.checked}).catch(()=>{cb.checked=!cb.checked}).finally(()=>{cb.disabled=false})});lab.append(cb,document.createTextNode(' Cotygodniowe podsumowanie e-mailem (status i liczby, bez treści rozmów)'));prefsZone.append(lab)}
+ if(me.can_manage_billing)prefsZone.append(btn('Zarządzaj subskrypcją, kartą i fakturami','linkbtn',async()=>{try{const r=await post('/api/billing/portal');location.href=r.url}catch(e){err.textContent=e.message||'Coś poszło nie tak.'}}));
+ if(me.can_manage_billing&&me.has_access&&me.cancel_reasons)prefsZone.append(btn('Chcę zrezygnować','linkbtn cancel-link',null,'/konto?rezygnacja=1'));
+ prefsZone.append(err)}).catch(()=>{});
 const withdrawZone=document.getElementById('withdraw-zone');
 if(withdrawZone)fetch('/api/me').then(r=>r.ok?r.json():Promise.reject()).then(me=>{if(me.can_withdraw)withdrawBox(withdrawZone)}).catch(()=>{});
 
