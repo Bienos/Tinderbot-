@@ -709,3 +709,33 @@ def test_state_change_mails_from_stripe_events_are_sent_once(client,monkeypatch)
     assert event('customer.subscription.deleted','canceled').status_code==200
     subjects=[m['subject'] for m in mailer.SENT]
     assert subjects==['Nie udało się pobrać płatności','Subskrypcja została anulowana'],subjects
+
+
+def test_mail_never_leaves_from_a_private_or_foreign_address(monkeypatch):
+    """MAIL_FROM must be on the site's domain and Gmail is refused (it rewrites From). Otherwise nothing is sent."""
+    from control import mailer
+    sent=[]
+    class FakeSMTP:
+        def __init__(self,*a,**k):pass
+        def __enter__(self):return self
+        def __exit__(self,*a):return False
+        def starttls(self,**k):pass
+        def login(self,*a):pass
+        def send_message(self,msg):sent.append(msg)
+    monkeypatch.setattr(mailer.smtplib,'SMTP',FakeSMTP)
+    base={'SMTP_HOST':'smtp.example.com','SMTP_USERNAME':'u','SMTP_PASSWORD':'p','PUBLIC_ORIGIN':'https://winq.site'}
+    for k,v in base.items():monkeypatch.setenv(k,v)
+    spec={'subject':'S','heading':'H','paragraphs':['p']}
+    for bad in ('patcich98@gmail.com','','kontakt@winq.site.evil.com','kontakt@other.pl'):
+        monkeypatch.setenv('MAIL_FROM',bad);assert mailer.send_spec('x@y.pl',spec) is False
+    monkeypatch.setenv('MAIL_FROM','kontakt@winq.site');monkeypatch.setenv('SMTP_HOST','smtp.gmail.com')
+    assert mailer.send_spec('x@y.pl',spec) is False and 'Gmail' in mailer.sender_problem()
+    assert not sent
+    monkeypatch.setenv('SMTP_HOST','smtp.example.com');monkeypatch.setenv('MAIL_REPLY_TO','patcich98@gmail.com')
+    assert mailer.send_spec('x@y.pl',spec) is True
+    assert sent[0]['From']=='Winq <kontakt@winq.site>' and sent[0]['Reply-To']=='kontakt@winq.site'   # a private Reply-To is ignored
+    assert 'patcich98' not in sent[0].as_string()
+
+
+def test_email_logo_is_served_for_mails(client):
+    r=client.get('/assets/email-logo.png');assert r.status_code==200 and r.headers['content-type']=='image/png'

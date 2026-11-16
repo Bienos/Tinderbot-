@@ -304,7 +304,7 @@ def terms():
 @app.get('/assets/{name}')
 def asset(name: str):
     types = {'landing.js': 'text/javascript', 'account.js': 'text/javascript', 'landing.css': 'text/css',
-             'og.png': 'image/png', 'icon.svg': 'image/svg+xml'}
+             'og.png': 'image/png', 'email-logo.png': 'image/png', 'icon.svg': 'image/svg+xml'}
     if name not in types:
         raise HTTPException(404)
     return FileResponse(STATIC / name, media_type=types[name], headers={'Cache-Control': 'public, max-age=86400'})
