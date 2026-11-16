@@ -268,7 +268,7 @@ def state():
         p['outcomes']=[o['kind'] for o in outcomes.get(t['id'],[])];p['automatic_sending']=rt.auto_allowed(t,ctx);p['profile']=profiles.get(t['id']);h=hist[t['id']];p['sort_at']=(h[-1]['created_at'] if h else None) or (p['profile'] or {}).get('last_activity') or (p['profile'] or {}).get('matched_at') or '';p['matched_at']=(p['profile'] or {}).get('matched_at');p['plan']=strategy.analyze(hist[t['id']],cfg,outcomes.get(t['id'],[]));threads.append(p)
     mem=rt.memory_by_thread()
     return {'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
-            'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
+            'worker':service.WORKER,'settings':rt.settings(),'synced_facts':rt.synced_facts(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:mem.get(t['id'],[]) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),
             'actions':s.rows('SELECT * FROM actions ORDER BY updated DESC LIMIT 100'),

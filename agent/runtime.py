@@ -252,9 +252,22 @@ def expire():
         db.execute('DELETE FROM tinder_requests WHERE ts<?',(time.time()-3600,))
 
 
+def synced_facts():
+    """Facts about the owner read from his own Tinder profile during sync (name, age, city, work, interests)."""
+    for row in s.rows("SELECT value FROM connections WHERE id LIKE 'tinder:%' AND enabled=1 ORDER BY id"):
+        facts=json.loads(row['value']).get('owner_facts')
+        if isinstance(facts,dict) and facts:return {k:v for k,v in facts.items() if isinstance(v,str) and v}
+    return {}
+def effective_profile(cfg=None):
+    """Tinder facts are only the fallback: whatever the owner typed himself always wins."""
+    cfg=settings() if cfg is None else cfg
+    return {**synced_facts(),**{k:v for k,v in cfg['profile'].items() if v}}
+
+
 def settings_hash(cfg=None):
     cfg=settings() if cfg is None else cfg
     value={k:cfg.get(k) for k in ('profile','style','language','feedback','goal','allow_instagram','pace','availability','date_ideas')}
+    value['profile']=effective_profile(cfg)
     return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 

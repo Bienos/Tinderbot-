@@ -89,7 +89,7 @@ async def process_job(job):
         from agent import strategy
         outcome_rows=s.rows('SELECT value FROM outcome_state WHERE thread_id=?',(t['id'],))
         plan=strategy.analyze(hist,cfg,json.loads(outcome_rows[0]['value']) if outcome_rows else [])
-        profile={**cfg['profile'],**strategy.planning_facts(cfg)}
+        profile={**rt.effective_profile(cfg),**strategy.planning_facts(cfg)}
         decision,generator=await asyncio.to_thread(generate,hist,profile,memory,
              {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
              {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},

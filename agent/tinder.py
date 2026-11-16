@@ -93,15 +93,49 @@ def profile_summary(person: dict, match: dict | None = None) -> dict:
             # Full-size version for the photo viewer: the original, else the widest rendition.
             largest = max(files, key=lambda f: f.get('width') or 0)['url'] if files else None
             photos.append(url); full.append(ph['url'] if _tinder_https(ph.get('url')) else (largest or url))
-    bio = person.get('bio'); age = None
-    try:
-        born = datetime.fromisoformat(str(person.get('birth_date')).replace('Z', '+00:00'))
-        today = datetime.now(timezone.utc); age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-        if not 18 <= age <= 120: age = None
-    except ValueError: age = None
+    bio = person.get('bio'); age = _age(person.get('birth_date'))
     match = match or {}
     return {'photos': photos, 'photos_full': full, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age,
             'matched_at': _iso(match.get('created_date')), 'last_activity': _iso(match.get('last_activity_date'))}
+
+
+def _age(birth_date) -> int | None:
+    try:
+        born = datetime.fromisoformat(str(birth_date).replace('Z', '+00:00'))
+        today = datetime.now(timezone.utc); age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+    except ValueError: return None
+    return age if 18 <= age <= 120 else None
+
+
+def _named(value) -> str:
+    """Tinder sends names either as plain strings or as {'name': ...} objects."""
+    if isinstance(value, dict): value = value.get('name')
+    return value.strip()[:100] if isinstance(value, str) else ''
+
+
+def owner_facts(user: dict) -> dict:
+    """The owner's OWN profile as ready-made facts for the "Fakty o Tobie" form. Only fields Tinder really returned;
+    the date idea is not a Tinder field, so it always stays a manual entry. Keys match the dashboard form."""
+    if not isinstance(user, dict): return {}
+    facts = {}
+    if name := _named(user.get('name')): facts['imię'] = name
+    if (age := _age(user.get('birth_date'))) is not None: facts['wiek'] = str(age)
+    city = _named(user.get('city')) or _named((user.get('pos_info') or {}).get('city') if isinstance(user.get('pos_info'), dict) else None)
+    if city: facts['miasto'] = city
+    work = ''
+    for job in user.get('jobs') or []:
+        if not isinstance(job, dict): continue
+        title, company = _named(job.get('title')), _named(job.get('company'))
+        work = f'{title}, {company}' if title and company else (title or company)
+        if work: break
+    if not work:
+        for school in user.get('schools') or []:
+            if work := _named(school): break
+    if work: facts['praca lub studia'] = work
+    raw = user.get('user_interests') or user.get('interests') or []
+    interests = [n for n in (_named(i) for i in (raw[:12] if isinstance(raw, list) else [])) if n]
+    if interests: facts['zainteresowania'] = ', '.join(interests)[:300]
+    return facts
 
 
 TOKEN_SLOT = 'tinder_token'
@@ -251,6 +285,7 @@ class TinderClient:
         # None when this response has no bio field at all (not the same as an empty bio): then the last known
         # answer is kept instead of switching the autopilot off. owner_bio_now() asks the profile endpoint that has it.
         self.owner_bio = user.get('bio') if isinstance(user.get('bio'), str) else ('' if 'bio' in user else None)
+        self.owner_facts = owner_facts(user)
         return ident(user.get('_id') or user.get('id'))
 
     async def owner_bio_now(self) -> str:
@@ -507,6 +542,8 @@ async def sync_connection(connection_id: str):
         value.update({'idle_rounds':idle_rounds,'listing_signature':listing_signature})
         if getattr(api,'owner_bio',None) is not None:
             value.update({'bio_disclosure':bio_discloses_ai(api.owner_bio),'bio_checked':time.time()})
+        # Free by-product of the profile call above. An empty answer keeps the last known facts.
+        if getattr(api,'owner_facts',None): value['owner_facts']=api.owner_facts
         if page.complete and not value.get('initial_import_done'):
             value['initial_import_done']=True  # from now on the everyday (lower) request budget applies
             rt.audit(None,'tinder_initial_import_done','First full import finished; switching to everyday request limits')

@@ -108,7 +108,7 @@ def raw_message(mid='in-1',text='hey',sender=PERSON):
 class Source:
     def __init__(self):
         self.messages=[raw_message()];self.requests=[];self.posts=[];self.behavior='ok'
-        self.profile_owner=OWNER;self.owner_bio='';self.matches_visible=True;self.hide_sent=False;self.profile_status=200;self.new_id=0
+        self.profile_owner=OWNER;self.owner_bio='';self.matches_visible=True;self.hide_sent=False;self.profile_status=200;self.new_id=0;self.owner_extra={}
     def handle(self,req):
         self.requests.append(req)
         assert req.url.host=='api.gotinder.com' and req.headers.get('X-Auth-Token')==TOKEN
@@ -116,7 +116,7 @@ class Source:
         # Never forge the browser-generated anti-automation signatures.
         assert not any(h in req.headers for h in ('x-client-session','x-client-trace','x-agent-signals'))
         path=req.url.path
-        if path=='/profile':return httpx.Response(self.profile_status,json={'data':{'_id':self.profile_owner,'bio':self.owner_bio}})
+        if path=='/profile':return httpx.Response(self.profile_status,json={'data':{'_id':self.profile_owner,'bio':self.owner_bio,**self.owner_extra}})
         if path=='/v2/matches':return httpx.Response(200,json={'data':{'matches':[
             {'_id':'match-a','person':{'_id':PERSON,'name':'Fictional Test Contact'}},
             {'_id':'match-b','person':{'_id':'person-b','name':'Empty fictional match'}}] if self.matches_visible else []}})
@@ -473,3 +473,26 @@ async def test_bio_missing_from_profile_falls_back_and_never_switches_autopilot_
     assert (await tinder.check_bio(CID))=={'found':True,'bio':'pomaga mi AI'}
     await tinder.sync_connection(CID)
     assert tinder.public_status()['connections'][0]['bio_disclosure'] is True
+
+
+def test_owner_facts_reads_only_what_tinder_returned():
+    from agent.tinder import owner_facts
+    out=owner_facts({'name':' Kuba ','birth_date':'1990-01-01T00:00:00Z','city':{'name':'Warszawa'},
+        'jobs':[{'title':{'name':'Projektant'},'company':{'name':'Acme'}}],'schools':[{'name':'UW'}],
+        'user_interests':[{'name':'bieganie'},{'name':'planszówki'}]})
+    assert out['imię']=='Kuba' and out['miasto']=='Warszawa' and out['praca lub studia']=='Projektant, Acme'
+    assert out['zainteresowania']=='bieganie, planszówki' and out['wiek'].isdigit()
+    assert 'co lubię robić na randce' not in out
+    assert owner_facts({'schools':[{'name':'UW'}],'interests':'broken'})=={'praca lub studia':'UW'}
+    assert owner_facts({})=={} and owner_facts(None)=={}
+
+
+async def test_sync_stores_owner_facts_without_extra_requests_and_typed_values_win(source):
+    source.owner_extra={'name':'Kuba','city':{'name':'Gdańsk'}}
+    await setup_thread(source)
+    assert rt.synced_facts()=={'imię':'Kuba','miasto':'Gdańsk'}
+    assert not any(r.url.path=='/v2/profile' for r in source.requests)
+    cfg=rt.settings();cfg['profile']={'miasto':'Warszawa','praca lub studia':''};before=rt.settings_hash();rt.save_settings(cfg)
+    assert rt.effective_profile()=={'imię':'Kuba','miasto':'Warszawa'} and rt.settings_hash()!=before
+    source.owner_extra={};await tinder.sync_connection(CID)
+    assert rt.synced_facts()['imię']=='Kuba'  # an empty answer keeps the last known facts
