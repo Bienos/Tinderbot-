@@ -92,7 +92,7 @@ def test_endpoint_verifies_then_stores_encrypted_and_never_echoes(store,key,monk
     assert e.value.status_code==403 and not vault.has(tinder.TOKEN_SLOT)
     FakeClient.result='ok'
     out=call(application,{'token':' "'+TOKEN+'" ','account_owned':True,'acknowledge_unofficial':True,'sensitive_data':True})
-    assert out=={'connected':True,'connection_id':'tinder:owner'} and TOKEN not in str(out)
+    assert out=={'connected':True,'connection_id':'tinder:owner','interests':[]} and TOKEN not in str(out)
     assert vault.get(tinder.TOKEN_SLOT)==TOKEN
     import asyncio
     asyncio.run(application.tinder_token_delete())
@@ -105,3 +105,20 @@ def test_endpoint_refuses_without_key(store,monkeypatch):
     monkeypatch.delenv('TOKEN_ENCRYPTION_KEY',raising=False);application._TOKEN_ATTEMPTS.clear()
     with pytest.raises(HTTPException) as e:call(application,{'token':TOKEN,'account_owned':True,'acknowledge_unofficial':True,'sensitive_data':True})
     assert e.value.status_code==503
+
+
+def test_connecting_pulls_interests_but_never_fails_because_of_it(store,key,monkeypatch):
+    import app as application
+    from agent import tinder
+    monkeypatch.setenv('TINDER_ENABLED','true');monkeypatch.delenv('TINDER_AUTH_TOKEN',raising=False)
+    monkeypatch.setattr(tinder,'TinderClient',FakeClient);FakeClient.result='ok'
+    async def fake_connect():return 'tinder:owner'
+    monkeypatch.setattr(tinder,'connect',fake_connect)
+    payload={'token':TOKEN,'account_owned':True,'acknowledge_unofficial':True,'sensitive_data':True}
+    async def pulled(cid):return {'interests':['Bieganie'],'filled':False}
+    monkeypatch.setattr(tinder,'sync_profile',pulled);application._TOKEN_ATTEMPTS.clear()
+    assert call(application,payload)['interests']==['Bieganie']
+    async def broken(cid):raise tinder.TinderUnavailable('boom')
+    monkeypatch.setattr(tinder,'sync_profile',broken);application._TOKEN_ATTEMPTS.clear()
+    out=call(application,payload)
+    assert out['connected'] is True and out['interests']==[]

@@ -167,7 +167,12 @@ if(tab==='style'){
  let extra=el('div','extrafacts');const addRow=(k,v)=>{let r=el('div','kvrow');let ki=el('input','inp');ki.placeholder='Co (np. pies)';ki.value=k;ki.maxLength=60;let vi=el('input','inp');vi.placeholder='Fakt (np. mam labradora Burka)';vi.value=v;vi.maxLength=300;r.append(ki,vi);extra.append(r);fields.extra.push([ki,vi])};
  for(let k of Object.keys(profile).filter(k=>!known.has(k)))addRow(k,profile[k]);
  let add=el('button','secondary','Dodaj własny fakt');add.type='button';add.onclick=()=>addRow('','');
- let fwrap=el('div','');fwrap.append(fl,extra,add);body.append(group('Fakty o Tobie','Tylko to, co sam tu wpiszesz, Winq może powiedzieć o Tobie. Niczego nie dopisuje ze starych wiadomości. Im więcej prawdziwych szczegółów, tym mniej odpowiedzi „do sprawdzenia”.',fwrap));
+ let pull=el('button','secondary','Pobierz zainteresowania z Tindera');pull.type='button';const tc=tinderConn();if(!tc)pull.disabled=true;
+ let pres=el('div','mresult');pull.onclick=async()=>{pull.disabled=true;pres.className='mresult';pres.textContent='Czytam Twój profil na Tinderze…';
+  try{const r=await api('/api/tinder/connections/'+encodeURIComponent(tc.id)+'/sync-profile','POST');await refresh();cfg=data.settings;
+   if(r.filled){showSettings('style')}else{pres.className='mresult ok';pres.textContent=r.interests.length?'Masz już wpisane zainteresowania, więc ich nie zmieniam. Na Tinderze: '+r.interests.join(', '):'Nie widzę zainteresowań w Twoim profilu na Tinderze.';pull.disabled=false}}
+  catch(e){pres.className='mresult err';pres.textContent=ERR_PL[e.message]||e.message;pull.disabled=false}};
+ let fwrap=el('div','');fwrap.append(fl,pull,pres,extra,add);body.append(group('Fakty o Tobie','Tylko to, co sam tu wpiszesz, Winq może powiedzieć o Tobie. Niczego nie dopisuje ze starych wiadomości. Im więcej prawdziwych szczegółów, tym mniej odpowiedzi „do sprawdzenia”.',fwrap));
  let fb=el('textarea','inp');fb.rows=4;fb.placeholder='np. Nigdy nie używaj wykrzykników\nNie pytaj o pracę w pierwszych wiadomościach';fb.value=cfg.feedback.join('\n');fields.feedback=fb;body.append(group('Twoje zasady','Jedna zasada w linii. Winq przestrzega ich w każdej wiadomości.',fb));}
 if(tab==='tinder')buildTinder();
 if(tab==='accounts'){

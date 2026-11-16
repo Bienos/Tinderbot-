@@ -37,8 +37,19 @@ def caps():
         minute=max(minute,integer('TINDER_IMPORT_REQUESTS_PER_MINUTE',120));hour=max(hour,integer('TINDER_IMPORT_REQUESTS_PER_HOUR',1000))
     return [(60,minute),(3600,hour)]
 
-def claim_request():
+_OWNER_CHECKS=[]
+
+def claim_request(owner=False):
     now=time.time()
+    if owner:
+        # Owner-clicked bio check (2 tiny reads): not held back by the sync budget, but capped on its own.
+        recent=[t for t in _OWNER_CHECKS if t>now-3600]
+        _OWNER_CHECKS[:]=recent
+        if len(recent)>=integer('TINDER_OWNER_CHECK_REQUESTS_PER_HOUR',20) or len([t for t in recent if t>now-60])>=6:
+            raise TrafficBudget(60)
+        _OWNER_CHECKS.append(now)
+        with s.connect() as db:db.execute('INSERT INTO tinder_requests(ts) VALUES(?)',(now,))
+        return
     caps_now=caps()
     with s.connect() as db:
         db.execute('BEGIN IMMEDIATE');db.execute('DELETE FROM tinder_requests WHERE ts<?',(now-3600,))

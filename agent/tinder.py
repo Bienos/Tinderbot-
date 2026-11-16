@@ -37,9 +37,14 @@ class TinderRateLimited(TinderError):
         self.reason='rate_limited'
         super().__init__('rate_limited')
 
-def active_cooldown(delay):
-    limited=TinderRateLimited(delay);limited.existing=True;limited.reason='cooldown_active'
+def active_cooldown(delay,cause=None):
+    """cause = what started the cooldown (e.g. 'local_request_budget' = our own limit, 'rate_limited' = Tinder)."""
+    limited=TinderRateLimited(delay);limited.existing=True;limited.reason='cooldown_active';limited.cause=cause
     return limited
+
+def is_local_limit(exc):
+    """True when the wait comes from our own request budget, not from Tinder asking for a pause."""
+    return getattr(exc,'reason',None)=='local_request_budget' or getattr(exc,'cause',None)=='local_request_budget'
 
 @dataclass(frozen=True)
 class Page:
@@ -145,6 +150,7 @@ class TinderClient:
         self.max_pages = max(1, max_pages)
         self.credential_hash=hashlib.sha256(auth_token.encode()).hexdigest()
         self.reconnect=False
+        self.owner_check=False  # owner clicked "check my bio": a local-budget pause must not block this tiny read
         self.client = httpx.AsyncClient(
             base_url=BASE_URL, timeout=10, transport=transport, follow_redirects=False, trust_env=False,
             headers={'X-Auth-Token': auth_token, 'Accept': 'application/json',
@@ -179,9 +185,10 @@ class TinderClient:
             for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%'"):
                 state=json.loads(row['value'])
                 if state.get('credential_fingerprint')!=self.credential_hash:continue
-                if state.get('blocked_until',0)>time.time():raise active_cooldown(state['blocked_until']-time.time())
+                if state.get('blocked_until',0)>time.time() and not (self.owner_check and state.get('error')=='local_request_budget'):
+                    raise active_cooldown(state['blocked_until']-time.time(),state.get('error'))
                 if not row['enabled'] and not self.reconnect:raise TinderAuthError('connection_paused')
-            try:traffic.claim_request()
+            try:traffic.claim_request(owner=self.owner_check)
             except traffic.TrafficBudget as exc:
                 limited=TinderRateLimited(exc.delay);limited.reason='local_request_budget';raise limited from None
             try:
@@ -261,6 +268,14 @@ class TinderClient:
             self.owner_bio = user.get('bio') if isinstance(user, dict) and isinstance(user.get('bio'), str) else ''
         return self.owner_bio
 
+    async def owner_interests_now(self) -> list[str]:
+        """The owner's own Tinder interests ("passions"), read defensively: field names are not under our control."""
+        data = await self.request('GET', '/v2/profile', params={'include': 'user'})
+        user = (data.get('data') or {}).get('user') if isinstance(data.get('data'), dict) else None
+        raw = (user.get('user_interests') or {}).get('selected_interests') if isinstance(user, dict) and isinstance(user.get('user_interests'), dict) else None
+        names = [i.get('name') if isinstance(i, dict) else i for i in raw] if isinstance(raw, list) else []
+        return [n.strip()[:40] for n in names if isinstance(n, str) and n.strip()][:15]
+
     async def pages(self, path: str, key: str, count: int, extra: dict | None = None) -> Page:
         collected = {}; cursor = None; seen = set()
         for _ in range(self.max_pages):
@@ -335,13 +350,14 @@ def client() -> TinderClient:
     return TinderClient(token())
 
 
-def connection(connection_id: str) -> tuple[dict, dict]:
+def connection(connection_id: str, *, owner_check: bool = False) -> tuple[dict, dict]:
     rows = s.rows('SELECT * FROM connections WHERE id=?', (connection_id,))
     if not rows or not rows[0]['id'].startswith('tinder:'): raise TinderAuthError('tinder_connection_missing')
     row = rows[0]; value = json.loads(row['value'])
     if not configured() or not row['enabled'] or value.get('credential_fingerprint') != fingerprint():
         raise TinderAuthError('tinder_connection_disabled_or_credential_changed')
-    if value.get('blocked_until', 0) > time.time(): raise active_cooldown(value['blocked_until'] - time.time())
+    if value.get('blocked_until', 0) > time.time() and not (owner_check and value.get('error') == 'local_request_budget'):
+        raise active_cooldown(value['blocked_until'] - time.time(), value.get('error'))
     return row, value
 
 
@@ -526,8 +542,9 @@ def clear_local_budget_block():
 
 async def check_bio(connection_id: str) -> dict:
     """The owner's "I added it, check" button: read the bio now, outside the sync schedule, and store the answer."""
-    con, _ = connection(connection_id)
+    con, _ = connection(connection_id, owner_check=True)
     async with client() as api:
+        api.owner_check = True
         owner = await api.profile()
         if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
         bio = await api.owner_bio_now()
@@ -538,6 +555,23 @@ async def check_bio(connection_id: str) -> dict:
         db.execute('UPDATE connections SET value=? WHERE id=?', (json.dumps(value), connection_id))
     rt.audit(None, 'tinder_bio_checked', 'AI disclosure found in bio' if found else 'No AI disclosure in bio')
     return {'found': found, 'bio': bio[:500]}
+
+
+async def sync_profile(connection_id: str) -> dict:
+    """Separate, owner-triggered read of the owner's own profile (interests). It never touches the inbox sync and its
+    budget; it has its own small cap. Fills the "zainteresowania" fact only when the owner left it empty."""
+    con, _ = connection(connection_id, owner_check=True)
+    async with client() as api:
+        api.owner_check = True
+        owner = await api.profile()
+        if owner != con['user_id']: raise TinderAuthError('account_identity_mismatch')
+        interests = await api.owner_interests_now()
+    cfg = rt.settings(); profile = dict(cfg.get('profile') or {})
+    filled = bool(interests) and not str(profile.get('zainteresowania', '')).strip()
+    if filled:
+        profile['zainteresowania'] = ', '.join(interests); cfg['profile'] = profile; rt.save_settings(cfg)
+    rt.audit(None, 'tinder_profile_synced', f'Read {len(interests)} interests from the owner\'s own profile; ' + ('saved' if filled else 'nothing changed'))
+    return {'interests': interests, 'filled': filled}
 
 
 async def poll():
