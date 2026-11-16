@@ -6,10 +6,7 @@
 <form id="register-form" novalidate>
 <label>E-mail<input type="email" name="email" autocomplete="email" required placeholder="ty@przyklad.pl"></label>
 <div class="row2f"><label>Hasło<span class="pw"><input type="password" name="password" autocomplete="new-password" minlength="10" required placeholder="min. 10 znaków"><button type="button" class="show" data-toggle="password">Pokaż</button></span></label><label><span>Imię <span class="opt">(opcjonalnie)</span></span><input type="text" name="name" autocomplete="given-name" maxlength="60"></label></div>
-<fieldset class="modes"><legend>Jak chcesz korzystać?</legend>
-<label class="mode"><input type="radio" name="mode" value="drafts" checked><span><b>Szkice</b><small>Zatwierdzam każdą wiadomość</small></span></label>
-<label class="mode"><input type="radio" name="mode" value="autopilot"><span><b>Autopilot</b><small>W wybranych rozmowach</small></span></label>
-</fieldset>
+<fieldset class="src"><legend>Skąd o nas wiesz? <span class="opt">(opcjonalnie)</span></legend><label><input type="radio" name="source" value="tiktok"><span>TikTok</span></label><label><input type="radio" name="source" value="instagram"><span>Instagram</span></label><label><input type="radio" name="source" value="friend"><span>Znajomy</span></label><label><input type="radio" name="source" value="google"><span>Google</span></label><label><input type="radio" name="source" value="other"><span>Inne</span></label></fieldset>
 <label class="hp" aria-hidden="true">Strona<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
 <label class="check"><input type="checkbox" name="adult" required> Mam ukończone 18 lat.</label>
 <label class="check"><input type="checkbox" name="terms" required><span>Akceptuję <a href="/regulamin" target="_blank">regulamin</a> i <a href="/prywatnosc" target="_blank">politykę prywatności</a>.</span></label>

@@ -3,7 +3,7 @@ function bind(id,url,build,done){const f=document.getElementById(id);if(!f)retur
 f.addEventListener('submit',async e=>{e.preventDefault();const btn=f.querySelector('button[type=submit]');btn.disabled=true;out.className='';out.textContent='Chwila...';
 try{await post(url,build(new FormData(f)));done()}catch(err){out.className='err';out.textContent=err.message;btn.disabled=false}})}
 bind('login-form','/api/login',f=>({email:f.get('email'),password:f.get('password')}),()=>location.href='/konto');
-bind('register-form','/api/register',f=>({email:f.get('email'),name:f.get('name'),password:f.get('password'),mode:f.get('mode'),website:f.get('website'),adult:f.get('adult')==='on',terms:f.get('terms')==='on',marketing:f.get('marketing')==='on'}),()=>location.href='/konto');
+bind('register-form','/api/register',f=>({email:f.get('email'),name:f.get('name'),password:f.get('password'),source:f.get('source')||'',website:f.get('website'),adult:f.get('adult')==='on',terms:f.get('terms')==='on',marketing:f.get('marketing')==='on'}),()=>location.href='/konto');
 bind('forgot-form','/api/password/forgot',f=>({email:f.get('email')}),()=>{const out=document.querySelector('#forgot-form [role=status]');out.className='ok';out.textContent='Link jest już w drodze. Sprawdź skrzynkę, także spam.';document.querySelector('#forgot-form button[type=submit]').disabled=true});
 bind('reset-form','/api/password/reset',f=>({password:f.get('password'),token:new URLSearchParams(location.search).get('t')||''}),()=>location.href='/konto');
 bind('delete-form','/api/account/delete',f=>({password:f.get('password')}),()=>location.href='/');

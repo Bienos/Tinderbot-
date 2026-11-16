@@ -55,8 +55,11 @@ MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status
               ('accounts', 'comped', 'INTEGER NOT NULL DEFAULT 0'), ('accounts', 'render_service_id', 'TEXT'),
               ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
               ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
-              ('accounts', 'withdrawn_at', 'DOUBLE PRECISION'), ('accounts', 'provision_started', 'DOUBLE PRECISION')]
+              ('accounts', 'withdrawn_at', 'DOUBLE PRECISION'), ('accounts', 'provision_started', 'DOUBLE PRECISION'),
+              ('accounts', 'source', 'TEXT')]
 WITHDRAWAL_DAYS = 14
+# Optional "Skąd o nas wiesz?" answer on sign-up.
+SIGNUP_SOURCES = ('tiktok', 'instagram', 'friend', 'google', 'other')
 
 
 def _pg_url() -> str:
@@ -501,8 +504,9 @@ async def register(request: Request, tasks: BackgroundTasks):
         raise HTTPException(409, 'Konto z tym adresem już istnieje. Zaloguj się.')
     mode = body.get('mode') if body.get('mode') in ('drafts', 'autopilot', 'unsure') else 'unsure'
     comped = is_owner(email) or email in {e.strip().lower() for e in os.getenv('COMPED_EMAILS', '').split(',') if e.strip()}
-    q('INSERT INTO accounts(email,name,pw_hash,status,mode,consent_marketing,created,comped) VALUES(?,?,?,?,?,?,?,?)',
-      (email, str(body.get('name', '')).strip()[:60], hash_password(password), 'pending', mode, int(body.get('marketing') is True), time.time(), int(comped)))
+    source = body.get('source') if body.get('source') in SIGNUP_SOURCES else None
+    q('INSERT INTO accounts(email,name,pw_hash,status,mode,consent_marketing,created,comped,source) VALUES(?,?,?,?,?,?,?,?,?)',
+      (email, str(body.get('name', '')).strip()[:60], hash_password(password), 'pending', mode, int(body.get('marketing') is True), time.time(), int(comped), source))
     acc = q('SELECT id FROM accounts WHERE email=?', (email,), fetch=True)[0]
     tasks.add_task(mailer.welcome, email, _origin(request))
     if is_owner(email):
@@ -847,7 +851,7 @@ def _admin(request: Request):
 @app.get('/admin/accounts')
 def admin_accounts(request: Request):
     _admin(request)
-    rows = q('SELECT email,name,status,plan_status,comped,instance_url,render_service_id,provision_state,provision_error,mode,consent_marketing,created '
+    rows = q('SELECT email,name,status,plan_status,comped,instance_url,render_service_id,provision_state,provision_error,mode,source,consent_marketing,created '
              'FROM accounts ORDER BY created DESC', fetch=True)
     return {'count': len(rows), 'items': rows}
 
