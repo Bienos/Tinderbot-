@@ -66,6 +66,10 @@ def metadata_key(match):
 def should_read(thread,cached,key,now=None):
     now=time.time() if now is None else now
     if thread['user_paused'] or thread['user_archived']:return False
+    # A conversation that could not be read (media we do not support, a very long history, an odd shape) is NOT retried every
+    # poll: each retry costs several requests and, with a few such chats, used up the whole hourly budget so that no
+    # synchronization ever finished. It is tried again after TINDER_FAILED_THREAD_RETRY seconds (default one hour).
+    if cached and cached.get('read_failed') and now-float(cached.get('failed_at') or 0)<integer('TINDER_FAILED_THREAD_RETRY',3600,60,86400):return False
     if not cached or not cached.get('last_read'):return True
     if key and cached.get('activity_key')!=key:return True
     if thread.get('source_visibility')!='available':return True

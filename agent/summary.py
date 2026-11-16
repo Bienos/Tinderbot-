@@ -96,6 +96,12 @@ def _health(now: float) -> dict:
         v = json.loads(r['value'])
         conns.append({'enabled': bool(r['enabled']), 'error': v.get('error'), 'last_sync': _ts(v.get('last_sync')),
                       'blocked_until': float(v.get('blocked_until', 0) or 0)})
+    unreadable = 0
+    for r in s.rows('SELECT value FROM tinder_threads'):
+        try:
+            unreadable += bool(json.loads(r['value']).get('read_failed'))
+        except ValueError:
+            pass
     issues: list[str] = []
     paused = bool(cfg.get('paused'))
     live = [c for c in conns if c['enabled']]
@@ -113,7 +119,7 @@ def _health(now: float) -> dict:
         issues.append('worker_error')
     problem = any(i.startswith('tinder_error') or i in ('sync_stale', 'worker_error', 'tinder_not_connected') for i in issues)
     return {'status': 'problem' if problem else 'attention' if issues else 'ok', 'issues': sorted(set(issues)),
-            'tinder': {'configured': tinder.configured(), 'connections': len(conns), 'connected': bool(live) and not any(c['error'] for c in live),
+            'tinder': {'configured': tinder.configured(), 'connections': len(conns), 'unreadable_threads': unreadable, 'connected': bool(live) and not any(c['error'] for c in live),
                        'last_sync_age_min': None if last_sync is None else max(0, round((now - last_sync) / 60))},
             'agent': {'paused': paused, 'mode': cfg.get('mode'), 'worker_running': bool(service.WORKER.get('running'))}}
 

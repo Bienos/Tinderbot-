@@ -472,7 +472,7 @@ def _save_tinder_value(tid: str, value: dict) -> None:
 
 
 def _mark_read_failed(tid: str) -> None:
-    _save_tinder_value(tid, {**_tinder_value(tid), 'read_failed': True})
+    _save_tinder_value(tid, {**_tinder_value(tid), 'read_failed': True, 'failed_at': time.time()})
 
 
 def _bump_missed(tid: str) -> int:
@@ -520,7 +520,7 @@ async def sync_connection(connection_id: str):
                 changed=changed or previous_hash!=rt.history_hash(history)
                 s.set_thread_flags(tid, visibility='available')
                 thread['source_visibility'] = 'available'; ingest(thread, history)
-                ok={k:v for k,v in cached.items() if k not in ('read_failed','missed')}
+                ok={k:v for k,v in cached.items() if k not in ('read_failed','failed_at','missed')}
                 with s.connect() as db:db.execute('UPDATE tinder_threads SET value=? WHERE thread_id=?',(json.dumps({**ok,'person_id':person_id,'activity_key':activity_key,'last_read':time.time()}),tid))
             except TinderProtocolError:
                 _mark_read_failed(tid)

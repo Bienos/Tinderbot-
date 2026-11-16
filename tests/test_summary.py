@@ -94,3 +94,12 @@ def test_summary_reports_whether_the_plan_has_advanced_statistics(filled,monkeyp
     from agent import summary
     monkeypatch.setenv('PLAN',plan)                                   # no plan (the owner's own bot): nothing is limited
     d=summary.weekly(filled)['plan'];assert d['advanced_stats'] is advanced and d['name']==(plan or None)
+
+
+def test_health_counts_conversations_that_could_not_be_read(store):
+    import json
+    from agent import summary
+    with s.connect() as db:
+        db.execute("INSERT INTO tinder_threads VALUES('a',?),('b',?),('c',?)",
+                   (json.dumps({'read_failed': True}), json.dumps({'person_id': 'x'}), json.dumps({'read_failed': True, 'failed_at': 1})))
+    assert summary.weekly()['health']['tinder']['unreadable_threads'] == 2

@@ -224,3 +224,18 @@ async def test_profile_sync_respects_a_cooldown_from_tinder(source,monkeypatch):
     _profile_with_interests(monkeypatch,source,['Bieganie']);before=len(source.requests)
     with pytest.raises(tinder.TinderRateLimited):await tinder.sync_profile(CID)
     assert len(source.requests)==before
+
+
+def test_a_conversation_that_could_not_be_read_is_not_retried_every_poll(store, monkeypatch):
+    """Unreadable chats (unsupported media, huge histories) used to be re-read on every poll and ate the whole hourly budget."""
+    import time
+    from agent import tinder_traffic as traffic
+    thread = {'id': 't', 'user_paused': 0, 'user_archived': 0, 'source_visibility': 'not_observed'}
+    now = time.time()
+    failed = {'last_read': now - 10, 'read_failed': True, 'failed_at': now - 60}
+    assert traffic.should_read(thread, failed, 'k', now) is False                  # failed a minute ago: leave it alone
+    assert traffic.should_read(thread, {**failed, 'failed_at': now - 3700}, 'k', now) is True   # an hour later: try again
+    monkeypatch.setenv('TINDER_FAILED_THREAD_RETRY', '120')
+    assert traffic.should_read(thread, {**failed, 'failed_at': now - 130}, 'k', now) is True
+    # a healthy but never-read conversation is still read at once
+    assert traffic.should_read({**thread, 'source_visibility': 'available'}, None, 'k', now) is True
