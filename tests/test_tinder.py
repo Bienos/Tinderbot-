@@ -581,7 +581,7 @@ async def test_a_request_pause_only_blocks_sending_not_drafting(source,monkeypat
     def pause(seconds):
         with s.connect() as db:
             v=json.loads(db.execute('SELECT value FROM connections WHERE id=?',(CID,)).fetchone()['value'])
-            v.update({'blocked_until':time.time()+seconds,'error':'local_request_budget'} if seconds else {'blocked_until':0,'error':None})
+            v.update({'blocked_until':time.time()+seconds,'error':'rate_limited'} if seconds else {'blocked_until':0,'error':None})
             db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(v),CID))
     pause(600)
     t=service.thread_by_id(TID)

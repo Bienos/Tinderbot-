@@ -37,6 +37,12 @@ class TinderRateLimited(TinderError):
         self.reason='rate_limited'
         super().__init__('rate_limited')
 
+def blocking(state: dict) -> bool:
+    """Is this connection state a real pause? A block left behind by our OWN request budget (older versions stored one, and it
+    survives a restart) is not: the request counter itself paces us, and sending must stay possible."""
+    return state.get('blocked_until', 0) > time.time() and state.get('error') != 'local_request_budget'
+
+
 def active_cooldown(delay,cause=None):
     """cause = what started the cooldown (e.g. 'local_request_budget' = our own limit, 'rate_limited' = Tinder)."""
     limited=TinderRateLimited(delay);limited.existing=True;limited.reason='cooldown_active';limited.cause=cause
@@ -196,7 +202,7 @@ class TinderClient:
             for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%'"):
                 state=json.loads(row['value'])
                 if state.get('credential_fingerprint')!=self.credential_hash:continue
-                if state.get('blocked_until',0)>time.time() and not (self.owner_check and state.get('error')=='local_request_budget'):
+                if blocking(state):
                     raise active_cooldown(state['blocked_until']-time.time(),state.get('error'))
                 if not row['enabled'] and not self.reconnect:raise TinderAuthError('connection_paused')
             try:traffic.claim_request(owner=self.owner_check,reserve=self.read_reserve)
@@ -367,7 +373,7 @@ def connection(connection_id: str, *, owner_check: bool = False) -> tuple[dict, 
     row = rows[0]; value = json.loads(row['value'])
     if not configured() or not row['enabled'] or value.get('credential_fingerprint') != fingerprint():
         raise TinderAuthError('tinder_connection_disabled_or_credential_changed')
-    if value.get('blocked_until', 0) > time.time() and not (owner_check and value.get('error') == 'local_request_budget'):
+    if blocking(value):
         raise active_cooldown(value['blocked_until'] - time.time(), value.get('error'))
     return row, value
 
@@ -376,7 +382,8 @@ def paused_for(connection_id: str) -> float:
     """Seconds this connection must stay quiet (our own request budget, or Tinder asked for a pause). 0 when it may talk."""
     rows = s.rows('SELECT value FROM connections WHERE id=?', (connection_id,))
     try:
-        return max(0.0, float(json.loads(rows[0]['value']).get('blocked_until', 0)) - time.time()) if rows else 0.0
+        v = json.loads(rows[0]['value']) if rows else {}
+        return max(0.0, float(v.get('blocked_until', 0)) - time.time()) if rows and blocking(v) else 0.0
     except (ValueError, TypeError):
         return 0.0
 
@@ -392,7 +399,7 @@ def status_update(connection_id: str, *, error=None, delay=0, disable=False, pol
             delay=max(delay,300*(2**min(len(events)-1,6)))
             if len(events)>=3:disable=True;value['error']='repeated_rate_limits_requires_review'
         value['next_poll'] = time.time() + delay
-        if error in ('rate_limited','local_request_budget','server_retry_after'):value['blocked_until']=max(value.get('blocked_until',0),time.time()+delay)
+        if error in ('rate_limited','server_retry_after'):value['blocked_until']=max(value.get('blocked_until',0),time.time()+delay)  # not our own budget
         if polled:
             value['last_sync'] = s.utcnow();value['failures']=0
         elif error and error not in ('rate_limited','local_request_budget'):
@@ -610,7 +617,7 @@ async def poll():
     if not configured() or rt.settings()['paused']: return
     for row in s.rows("SELECT * FROM connections WHERE id LIKE 'tinder:%' AND enabled=1"):
         value = json.loads(row['value'])
-        if max(value.get('next_poll', 0), value.get('blocked_until', 0)) > time.time(): continue
+        if max(value.get('next_poll', 0), value.get('blocked_until', 0) if blocking(value) else 0) > time.time(): continue
         try: await sync_connection(row['id'])
         except TinderRateLimited as exc:
             if exc.existing:pass
@@ -719,7 +726,7 @@ def public_status():
                             'auto_send': bool(value.get('auto_send',False)),
                             'bio_mode': bool(value.get('bio_mode',False)), 'bio_disclosure': bool(value.get('bio_disclosure',False)),
                             'error': value.get('error'), 'last_sync': value.get('last_sync'),
-                            'next_poll': value.get('next_poll', 0), 'blocked_until':value.get('blocked_until',0), 'failures':value.get('failures',0)})
+                            'next_poll': value.get('next_poll', 0), 'blocked_until':value.get('blocked_until',0) if blocking(value) else 0, 'failures':value.get('failures',0)})
     from agent import vault
     tail = None
     if token_source():

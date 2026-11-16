@@ -95,7 +95,7 @@ def _health(now: float) -> dict:
     for r in rows:
         v = json.loads(r['value'])
         conns.append({'enabled': bool(r['enabled']), 'error': v.get('error'), 'last_sync': _ts(v.get('last_sync')),
-                      'blocked_until': float(v.get('blocked_until', 0) or 0), 'import_done': bool(v.get('initial_import_done')),
+                      'blocked_until': 0.0 if v.get('error') == 'local_request_budget' else float(v.get('blocked_until', 0) or 0), 'import_done': bool(v.get('initial_import_done')),
                       'next_poll': float(v.get('next_poll', 0) or 0), 'idle_rounds': v.get('idle_rounds')})
     unreadable = threads_read = threads_total = 0
     for r in s.rows('SELECT value FROM tinder_threads'):

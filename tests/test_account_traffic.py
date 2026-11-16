@@ -179,11 +179,19 @@ async def test_owner_bio_check_is_not_blocked_by_our_own_local_budget(source):
     with pytest.raises(tinder.TinderRateLimited) as e:await tinder.check_bio(CID)
     assert not tinder.is_local_limit(e.value) and len(source.requests)==before
 
-async def test_blocked_sync_reports_that_the_limit_is_local(source):
+async def test_only_a_pause_asked_for_by_tinder_blocks_the_connection_not_our_own_budget(source):
     await tinder.connect()
     tinder.status_update(CID,error='local_request_budget',delay=1800)
-    with pytest.raises(tinder.TinderRateLimited) as e:await tinder.TinderAdapter().snapshot(setup_thread_stub())
-    assert tinder.is_local_limit(e.value)
+    v=json.loads(s.rows('SELECT value FROM connections WHERE id=?',(CID,))[0]['value'])
+    assert not v.get('blocked_until') and tinder.paused_for(CID)==0 and tinder.connection(CID)         # our own pacing blocks nothing
+    # a block an older version left behind for our own budget is ignored too (it survives a restart)
+    with s.connect() as db:
+        v.update({'blocked_until':__import__('time').time()+2400,'error':'local_request_budget'});db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(v),CID))
+    assert tinder.paused_for(CID)==0 and tinder.connection(CID) and tinder.public_status()['connections'][0]['blocked_until']==0
+    # Tinder asking for a pause is a real block
+    tinder.status_update(CID,error='rate_limited',delay=1800)
+    with pytest.raises(tinder.TinderRateLimited) as e:tinder.connection(CID)
+    assert not tinder.is_local_limit(e.value) and tinder.paused_for(CID)>1000
 
 def setup_thread_stub():
     return {'connection_id':CID,'id':TID,'chat_id':'x'}
