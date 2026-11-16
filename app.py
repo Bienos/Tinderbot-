@@ -594,7 +594,7 @@ def tinder_automation(connection_id:str,body:TinderAutomation):
         value=json.loads(row['value'])
         if body.enabled:
             from agent import plans
-            if not plans.autopilot_allowed():raise HTTPException(403,'Autopilot jest w pakietach Flirt i Casanova. Ulepsz pakiet na stronie konta.')
+            if not plans.autopilot_allowed():raise HTTPException(403,'Autopilot jest w pakietach Flirt i Casanova. Zmień pakiet na stronie konta.')
         if body.enabled is not None:value['auto_send']=body.enabled
         if body.bio_mode is not None:value['bio_mode']=body.bio_mode
         db.execute('UPDATE connections SET value=? WHERE id=?',(json.dumps(value),connection_id))
