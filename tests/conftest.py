@@ -1,5 +1,15 @@
 import pytest
 from agent import storage as s,runtime as rt
+# The deployed bots run this suite in their build (python -m pytest) with their own production settings in the environment.
+# A test must never inherit those: one extra setting on a server (PUBLIC_ORIGIN for a custom domain, TRIAL_DAYS, a plan...)
+# used to fail the whole build and block the deploy. Tests that need one of these set it themselves.
+HOST_SETTINGS=('PUBLIC_ORIGIN','RENDER_EXTERNAL_URL','CONTROL_ORIGIN','OWNER_PANEL_URL','OWNER_EMAIL','OWNER_SERVICE_ID','SSO_SECRET',
+               'TRIAL_DAYS','PLAN','PLAN_CONVERSATIONS','DATABASE_URL','WEEKLY_SUMMARY','BRAND_NAME','PLAN_PRICE','MAIL_FROM','MAIL_DOMAIN',
+               'MAIL_REPLY_TO','SMTP_HOST','SMTP_USERNAME','SMTP_PASSWORD','TRUST_PROXY','CUSTOM_DOMAIN','FLY_PUBLIC_DOMAIN')
+@pytest.fixture(autouse=True)
+def isolate_from_host_settings(monkeypatch):
+    for name in HOST_SETTINGS:monkeypatch.delenv(name,raising=False)
+
 @pytest.fixture(autouse=True)
 def disable_operator_startup_check(monkeypatch):
     # A production troubleshooting flag must not add real network calls to tests.
