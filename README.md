@@ -46,16 +46,16 @@ The connector is unofficial, adapted from OpenDate with MIT attribution. Live Ti
 | Simulation | Automatic fictional replies, including real browser execution; no live-platform autonomy. |
 | Authorized autonomy | Automatic replies in enabled Tinder/Telegram threads with disclosure, participant consent and owner grants; Telegram additionally requires business reply rights and a recent incoming message. The mode name is an internal permission setting, not a claim that Tinder authorizes this integration. |
 
-There is no automatic follow-up when the latest message is ours. A new match is never opened by itself: the owner starts a **campaign** (below) or writes the first message. Pause/revocation cannot recall an external request already dispatched.
+There is no automatic follow-up when the latest message is ours. A new match is never opened by itself: the owner starts **Automatyzuj** (below) or writes the first message. Pause/revocation cannot recall an external request already dispatched.
 
-## Campaigns: the agent writes the first message
+## Automatyzuj: the agent writes the first message
 
-New matches without any message appear in the dashboard under **Kampania**. Tick the people, choose who writes first and press **Start**:
+New matches without any message appear in the dashboard under **Automatyzuj**. Tick the people, choose who writes first and press **Start**:
 
 - **Wysyłaj sam** — the agent writes and sends each opener itself (needs autopilot: plan with autopilot, AI disclosure in the bio or a thread grant, connected account). Openers go out one at a time, `CAMPAIGN_GAP_SECONDS` (240) apart, never more than `CAMPAIGN_OPENERS_PER_DAY` (30) a day, and the last `CAMPAIGN_REPLY_RESERVE` (5) of the hourly Tinder budget stay free for replies.
 - **Tylko szkice** — the agent writes drafts and nothing leaves without the owner's click; **Przejrzyj szkice po kolei** walks through them.
 
-An opener only uses what she wrote in her own profile (name, age, bio) and the owner's verified facts, and passes the same independent factual/boundary review as a reply. A match with no bio gets a neutral greeting or is left to the owner. Conversations that already have messages are never touched; a conversation that starts meanwhile cancels its opener. A plan's active-conversation limit applies (Casanova: 30), global pause and per-thread pause stop everything, a failed or uncertain delivery is never retried, and **Zatrzymaj kampanię** drops what is still queued. The same agent can also draft a single opener from a conversation (**Napisz szkic pierwszej wiadomości**).
+An opener only uses what she wrote in her own profile (name, age, bio) and the owner's verified facts, and passes the same independent factual/boundary review as a reply. A match with no bio gets a neutral greeting or is left to the owner. Conversations that already have messages are never touched; a conversation that starts meanwhile cancels its opener. A plan's active-conversation limit applies (Casanova: 30), global pause and per-thread pause stop everything, a failed or uncertain delivery is never retried, and **Zatrzymaj automatyzację** drops what is still queued. The same agent can also draft a single opener from a conversation (**Napisz szkic pierwszej wiadomości**).
 
 The defaults are application choices, not platform-approved rates: cold outreach is more visible to a platform than replies. See [ACCOUNT_RISK.md](docs/ACCOUNT_RISK.md).
 

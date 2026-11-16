@@ -342,7 +342,7 @@ async function logoutNow(){try{await api('/auth/logout','POST')}catch(e){}locati
 function renderRoster(){let box=document.getElementById('roster');box.replaceChildren();if(!data)return;
 let todo=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a)),reply=data.threads.filter(t=>t.state==='needs_reply').sort((a,b)=>tsOf(b)-tsOf(a));
 document.getElementById('roster-title').textContent='Do napisania · '+todo.length+' nowych'+(reply.length?' · '+reply.length+' czeka na Twoją odpowiedź':'');
-let cb=document.getElementById('campaign-btn');if(cb){let run=!!data.campaign?.running;cb.hidden=false;cb.textContent=run?'Kampania · trwa':todo.length?'Kampania ('+todo.length+')':'Kampania';cb.onclick=showCampaign}
+let cb=document.getElementById('campaign-btn');if(cb){let run=!!data.campaign?.running;cb.hidden=false;cb.textContent=run?'Automatyzuj · trwa':todo.length?'Automatyzuj ('+todo.length+')':'Automatyzuj';cb.onclick=showCampaign}
 let qn=pendingQueue().length,qb=document.getElementById('queue-btn');if(qb){qb.hidden=!qn;qb.textContent='Odpisz po kolei ('+qn+')'}
 if(!todo.length&&!reply.length){box.append(el('div','roster-empty','Wszystko odpisane. Nowe dopasowania pojawią się tutaj.'));return}
 for(let t of [...todo,...reply]){let b=el('button','rost'+(selected===t.id?' sel':''));let u=safeImg(t.profile?.photos?.[0]);
@@ -570,7 +570,7 @@ function renderOnboarding(){const box=document.getElementById('onboard');if(!box
  const close=el('button','ob-close','Ukryj');close.onclick=()=>{try{localStorage.setItem('winq-start-hidden','1')}catch(e){}box.hidden=true};card.append(close);
  card.append(startGuide(()=>renderOnboarding()));box.append(card)}
 
-/* ---------- Kampania: agent pisze pierwszą wiadomość do wybranych nowych dopasowań ---------- */
+/* ---------- Automatyzuj: agent pisze pierwszą wiadomość do wybranych nowych dopasowań ---------- */
 const CAMPAIGN={mode:null,sel:null,msg:null};
 const CMP_STATUS={queued:'w kolejce',sent:'wysłano',review:'szkic czeka na Ciebie',started:'rozmowa ruszyła',skipped:'pominięto',failed:'nie udało się'};
 function fmtDur(sec){let m=Math.round(sec/60);if(m<2)return 'kilka minut';if(m<90)return m+' min';let h=Math.round(m/6)/10;return h+' godz.'}
@@ -578,7 +578,7 @@ function autoLive(){return apLive(tinderConn())&&(!data.plan||data.plan.autopilo
 function autoWhy(){if(data.plan&&!data.plan.autopilot)return 'Pakiet '+data.plan.label+' pisze tylko szkice. Wysyłanie samo jest od pakietu Flirt.';return 'Żeby agent wysyłał sam, włącz autopilota (informacja o AI w Twoim bio). Do tego czasu przygotuje szkice.'}
 function openerBox(box,t,send){
  let it=data.campaign?.items?.[t.id],c=data.campaign||{};
- if(it&&it.status==='queued'){let w=el('div','working');w.setAttribute('role','status');w.append(el('span','dots'),el('span','',it.mode==='auto'?'Agent pisze pierwszą wiadomość i wyśle ją za chwilę, w kolejce kampanii.':'Agent pisze szkic pierwszej wiadomości. Zwykle kilka sekund.'));box.append(w);return}
+ if(it&&it.status==='queued'){let w=el('div','working');w.setAttribute('role','status');w.append(el('span','dots'),el('span','',it.mode==='auto'?'Agent pisze pierwszą wiadomość i wyśle ją za chwilę, w kolejce automatyzacji.':'Agent pisze szkic pierwszej wiadomości. Zwykle kilka sekund.'));box.append(w);return}
  if(!data.llm_enabled){box.append(el('p','','Podłącz model AI w ustawieniach serwera, żeby agent mógł pisać pierwsze wiadomości. Możesz też napisać sam w Tinderze.'));return}
  if(it&&(it.status==='skipped'||it.status==='failed')&&it.note)box.append(el('div','callout warn',it.note));
  box.append(el('p','','Nowe dopasowanie. Napisz pierwszą wiadomość sam w Tinderze albo poproś agenta: nawiąże do jej opisu, a Ty zdecydujesz, czy ją wysłać.'));
@@ -586,7 +586,7 @@ function openerBox(box,t,send){
  if(autoLive()){let go=el('button','secondary','Napisz i wyślij sam');go.onclick=()=>send('/api/threads/'+encodeURIComponent(t.id)+'/opener',{mode:'auto'},go);row.append(go)}
  box.append(row);
  if(c.free_slots===0)box.append(el('div','callout warn','Wszystkie miejsca w pakiecie '+data.plan.label+' są zajęte. Pierwsza wiadomość zajmie jedno z nich.'))}
-const CMP_TITLE='Kampania: pierwsze wiadomości';let CMP_TIMER=null;
+const CMP_TITLE='Automatyzuj: pierwsze wiadomości';let CMP_TIMER=null;
 function showCampaign(){CAMPAIGN.msg=null;CAMPAIGN.sel=null;let p=panel(CMP_TITLE);fillCampaign(p);campaignWatch(p)}
 /* The page behind a panel does not refresh itself, so while this panel is open it follows the campaign: new numbers show up without a click. */
 function campaignWatch(p){clearInterval(CMP_TIMER);let last=JSON.stringify(data.campaign);
@@ -607,14 +607,14 @@ function fillCampaign(p){p.replaceChildren();
  if(CAMPAIGN.msg)p.append(el('div','callout ok',CAMPAIGN.msg));
  /* trwa / wynik */
  const done=Object.values(counts).reduce((a,b)=>a+b,0);
- if(done){let box=el('div','scard');box.append(el('div','glabel',cs.running?'Kampania trwa':'Ostatnia kampania'));
+ if(done){let box=el('div','scard');box.append(el('div','glabel',cs.running?'Automatyzacja trwa':'Ostatnia automatyzacja'));
   let parts=[['sent','Wysłano'],['review','Szkice do wysłania'],['queued','W kolejce'],['started','Rozmowy rozpoczęte'],['skipped','Pominięto'],['failed','Nie udało się']].filter(([k])=>counts[k]).map(([k,l])=>l+': '+counts[k]);
   box.append(el('div','gdesc',parts.join(' · ')));
   let notes=Object.entries(cs.items||{}).filter(([,v])=>['skipped','failed'].includes(v.status)&&v.note);
   for(let [id,v] of notes.slice(0,6)){let th=data.threads.find(x=>x.id===id);box.append(el('div','gdesc',(th?th.display_name:'?')+': '+v.note))}
   let row=el('div','btnrow');
   if(counts.review){let q=el('button','primary','Przejrzyj szkice po kolei ('+counts.review+')');q.onclick=()=>{closePanel();showQueue()};row.append(q)}
-  if(cs.running){let st=el('button','secondary danger','Zatrzymaj kampanię');st.onclick=async()=>{if(!confirm('Zatrzymać kampanię? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;st.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();fillCampaign(p)}catch(e){st.disabled=false}};row.append(st)}
+  if(cs.running){let st=el('button','secondary danger','Zatrzymaj automatyzację');st.onclick=async()=>{if(!confirm('Zatrzymać automatyzację? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;st.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();fillCampaign(p)}catch(e){st.disabled=false}};row.append(st)}
   if(row.children.length)box.append(row);p.append(box)}
  if(!data.llm_enabled){p.append(el('div','callout warn','Podłącz model AI w ustawieniach serwera, żeby agent mógł pisać pierwsze wiadomości.'));return}
  if(!eligible.length){p.append(el('div','roster-empty','Nie ma teraz nowych dopasowań bez wiadomości. Gdy pojawią się nowe, wrócisz tu i klikniesz Start.'));return}
