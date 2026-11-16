@@ -292,18 +292,13 @@ def _free_label(n: int) -> str:
     return f'{n} miesiąc gratis' if n == 1 else f'{n} miesiące gratis'
 
 
-def _strip(months: int, free: int) -> str:
-    """One small block per month, the free ones in the brand gradient: the saving is visible without reading."""
-    return '<span class="mo"></span>' * (months - free) + '<span class="mo free"></span>' * free
-
-
 def _period_facts(plan: dict, per: dict) -> dict:
     total = catalog.total(plan, per)
     regular = plan['price'] * per['months']
-    return {'per': _zl(total / per['months']), 'total': total, 'regular': regular, 'save': regular - total,
-            'months': per['months'], 'free': per['free'], 'strip': _strip(per['months'], per['free']),
-            'line': ('Płatność co miesiąc, anulujesz kiedy chcesz.' if per['months'] == 1 else
-                     f'Płacisz raz {_zl(total)} za {per["months"]} mies. (zamiast {_zl(regular)}). Oszczędzasz {_zl(regular - total)}.'),
+    longer = per['months'] > 1
+    return {'per': _zl(total / per['months']), 'was': _zl(plan['price']) if longer else '', 'total': total, 'regular': regular,
+            'save': regular - total, 'months': per['months'], 'free': per['free'],
+            'sub': f'{_zl(total)} za {per["months"]} miesięcy' if longer else '',
             'badge': '' if not per['free'] else f'{_free_label(per["free"])} · −{_zl(regular - total)}'}
 
 
@@ -323,12 +318,12 @@ def tiers_html() -> str:
         cards.append(
             f'<article class="tier{" popular" if p.get("popular") else ""}" data-slug="{p["slug"]}" data-prices="{data}">{badge}<h3>{p["name"]}</h3>'
             f'<p class="tier-tag">{html_lib.escape(p["tagline"])}</p>'
-            f'<p class="tier-price"><b class="js-per">{cur["per"]}</b><span> / mies.</span></p>'
+            f'<p class="tier-price"><b class="js-per">{cur["per"]}</b><span> / mies.</span>'
+            f'<s class="tier-was js-was"{"" if cur["was"] else " hidden"}>{cur["was"]}</s></p>'
             f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p>'
-            f'<div class="tier-strip js-strip" aria-hidden="true">{cur["strip"]}</div>'
-            f'<p class="tier-total js-line">{html_lib.escape(cur["line"])}</p>'
             f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p><ul>{items}</ul>'
-            f'<a class="btn{"" if p.get("popular") else " ghost"} js-cta" href="/rejestracja?plan={p["slug"]}&amp;period={default["key"]}">Wybieram {p["name"]}</a></article>')
+            f'<a class="btn{"" if p.get("popular") else " ghost"} js-cta" href="/rejestracja?plan={p["slug"]}&amp;period={default["key"]}">'
+            f'<span>Wybieram {p["name"]}</span><small class="cta-sub js-sub"{"" if cur["sub"] else " hidden"}>{cur["sub"]}</small></a></article>')
     switch = ''
     if longer:
         tabs = ''.join(f'<button type="button" data-period="{q["key"]}" class="{"on" if q["key"] == default["key"] else ""}" aria-pressed="{"true" if q["key"] == default["key"] else "false"}">'

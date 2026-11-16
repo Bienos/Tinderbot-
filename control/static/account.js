@@ -22,8 +22,8 @@ function buy(label,plans){const l=document.createElement('label');l.className='c
    if(keys.length>1){const sw=document.createElement('div');sw.className='period acc';plans[0].periods.forEach(x=>{const b=document.createElement('button');b.type='button';b.className=x.key===per?'on':'';b.textContent=x.label+(x.free?' · '+free(x.free):'');b.onclick=()=>{per=x.key;try{sessionStorage.setItem('winq-period',per)}catch(e){}draw()};sw.append(b)});box.append(sw)}
    plans.forEach(p=>{const f=(p.periods||[]).find(x=>x.key===per)||p.periods[0],o=document.createElement('div');o.className='plan-opt'+((want?want===p.slug:p.popular)?' pick':'');
     const h=document.createElement('h3');h.textContent=p.name;const pr=document.createElement('small');pr.textContent=zl(f.per_month)+' / mies.';h.append(pr);
-    const d=document.createElement('p');d.textContent=p.tagline+'. '+(p.autopilot?'Autopilot, ':'Szkice, ')+'do '+p.conversations+' aktywnych rozmów naraz.'+(f.months>1?' Płacisz raz '+zl(f.total)+' za '+f.months+' mies. (zamiast '+zl(f.regular)+', oszczędzasz '+zl(f.regular-f.total)+').':'');
-    o.append(h,d,btn('Wybieram '+p.name+(f.months>1?' na '+f.months+' mies.':''),p.popular||want===p.slug?'btn':'btn ghost',()=>start(p.slug)));box.append(o)})};
+    const d=document.createElement('p');d.textContent=p.tagline+'. '+(p.autopilot?'Autopilot, ':'Szkice, ')+'do '+p.conversations+' aktywnych rozmów naraz.';
+    o.append(h,d,btn('Wybieram '+p.name+(f.months>1?' · '+zl(f.total)+' za '+f.months+' mies.':''),p.popular||want===p.slug?'btn':'btn ghost',()=>start(p.slug)));box.append(o)})};
   draw();card.append(box,l);return}
  const b=btn(label,'btn',()=>{if(!c.checked){l.classList.add('need');return}go('/api/billing/checkout',{start_now:true})});card.append(l,b)}
 function withdrawBox(){const d=document.createElement('details');d.className='withdraw';const s=document.createElement('summary');s.textContent='Odstąp od umowy';
