@@ -204,6 +204,22 @@ def deploy_status(app: str) -> str:
     return 'live' if state in ('stopped', 'suspended') else 'unknown'
 
 
+def delete_instance(app: str) -> None:
+    """Remove a customer's bot for good: app, Machine, volume (with its snapshots) and the certificate on the front door.
+    Safe to repeat: something already gone (404) counts as done, so a half-finished removal can simply be retried."""
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,62}', app):
+        raise FlyError('refusing to delete an app with an unexpected name')
+    host = bot_host(app)
+    with _client() as c:
+        r = c.delete(f'/apps/{app}', params={'force': 'true'})
+        if r.status_code not in (200, 202, 204, 404):
+            _check(r, 'delete app')
+        if host:
+            r = c.delete(f'/apps/{router_app()}/certificates/{host}')
+            if r.status_code not in (200, 202, 204, 404):
+                _check(r, 'delete certificate')
+
+
 def update_image(app: str, image: str) -> str:
     """Move one bot to a new image. The volume (and its data) stays attached; the Machine restarts."""
     with _client() as c:

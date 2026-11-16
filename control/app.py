@@ -51,6 +51,7 @@ async def _weekly_loop():
     await asyncio.sleep(90)
     while True:
         try:
+            await asyncio.to_thread(remove_pending_instances)  # bots of deleted accounts that could not be removed earlier
             if mailer.configured() and mailer.sender_problem() is None:
                 results = await asyncio.to_thread(run_weekly, time.time())
                 sent = sum(1 for r in results if r['result'] == 'sent')
@@ -93,6 +94,9 @@ SCHEMAS = [
     'created DOUBLE PRECISION NOT NULL)',
     'CREATE TABLE IF NOT EXISTS account_sessions (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, expires DOUBLE PRECISION NOT NULL)',
     'CREATE TABLE IF NOT EXISTS password_resets (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, expires DOUBLE PRECISION NOT NULL)',
+    # Bots of deleted accounts that still have to be removed from the hosting provider (retried until it works).
+    'CREATE TABLE IF NOT EXISTS instance_removals (service_id TEXT PRIMARY KEY, created DOUBLE PRECISION NOT NULL, '
+    'attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT)',
 ]
 
 
@@ -801,10 +805,36 @@ async def delete_account(request: Request, tasks: BackgroundTasks):
         raise HTTPException(401, 'Nie jesteś zalogowany.')
     if not check_password(str(body.get('password', '')), acc['pw_hash']):
         raise HTTPException(401, 'Nieprawidłowe hasło.')
+    # The customer's own bot holds their conversations and the encrypted Tinder token: it goes with the account. It is written
+    # down first, so a provider hiccup never leaves a forgotten server behind; removal then retries until it works.
+    sid = (acc.get('render_service_id') or '').strip()
+    if sid and not is_owner(acc['email']) and sid != os.getenv('OWNER_SERVICE_ID', '').strip():
+        q('INSERT INTO instance_removals(service_id,created) VALUES(?,?) ON CONFLICT(service_id) DO NOTHING', (sid, time.time()))
     q('DELETE FROM account_sessions WHERE account_id=?', (acc['id'],))
     q('DELETE FROM accounts WHERE id=?', (acc['id'],))
+    tasks.add_task(remove_pending_instances)
     tasks.add_task(mailer.account_deleted, acc['email'])
     return _cookie(JSONResponse({'deleted': True}), None)
+
+
+def remove_pending_instances() -> dict:
+    """Delete the bots of deleted accounts. A failure keeps the entry (with the reason) for the next pass; success removes it."""
+    done, failed = 0, 0
+    for row in q('SELECT service_id FROM instance_removals ORDER BY created', fetch=True):
+        sid = row['service_id']
+        try:
+            if not provision.can_query(sid):
+                raise RuntimeError('hosting API is not configured')
+            provision.delete_instance(sid)
+        except Exception as exc:  # the reason only, never a token or a response body
+            q('UPDATE instance_removals SET attempts=attempts+1, last_error=? WHERE service_id=?', (f'{type(exc).__name__}: {str(exc)[:160]}', sid))
+            log.warning('removing instance %s failed: %s: %s', sid, type(exc).__name__, str(exc)[:160])
+            failed += 1
+            continue
+        q('DELETE FROM instance_removals WHERE service_id=?', (sid,))
+        log.info('removed instance %s of a deleted account', sid)
+        done += 1
+    return {'removed': done, 'failed': failed}
 
 
 # ---- billing (Stripe Checkout + webhook + customer portal)
@@ -996,6 +1026,10 @@ def run_provision(account_id: int, origin: str = '') -> str:
     except Exception as exc:
         q("UPDATE accounts SET provision_state='failed', provision_error=? WHERE id=?", (type(exc).__name__ + ': ' + str(exc)[:240], account_id))
         return 'failed'
+    if not q('SELECT 1 FROM accounts WHERE id=?', (account_id,), fetch=True):  # deleted while the server was being built
+        q('INSERT INTO instance_removals(service_id,created) VALUES(?,?) ON CONFLICT(service_id) DO NOTHING', (inst['service_id'], time.time()))
+        remove_pending_instances()
+        return 'missing'
     q("UPDATE accounts SET status='active', instance_url=?, sso_secret=?, render_service_id=?, provision_state='done' WHERE id=?",
       (inst['url'], inst['sso_secret'], inst['service_id'], account_id))
     mailer.panel_ready(acc['email'], origin or os.getenv('PUBLIC_ORIGIN', '').rstrip('/'))
@@ -1131,6 +1165,21 @@ async def admin_status(request: Request):
     if status == 'disabled':
         q('DELETE FROM account_sessions WHERE account_id IN (SELECT id FROM accounts WHERE email=?)', (str(body.get('email', '')).strip().lower(),))
     return {'ok': True}
+
+
+@app.get('/admin/instances/removals')
+def admin_removals(request: Request):
+    """Bots of deleted accounts still waiting to be removed (with the last error). POST /admin/instances/removals retries now."""
+    _admin(request)
+    rows = q('SELECT service_id,created,attempts,last_error FROM instance_removals ORDER BY created', fetch=True)
+    return {'count': len(rows), 'items': rows}
+
+
+@app.post('/admin/instances/removals')
+async def admin_removals_retry(request: Request):
+    _admin(request)
+    result = await asyncio.to_thread(remove_pending_instances)
+    return {**result, 'left': len(q('SELECT 1 FROM instance_removals', fetch=True))}
 
 
 @app.post('/admin/weekly/run')

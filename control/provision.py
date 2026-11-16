@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import os
+import re
 import secrets
 
 import httpx
@@ -154,6 +155,19 @@ def link_existing(service_id: str) -> dict:
                 c.put(f'/services/{service_id}/env-vars/{key}', json={'value': value}).raise_for_status()
         c.post(f'/services/{service_id}/deploys', json={}).raise_for_status()
     return {'url': url, 'sso_secret': sso_secret}
+
+
+def delete_instance(service_id: str) -> None:
+    """Remove a customer's bot and its disk for good, on whichever provider runs it. Already gone counts as done."""
+    if service_id.startswith('fly:'):
+        from control import fly
+        return fly.delete_instance(service_id[4:])
+    if not re.fullmatch(r'srv-[a-z0-9]+', service_id):
+        raise RuntimeError('refusing to delete a service with an unexpected id')
+    with _client() as c:
+        r = c.delete(f'/services/{service_id}')
+        if r.status_code not in (200, 202, 204, 404):
+            r.raise_for_status()
 
 
 def set_suspended(service_id: str, suspended: bool) -> None:

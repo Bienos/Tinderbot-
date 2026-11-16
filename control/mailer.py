@@ -339,8 +339,8 @@ def account_deleted(to: str) -> None:
     _safe(to, {'subject': 'Twoje konto zostało usunięte', 'preheader': 'Potwierdzenie usunięcia konta.',
                'heading': 'Konto usunięte',
                'paragraphs': ['Usunęliśmy Twoje konto w Winq. Dziękujemy, że byłeś z nami.'],
-               'callout': ('info', 'Osobnego serwera z Twoim panelem i rozmowami nie kasujemy automatycznie. Jeśli z niego korzystałeś, odpisz na tę wiadomość, '
-                                   'a usuniemy go razem z danymi. Jeśli masz aktywną subskrypcję, anuluj ją, żeby nie pobierano opłat.'),
+               'callout': ('info', 'Razem z kontem usuwamy Twój osobny serwer: rozmowy, ustawienia i zaszyfrowany token Tindera. Zwykle trwa to kilka minut. '
+                                   'Subskrypcję trzeba anulować osobno. Jeśli jest jeszcze aktywna, anuluj ją w Stripe, żeby nie pobierano opłat.'),
                'why': 'To jednorazowe potwierdzenie. Nie wyślemy Ci już więcej wiadomości.'})
 
 
