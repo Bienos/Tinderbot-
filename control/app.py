@@ -499,7 +499,7 @@ def llms(request: Request):
             f'> {BRAND} to płatny asystent randkowy AI dla dorosłych (18+). Pisze szkice odpowiedzi na Tinderze w stylu użytkownika '
             f'i podpowiada, kiedy zaprosić na randkę. Domyślnie użytkownik zatwierdza każdą wiadomość; w wybranych rozmowach może włączyć autopilota '
             f'i dostawać powiadomienia o umówionych randkach, Instagramie lub numerze. Cena: {price}, anulowanie w każdej chwili. '
-            f'{BRAND} nie jest powiązany z Tinder ani Match Group.\n\n'
+            f'{BRAND} nie jest jeszcze powiązany z żadną aplikacją randkową.\n\n'
             f'## Strony\n\n'
             f'- [Strona główna]({origin}/): co robi {BRAND}, jak działa, cennik i najczęstsze pytania\n'
             f'- [Regulamin]({origin}/regulamin): zasady korzystania z usługi\n'
