@@ -599,7 +599,7 @@ def setup_progress(acc: dict) -> dict:
 
 
 @app.post('/api/account/delete')
-async def delete_account(request: Request):
+async def delete_account(request: Request, tasks: BackgroundTasks):
     body = await _json(request)
     acc = current_account(request)
     if not acc:
@@ -608,6 +608,7 @@ async def delete_account(request: Request):
         raise HTTPException(401, 'Nieprawidłowe hasło.')
     q('DELETE FROM account_sessions WHERE account_id=?', (acc['id'],))
     q('DELETE FROM accounts WHERE id=?', (acc['id'],))
+    tasks.add_task(mailer.account_deleted, acc['email'])
     return _cookie(JSONResponse({'deleted': True}), None)
 
 
@@ -743,7 +744,15 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
     elif event['type'] in ('customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'):
         status = 'canceled' if event['type'] == 'customer.subscription.deleted' else str(obj.get('status', 'none'))
         # A withdrawn contract stays withdrawn until the owner cancels it in Stripe; only a fresh checkout reopens it.
+        before = q('SELECT email, plan_status FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True)
         q('UPDATE accounts SET plan_status=? WHERE stripe_customer=? AND withdrawn_at IS NULL', (status[:30], obj.get('customer')))
+        for row in before:  # one mail per change of state: Stripe repeats these events
+            if row['plan_status'] == status[:30]:
+                continue
+            if status in ('past_due', 'unpaid'):
+                tasks.add_task(mailer.payment_failed, row['email'], _origin(request))
+            elif status == 'canceled':
+                tasks.add_task(mailer.subscription_canceled, row['email'], _origin(request))
         for acc in q('SELECT render_service_id FROM accounts WHERE stripe_customer=? AND render_service_id IS NOT NULL', (obj.get('customer'),), fetch=True):
             if provision.enabled():
                 tasks.add_task(_suspend, acc['render_service_id'], status not in ('active', 'trialing'))
@@ -826,7 +835,7 @@ async def password_forgot(request: Request, tasks: BackgroundTasks):
 
 
 @app.post('/api/password/reset')
-async def password_reset(request: Request):
+async def password_reset(request: Request, tasks: BackgroundTasks):
     body = await _json(request)
     raw, password = str(body.get('token', '')), str(body.get('password', ''))
     if not 10 <= len(password) <= 200:
@@ -838,6 +847,9 @@ async def password_reset(request: Request):
     q('UPDATE accounts SET pw_hash=? WHERE id=?', (hash_password(password), aid))
     q('DELETE FROM password_resets WHERE account_id=?', (aid,))
     q('DELETE FROM account_sessions WHERE account_id=?', (aid,))
+    owner_row = q('SELECT email FROM accounts WHERE id=?', (aid,), fetch=True)
+    if owner_row:
+        tasks.add_task(mailer.password_changed, owner_row[0]['email'], _origin(request))
     return _cookie(JSONResponse({'ok': True}), new_session(aid))
 
 
