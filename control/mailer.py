@@ -233,7 +233,7 @@ def welcome(to: str, origin: str) -> None:
     _safe(to, {'subject': 'Witaj w Winq', 'preheader': 'Twoje konto jest gotowe. Zostały trzy proste kroki.',
                'heading': 'Witaj w Winq! 👋',
                'paragraphs': ['Twoje konto jest gotowe. Winq to Twój asystent do rozmów na Tinderze: pisze szkice odpowiedzi w Twoim stylu, '
-                              'a gdy zechcesz, odpisuje sam.', 'Tak zaczniesz:'],
+                              'a gdy zechcesz, odpisuje sam.', 'Zaczniesz tak.'],
                'steps': [(f'Zacznij {_days(_trial())} za darmo' if _trial() else 'Wykup dostęp', 'Na stronie konta. Anulujesz w każdej chwili.'),
                          ('Przygotujemy Twój osobny serwer', 'Zwykle w kilka minut. Napiszemy, gdy będzie gotowy.'),
                          ('Połącz Tinder i włącz autopilota', 'Panel poprowadzi Cię krok po kroku.')],
@@ -260,7 +260,7 @@ def payment_ok(to: str, origin: str) -> None:
 def panel_ready(to: str, origin: str) -> None:
     _safe(to, {'subject': 'Twój panel jest gotowy', 'preheader': 'Połącz konto Tinder i włącz autopilota. To około 3 minuty.',
                'heading': 'Twój panel jest gotowy 🚀',
-               'paragraphs': ['Zaloguj się i kliknij „Otwórz mój panel”. Zostały cztery krótkie kroki, razem około 3 minut:'],
+               'paragraphs': ['Zaloguj się i kliknij „Otwórz mój panel”. Zostały cztery krótkie kroki, razem około 3 minut.'],
                'steps': [('Połącz konto Tinder', 'Ustawienia, Tinder. Wklejasz token, instrukcja jest przy polu.'),
                          ('Wybierz styl', 'Jedno kliknięcie. Zmienisz go, kiedy chcesz.'),
                          ('Dopisz „AI” w bio na Tinderze', 'Osoby, z którymi piszesz, mają wiedzieć, że pomaga Ci asystent.'),
