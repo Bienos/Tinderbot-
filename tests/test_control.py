@@ -636,3 +636,12 @@ def test_demo_serves_real_panel_on_fake_data(client):
         assert client.get('/demo/static/' + name).status_code == 200
     for name in ('../app.py', 'fonts/../../app.py', 'dashboard.html', 'login.js'):
         assert client.get('/demo/static/' + name).status_code == 404
+
+
+def test_register_stores_optional_signup_source(client):
+    import control.app as c
+    base={'email':'src@example.com','password':'x'*12,'adult':True,'terms':True}
+    assert client.post('/api/register',json={**base,'source':'tiktok'}).status_code==200
+    assert client.post('/api/register',json={**base,'email':'src2@example.com','source':'<script>'}).status_code==200
+    rows={r['email']:r['source'] for r in c.q('SELECT email,source FROM accounts',fetch=True)}
+    assert rows['src@example.com']=='tiktok' and rows['src2@example.com'] is None
