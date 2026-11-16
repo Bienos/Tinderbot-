@@ -126,7 +126,7 @@ def set_plan(service_id: str, plan: str) -> None:
 def render_create_instance(account_id: int, plan: str | None = None) -> dict:
     """Create the service, link the shared env group and redeploy so the group's variables are loaded."""
     sso_secret = secrets.token_urlsafe(32)
-    name = f'iskra-u{account_id}-{secrets.token_hex(2)}'
+    name = f'winq-bot-u{account_id}-{secrets.token_hex(2)}'
     group = os.getenv('RENDER_ENV_GROUP_ID')
     with _client() as c:
         extra = None if group else template_env(c)
