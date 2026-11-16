@@ -36,7 +36,12 @@ jobs:
       - if: steps.ready.outputs.ok == 'true'
         uses: actions/checkout@v4
       - if: steps.ready.outputs.ok == 'true'
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        name: Install flyctl
+        # Fly's own installer instead of a third-party action on a moving ref ("@master"): when that ref could not be
+        # fetched, the whole job failed in a few seconds, before running a single step.
+        run: |
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
       - if: steps.ready.outputs.ok == 'true'
         name: Build and push (unique tag)
         run: |
