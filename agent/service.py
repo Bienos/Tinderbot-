@@ -85,13 +85,14 @@ async def process_job(job):
         memory=[m for m in rt.memory(t['id']) if m['source_id'] not in recent]
         examples=style.select_examples(hist,language=cfg['language'],exclude_thread=t['id'])
         incoming=[m['body'] for m in hist if m['sender']=='them'][-1:]
-        lang=cfg['language'] if cfg['language'] in ('pl','en') else style.language_of(incoming[0] if incoming else '')
+        from agent import engine as _eng
+        lang=_eng.conversation_language(hist,campaigns.bio_of(t['id']),cfg['language'])
         from agent import strategy
         outcome_rows=s.rows('SELECT value FROM outcome_state WHERE thread_id=?',(t['id'],))
         plan=strategy.analyze(hist,cfg,json.loads(outcome_rows[0]['value']) if outcome_rows else [])
         profile={**cfg['profile'],**strategy.planning_facts(cfg)}
         decision,generator=await asyncio.to_thread(generate,hist,profile,memory,
-             {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
+             {'language':lang,'style':cfg['style'],'feedback':cfg['feedback']},
              {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},
              examples,style.style_stats(),style.canon_text(lang),plan)
         # Asked about AI: only an honest admission may go out; anything else waits for the owner.
@@ -134,10 +135,10 @@ async def process_opener(item):
         from agent import engine,style,strategy
         value=json.loads((s.rows('SELECT value FROM tinder_threads WHERE thread_id=?',(tid,)) or [{'value':'{}'}])[0]['value'])
         match=engine.match_card(value.get('profile'),t['display_name'])
-        lang=cfg['language'] if cfg['language'] in ('pl','en') else style.language_of(match['bio'])
+        lang=engine.conversation_language([],match['bio'],cfg['language'])
         profile={**cfg['profile'],**strategy.planning_facts(cfg)}
         decision,generator=await asyncio.to_thread(engine.generate_opener,match,profile,
-            {'language':cfg['language'],'style':cfg['style'],'feedback':cfg['feedback']},
+            {'language':lang,'style':cfg['style'],'feedback':cfg['feedback']},
             {'platform':t['platform'],'mode':cfg['mode'],'disclosure_required':True},
             [],style.style_stats(),style.canon_text(lang))
         body=decision.reply or decision.note

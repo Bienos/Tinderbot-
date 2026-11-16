@@ -448,11 +448,18 @@ class Launch(BaseModel):
     mode:__import__('typing').Literal['auto','draft']='draft'
     profile:__import__('typing').Literal['careful','balanced','fast']='balanced'
     only_with_bio:bool=True
+    window_start:str|None=Field(default=None,max_length=5)
+    window_end:str|None=Field(default=None,max_length=5)
 @app.post('/api/campaigns')
 def campaign_launch(body:Launch):
     """Start a campaign: the agent writes the first message to the chosen new matches (and sends it in 'auto' mode)."""
     if not model_configured():raise HTTPException(409,'Podłącz model AI, żeby agent mógł pisać pierwsze wiadomości.')
-    r=campaigns.launch(body.thread_ids,body.mode,body.profile,body.only_with_bio)
+    win=None
+    if body.window_start or body.window_end:
+        a,b=campaigns.parse_clock(body.window_start),campaigns.parse_clock(body.window_end)
+        if a is None or b is None or a==b:raise HTTPException(422,'Podaj godziny wysyłki w formacie GG:MM, początek inny niż koniec.')
+        win=(a,b)
+    r=campaigns.launch(body.thread_ids,body.mode,body.profile,body.only_with_bio,win)
     if not r['accepted']:raise HTTPException(409,next(iter(r['rejected'].values()),'Nie ma czego uruchomić.'))
     service.WAKE.set();return r
 @app.post('/api/campaigns/stop')

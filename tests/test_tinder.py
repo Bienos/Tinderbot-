@@ -601,3 +601,11 @@ async def test_a_request_pause_only_blocks_sending_not_drafting(source,monkeypat
     with s.connect() as db:db.execute("UPDATE campaign_items SET available=0")
     await drain()
     assert source.b_posts==[{'message':OPENER}] and campaign_item()['status']=='sent'
+
+
+def test_location_is_stored_only_when_tinder_sends_it():
+    assert 'location' not in tinder.profile_summary({'name': 'A', 'bio': 'x'})
+    assert tinder.profile_summary({'city': {'name': 'Berlin'}, 'distance_mi': 10})['location'] == {'city': 'Berlin', 'distance_km': 16}
+    assert tinder.profile_summary({'city': 'Kraków'})['location'] == {'city': 'Kraków', 'distance_km': None}
+    assert tinder.profile_summary({'distance_km': 7})['location'] == {'city': None, 'distance_km': 7}
+    assert 'location' not in tinder.profile_summary({'city': {'name': ''}, 'distance_mi': 'far'})

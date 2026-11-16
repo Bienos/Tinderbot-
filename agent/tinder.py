@@ -105,8 +105,18 @@ def profile_summary(person: dict, match: dict | None = None) -> dict:
         if not 18 <= age <= 120: age = None
     except ValueError: age = None
     match = match or {}
-    return {'photos': photos, 'photos_full': full, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age,
-            'matched_at': _iso(match.get('created_date')), 'last_activity': _iso(match.get('last_activity_date'))}
+    out = {'photos': photos, 'photos_full': full, 'bio': bio.strip()[:600] if isinstance(bio, str) else '', 'age': age,
+           'matched_at': _iso(match.get('created_date')), 'last_activity': _iso(match.get('last_activity_date'))}
+    # Location only if Tinder sends it (a city name, a distance); never guessed from anything else.
+    city = person.get('city')
+    city = (city.get('name') if isinstance(city, dict) else city) if city else None
+    km = None
+    for key, factor in (('distance_km', 1), ('distance_mi', 1.609)):
+        if isinstance(person.get(key), (int, float)):
+            km = round(person[key] * factor);break
+    if (isinstance(city, str) and city.strip()) or km is not None:
+        out['location'] = {'city': city.strip()[:60] if isinstance(city, str) and city.strip() else None, 'distance_km': km}
+    return out
 
 
 TOKEN_SLOT = 'tinder_token'

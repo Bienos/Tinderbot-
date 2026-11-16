@@ -58,3 +58,10 @@ def test_style_reaches_model_request(store,monkeypatch):
     engine.generate(hist,{},style_examples=ex,style_stats=style.style_stats(),canon=style.canon_text('pl'))
     assert seen['ctx']['style_examples']==ex and seen['ctx']['style_stats']['samples']>0
     assert seen['canon'].startswith('STYLE CANON')
+
+
+def test_language_detection_does_not_mistake_english_or_spanish_for_polish():
+    from agent.style import language_of
+    assert language_of('I want to go to the beach, what about you?') == 'en'
+    assert language_of('me encanta la canción, ¿y tú?') == 'en'
+    assert language_of('cześć, jak się masz?') == 'pl' and language_of('co dziś robisz? mam wolny wieczór') == 'pl'

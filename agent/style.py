@@ -18,7 +18,8 @@ from functools import lru_cache
 from pathlib import Path
 
 CORPUS = Path(__file__).resolve().parent.parent / 'data' / 'full_conversations_augment.jsonl'
-PL_HINT = re.compile(r"[ąćęłńóśźż]|\b(nie|jest|się|czy|jak|co|to|mam|masz|już|też|że|był|była|ale)\b", re.I)
+# "to" (English: "want to") and a bare "ó" (Spanish/Portuguese: "canción") are NOT Polish hints; people who write anything else get English.
+PL_HINT = re.compile(r"[ąćęłńśźż]|\b(nie|jest|się|czy|jak|co|mam|masz|już|też|że|był|była|ale|cześć|hej|dzięki|tak|dobrze)\b", re.I)
 EMOJI = re.compile(r"[\U0001F300-\U0001FAFF☀-➿]")
 WORD = re.compile(r"\w+", re.U)
 

@@ -33,7 +33,7 @@ if(n){let stage=el('div','pstage');stage.title='Kliknij, żeby obejrzeć zdjęci
  stage.append(zoom,who);stage.onclick=()=>openViewer(big,idx,t.display_name+(p.age?', '+p.age:''));box.append(stage);
  if(n>1){let strip=el('div','pthumbs');photos.forEach((u,k)=>{let th=cachedImg('pthumb:'+t.id+':'+k,u,'pthumb'+(k===idx?' on':''),'');th.onclick=()=>go(k);strip.append(th)});box.append(strip)}}
 else{who.className='pover flat';box.append(who)}
-let info=el('div','pinfo');if(p.bio){info.append(el('p','pbio',p.bio));let ig=p.bio.match(IG_RE);if(ig){let a=el('a','igchip','Instagram @'+ig[1]);a.href='https://www.instagram.com/'+encodeURIComponent(ig[1])+'/';a.target='_blank';a.rel='noopener noreferrer';info.append(a)}}
+let info=el('div','pinfo');if(p.location&&(p.location.city||p.location.distance_km!=null))info.append(el('p','pbio muted',[p.location.city,p.location.distance_km!=null?p.location.distance_km+' km od Ciebie':null].filter(Boolean).join(' · ')));if(p.bio){info.append(el('p','pbio',p.bio));let ig=p.bio.match(IG_RE);if(ig){let a=el('a','igchip','Instagram @'+ig[1]);a.href='https://www.instagram.com/'+encodeURIComponent(ig[1])+'/';a.target='_blank';a.rel='noopener noreferrer';info.append(a)}}
 else info.append(el('p','pbio muted','Brak opisu.'));
 let meta=el('div','pmeta');if(n)meta.append(el('span','',n+(n===1?' zdjęcie':n<5?' zdjęcia':' zdjęć')));if(p.last_activity)meta.append(el('span','','Aktywność '+fmtDate(p.last_activity)));if(meta.children.length)info.append(meta);
 box.append(info)}
@@ -571,7 +571,7 @@ function renderOnboarding(){const box=document.getElementById('onboard');if(!box
  card.append(startGuide(()=>renderOnboarding()));box.append(card)}
 
 /* ---------- Automatyzuj: agent pisze pierwszą wiadomość do wybranych nowych dopasowań ---------- */
-const CAMPAIGN={mode:null,sel:null,msg:null,profile:null,bio:true};
+const CAMPAIGN={mode:null,sel:null,msg:null,profile:null,bio:true,win:null};
 const CMP_STATUS={queued:'w kolejce',sent:'wysłano',review:'szkic czeka na Ciebie',started:'rozmowa ruszyła',skipped:'pominięto',failed:'nie udało się'};
 function fmtDur(sec){let m=Math.round(sec/60);if(m<2)return 'kilka minut';if(m<90)return m+' min';let h=Math.round(m/6)/10;return h+' godz.'}
 function autoLive(){return apLive(tinderConn())&&(!data.plan||data.plan.autopilot)}
@@ -587,7 +587,7 @@ function openerBox(box,t,send){
  box.append(row);
  if(c.free_slots===0)box.append(el('div','callout warn','Wszystkie miejsca w pakiecie '+data.plan.label+' są zajęte. Pierwsza wiadomość zajmie jedno z nich.'))}
 const CMP_TITLE='Automatyzuj: pierwsze wiadomości';let CMP_TIMER=null;
-function showCampaign(){CAMPAIGN.msg=null;CAMPAIGN.sel=null;let p=panel(CMP_TITLE);fillCampaign(p);campaignWatch(p)}
+function showCampaign(){CAMPAIGN.msg=null;CAMPAIGN.sel=null;CAMPAIGN.win=null;let p=panel(CMP_TITLE);fillCampaign(p);campaignWatch(p)}
 /* The page behind a panel does not refresh itself, so while this panel is open it follows the campaign: new numbers show up without a click. */
 function campaignWatch(p){clearInterval(CMP_TIMER);let last=JSON.stringify(data.campaign);
  CMP_TIMER=setInterval(async()=>{if(!document.getElementById('panel').open||document.getElementById('panel-title').textContent!==CMP_TITLE){clearInterval(CMP_TIMER);return}
@@ -646,21 +646,31 @@ function fillCampaign(p){p.replaceChildren();
  if(!live){let w=el('div','callout warn',autoWhy());if(!(data.plan&&!data.plan.autopilot)){let b=el('button','linkish','Włącz autopilota →');b.onclick=()=>{closePanel();showAutopilot()};w.append(document.createTextNode(' '),b)}p.append(w)}
  const pf=profiles[CAMPAIGN.profile]||{};
  if(CAMPAIGN.mode==='auto'){
-  let tempo=el('div','presets');for(let [k,v] of Object.entries(profiles)){let b=el('button','chipbtn'+(CAMPAIGN.profile===k?' on':''),v.label);b.type='button';b.onclick=()=>{CAMPAIGN.profile=k;redraw()};tempo.append(b)}
-  p.append(group('Tempo',pf.hint||'',tempo))}
+  let tempo=el('div','presets');for(let [k,v] of Object.entries(profiles)){let b=el('button','chipbtn'+(CAMPAIGN.profile===k?' on':''),v.label);b.type='button';b.onclick=()=>{CAMPAIGN.profile=k;CAMPAIGN.win=null;redraw()};tempo.append(b)}
+  p.append(group('Tempo',pf.hint||'',tempo));
+  /* godziny: własne, z podpowiedzią z Twoich rozmów */
+  const bh=cs.best_hours||{n:0};const base=pf.window||['00:00','23:59'];
+  if(!CAMPAIGN.win)CAMPAIGN.win=[...base];
+  if(cs.window_locked){p.append(el('div','gdesc','Godziny wysyłki ustawił administrator: '+(pf.window?pf.window[0]+'–'+pf.window[1]:'bez ograniczeń')+'.'))}
+  else{let hrs=el('div','cmphours');for(let [i,l] of [[0,'Od'],[1,'Do']]){let lab=el('label','');lab.append(document.createTextNode(l+' '));let inp=el('input','inp');inp.type='time';inp.value=CAMPAIGN.win[i];inp.onchange=()=>{if(inp.value){CAMPAIGN.win[i]=inp.value;redraw()}};lab.append(inp);hrs.append(lab)}
+   let reset=el('button','linkish','Wróć do godzin profilu');reset.type='button';reset.onclick=()=>{CAMPAIGN.win=null;redraw()};hrs.append(reset);
+   p.append(group('Godziny wysyłki','Wiadomości wychodzą tylko w tych godzinach ('+(cs.timezone||'Europe/Warsaw')+'). Poza nimi czekają do następnego dnia.',hrs));
+   if(bh.window){let s=el('div','callout ok');s.append(document.createTextNode('Na podstawie '+bh.n+' odpowiedzi w Twoich rozmowach najczęściej odpisują między '+bh.window[0]+' a '+bh.window[1]+' ('+Math.round(100*bh.share)+'% odpowiedzi). '));
+    let use=el('button','linkish','Użyj tych godzin');use.type='button';use.onclick=()=>{CAMPAIGN.win=[...bh.window];redraw()};s.append(use);p.append(s)}
+   else p.append(el('div','gdesc',bh.n?'Podpowiedź godzin pojawi się, gdy będziesz mieć co najmniej 10 odpowiedzi w rozmowach (teraz: '+bh.n+'). Na start rozsądny jest wieczór.':'Podpowiedź godzin pojawi się, gdy ludzie zaczną odpisywać (potrzeba co najmniej 10 odpowiedzi).'))}}
  /* 3. podsumowanie */
  let n=CAMPAIGN.sel.size;p.append(el('div','cmpstep','3. Podsumowanie'));
  let sum=el('div','cmpsum');
  if(CAMPAIGN.mode==='auto'&&pf.gap_seconds!==undefined){
-  const win=pf.window?(()=>{let [a,b]=pf.window.map(x=>{let [h,m]=x.split(':');return +h+m/60});return (b>a?b-a:24-a+b)*3600})():86400;
+  const ew=cs.window_locked?pf.window:CAMPAIGN.win;const win=ew?(()=>{let [a,b]=ew.map(x=>{let [h,m]=x.split(':');return +h+m/60});return (b>a?b-a:24-a+b)*3600})():86400;
   const perDay=Math.max(1,Math.min(pf.per_day||n,Math.floor(win/Math.max(1,pf.gap_seconds))));const days=Math.max(1,Math.ceil(n/perDay));
   sum.append(el('div','',(n?'Wysyłka '+n+' '+pl(n,'wiadomość','wiadomości','wiadomości'):'Zaznacz osoby powyżej')+(n?(days===1?', skończy się dziś (jeśli zaczniesz w oknie).':', rozłożona na około '+days+' '+pl(days,'dzień','dni','dni')+'.'):'.')),
-   el('div','muted','Co '+fmtDur(pf.gap_seconds)+', do '+pf.per_day+' dziennie'+(pf.window?', w godzinach '+pf.window[0]+'–'+pf.window[1]:'')+' ('+(cs.timezone||'Europe/Warsaw')+'). '+(cs.reserve||0)+' wysyłek na godzinę zostaje na odpowiedzi.'))}
+   el('div','muted','Co '+fmtDur(pf.gap_seconds)+', do '+pf.per_day+' dziennie'+(ew?', w godzinach '+ew[0]+'–'+ew[1]:'')+' ('+(cs.timezone||'Europe/Warsaw')+'). '+(cs.reserve||0)+' wysyłek na godzinę zostaje na odpowiedzi.'))}
  else sum.append(el('div','',n?'Przygotuję '+n+' '+pl(n,'szkic','szkice','szkiców')+'. Wyślesz je po kolei jednym przyciskiem.':'Zaznacz osoby powyżej.'));
  p.append(sum);
  let go=el('button','primary','Start · '+n+' '+pl(n,'osoba','osoby','osób'));go.disabled=!n;
  go.onclick=async()=>{go.disabled=true;note.className='mresult';note.textContent='Uruchamiam…';
-  try{let r=await api('/api/campaigns','POST',{thread_ids:[...CAMPAIGN.sel],mode:CAMPAIGN.mode,profile:CAMPAIGN.profile,only_with_bio:CAMPAIGN.bio});CAMPAIGN.sel=null;let rej=Object.values(r.rejected||{});
+  try{let r=await api('/api/campaigns','POST',{thread_ids:[...CAMPAIGN.sel],mode:CAMPAIGN.mode,profile:CAMPAIGN.profile,only_with_bio:CAMPAIGN.bio,...(CAMPAIGN.mode==='auto'&&CAMPAIGN.win&&!cs.window_locked?{window_start:CAMPAIGN.win[0],window_end:CAMPAIGN.win[1]}:{})});CAMPAIGN.sel=null;let rej=Object.values(r.rejected||{});
    CAMPAIGN.msg='Ruszyło: '+r.accepted.length+(rej.length?'. Pominięto '+rej.length+': '+rej[0]:'.');await refresh();redraw()}
   catch(e){note.className='mresult err';note.textContent=ERR_PL[e.message]||e.message;go.disabled=false}};
  let foot=el('div','mfoot');foot.append(go);p.append(foot)}
@@ -687,7 +697,7 @@ function renderAuto(){const box=document.getElementById('auto-view');if(!box||!d
  box.append(wrap)}
 function showRound(id){const r=((data.campaign&&data.campaign.rounds)||[]).find(x=>x.id===id);if(!r)return;const p=panel(r.name+' · '+(ROUND_STATUS[r.status]||r.status));
  const prof=(data.campaign.profiles||{})[r.profile];
- p.append(el('p','gdesc',(r.mode==='auto'?'Agent wysyłał sam':'Szkice dla Ciebie')+(r.mode==='auto'&&prof?' · tempo '+prof.label:'')+' · start '+roundWhen(r.created)));
+ p.append(el('p','gdesc',(r.mode==='auto'?'Agent wysyłał sam':'Szkice dla Ciebie')+(r.mode==='auto'&&prof?' · tempo '+prof.label:'')+(r.mode==='auto'&&(r.window||(prof&&prof.window))?' · godziny '+(r.window||prof.window).join('–'):'')+' · start '+roundWhen(r.created)));
  const tiles=el('div','scard');tiles.append(el('div','gdesc','Wysłano: '+r.sent+' / '+r.total+' · Odpisały: '+r.replied+' ('+pct(r.replied,r.sent)+') · Rozmowy 5+: '+r.talking+' · Spotkania: '+r.dates));p.append(tiles);
  if(r.status==='active'){let stop=el('button','secondary danger','Zatrzymaj automatyzację');stop.onclick=async()=>{if(!confirm('Zatrzymać automatyzację? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;stop.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();showRound(id)}catch(e){stop.disabled=false}};p.append(stop)}
  const list=el('div','cmplist');for(let x of r.people){let row=el('div','cmprow');let th=data.threads.find(t=>t.id===x.thread_id);

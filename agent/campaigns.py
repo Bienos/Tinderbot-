@@ -59,8 +59,9 @@ def timezone_name() -> str:
     return os.getenv('AUTOMATION_TZ', '').strip() or 'Europe/Warsaw'
 
 
-def window_hours(profile: str | None = None) -> tuple[float, float] | None:
-    """Local sending window (start, end) in hours, or None for "always". CAMPAIGN_WINDOW="17:00-22:30" or "always" overrides."""
+def window_hours(profile: str | None = None, own: tuple[float, float] | None = None) -> tuple[float, float] | None:
+    """Local sending window (start, end) in hours, or None for "always". The owner's own hours for a run win over the profile;
+    the operator's CAMPAIGN_WINDOW="17:00-22:30" (or "always") wins over both."""
     raw = os.getenv('CAMPAIGN_WINDOW', '').strip().lower()
     if raw == 'always':
         return None
@@ -71,11 +72,11 @@ def window_hours(profile: str | None = None) -> tuple[float, float] | None:
             return conv(a), conv(b)
         except (ValueError, IndexError):
             pass
-    return profile_of(profile)['window']
+    return own if own else profile_of(profile)['window']
 
 
-def in_window(profile: str | None = None, now: float | None = None) -> bool:
-    w = window_hours(profile)
+def in_window(profile: str | None = None, now: float | None = None, own: tuple[float, float] | None = None) -> bool:
+    w = window_hours(profile, own)
     if w is None:
         return True
     try:
@@ -84,6 +85,16 @@ def in_window(profile: str | None = None, now: float | None = None) -> bool:
         return True  # an unknown time zone must not stop everything silently
     hour = local.hour + local.minute / 60
     return w[0] <= hour < w[1] if w[0] <= w[1] else (hour >= w[0] or hour < w[1])
+
+
+def parse_clock(value) -> float | None:
+    """"17:30" -> 17.5; anything else None."""
+    try:
+        h, m = str(value).strip().split(':')
+        h, m = int(h), int(m)
+        return h + m / 60 if 0 <= h <= 23 and 0 <= m <= 59 else None
+    except (ValueError, AttributeError):
+        return None
 
 
 def _clock(h: float) -> str:
@@ -127,7 +138,8 @@ def blocker(thread: dict | None, history: list, *, queued: bool = True, need_bio
     return None
 
 
-def launch(thread_ids: list[str], mode: str, profile: str = DEFAULT_PROFILE, only_with_bio: bool = False) -> dict:
+def launch(thread_ids: list[str], mode: str, profile: str = DEFAULT_PROFILE, only_with_bio: bool = False,
+           window: tuple[float, float] | None = None) -> dict:
     """Queue first messages for the chosen new matches. Returns who was accepted and, for the rest, why not."""
     if mode not in MODES or profile not in PROFILES:
         raise ValueError('mode')
@@ -150,7 +162,8 @@ def launch(thread_ids: list[str], mode: str, profile: str = DEFAULT_PROFILE, onl
         campaign = uuid4().hex
         now = time.time()
         with s.connect() as db:
-            db.execute('INSERT INTO campaigns(id,created,mode,profile) VALUES(?,?,?,?)', (campaign, s.utcnow(), mode, profile))
+            db.execute('INSERT INTO campaigns(id,created,mode,profile,window_start,window_end) VALUES(?,?,?,?,?,?)',
+                       (campaign, s.utcnow(), mode, profile, window[0] if window else None, window[1] if window else None))
             for pos, tid in enumerate(accepted):
                 db.execute('INSERT OR REPLACE INTO campaign_items(thread_id,campaign_id,mode,status,note,position,available,updated,attempts) '
                            "VALUES(?,?,?,'queued',NULL,?,0,?,0)", (tid, campaign, mode, pos, now))
@@ -159,13 +172,13 @@ def launch(thread_ids: list[str], mode: str, profile: str = DEFAULT_PROFILE, onl
                            "AND status IN ('pending','stale','rejected','needs_user','no_reply')", (tid, s.OPENER_ANCHOR))
         for tid in accepted:
             rt.audit(tid, 'campaign_queued', 'Owner asked the agent to write the first message (' + mode + ')')
-    return {'campaign_id': campaign, 'mode': mode, 'profile': profile, 'accepted': accepted, 'rejected': rejected}
+    return {'campaign_id': campaign, 'mode': mode, 'profile': profile, 'window': list(window) if window else None, 'accepted': accepted, 'rejected': rejected}
 
 
-def send_room(profile: str | None = None) -> bool:
+def send_room(profile: str | None = None, own: tuple[float, float] | None = None) -> bool:
     """May another opener be SENT now: inside the sending window, spaced out, replies keep part of the budget, and a daily cap."""
     now = time.time()
-    if not in_window(profile, now):
+    if not in_window(profile, now, own):
         return False
     with s.connect() as db:
         last = db.execute("SELECT MAX(updated) FROM campaign_items WHERE status='sent'").fetchone()[0]
@@ -188,13 +201,15 @@ def claim_next() -> dict | None:
     rooms: dict = {}
     with s.connect() as db:
         db.execute('BEGIN IMMEDIATE')
-        rows = db.execute("SELECT i.*,c.profile FROM campaign_items i JOIN campaigns c ON c.id=i.campaign_id WHERE i.status='queued' "
+        rows = db.execute("SELECT i.*,c.profile,c.window_start,c.window_end FROM campaign_items i JOIN campaigns c ON c.id=i.campaign_id WHERE i.status='queued' "
                           'AND c.stopped=0 AND i.available<=? ORDER BY c.created, i.position', (time.time(),)).fetchall()
         for r in rows:
             if r['mode'] == 'auto':
-                if r['profile'] not in rooms:
-                    rooms[r['profile']] = send_room(r['profile'])
-                if not rooms[r['profile']]:
+                own = (r['window_start'], r['window_end']) if r['window_start'] is not None and r['window_end'] is not None else None
+                key = (r['profile'], own)
+                if key not in rooms:
+                    rooms[key] = send_room(r['profile'], own)
+                if not rooms[key]:
                     continue
             db.execute("UPDATE campaign_items SET status='working',attempts=attempts+1,updated=? WHERE thread_id=?", (time.time(), r['thread_id']))
             return {**dict(r), 'attempts': r['attempts'] + 1}
@@ -226,6 +241,38 @@ def stop() -> int:
     if ids:
         rt.audit(None, 'campaign_stopped', f'Owner stopped the campaign; {len(ids)} first messages dropped')
     return len(ids)
+
+
+def best_hours(by_thread: dict) -> dict:
+    """When people answered YOU: the hour (in AUTOMATION_TZ) of every reply that directly follows one of your messages, within a day.
+    A suggestion from the owner's own conversations, with the sample size, never a general claim. Needs at least 10 replies."""
+    try:
+        tz = ZoneInfo(timezone_name())
+    except Exception:
+        tz = None
+    counts = [0] * 24
+    for msgs in by_thread.values():
+        for a, b in zip(msgs, msgs[1:]):
+            if a['sender'] != 'you' or b['sender'] != 'them':
+                continue
+            try:
+                ta = datetime.fromisoformat(str(a['created_at']).replace('Z', '+00:00'))
+                tb = datetime.fromisoformat(str(b['created_at']).replace('Z', '+00:00'))
+                if ta.tzinfo is None or tb.tzinfo is None:
+                    continue
+                if 0 <= (tb - ta).total_seconds() <= 86400:
+                    counts[(tb.astimezone(tz) if tz else tb).hour] += 1
+            except ValueError:
+                continue
+    n = sum(counts)
+    out = {'n': n, 'by_hour': counts, 'window': None}
+    if n >= 10:
+        # the busiest 3 hours in a row (the day wraps around midnight)
+        start = max(range(24), key=lambda h: (counts[h] + counts[(h + 1) % 24] + counts[(h + 2) % 24], counts[(h + 1) % 24], -abs(h - 19)))  # a tie: the peak in the middle
+        share = (counts[start] + counts[(start + 1) % 24] + counts[(start + 2) % 24]) / n
+        out['window'] = [_clock(float(start)), _clock(float((start + 3) % 24))]
+        out['share'] = round(share, 2)
+    return out
 
 
 DATE_KINDS = {'date_confirmed', 'date_tentative'}
@@ -264,6 +311,7 @@ def rounds(by_thread: dict, outcomes: dict | None = None) -> list[dict]:
         count = lambda *k: sum(1 for x in people if x['status'] in k)
         queued = count('queued')
         out.append({'id': c['id'], 'number': n, 'name': f'Runda #{n}', 'created': c['created'], 'mode': c['mode'], 'profile': c['profile'],
+                    'window': [_clock(c['window_start']), _clock(c['window_end'])] if c.get('window_start') is not None and c.get('window_end') is not None else None,
                     'status': 'stopped' if c['stopped'] else 'active' if queued else 'done',
                     'total': len(people), 'queued': queued, 'sent': count('sent', 'replied', 'talking', 'date'),
                     'replied': count('replied', 'talking', 'date'), 'talking': count('talking', 'date'), 'dates': count('date'),
@@ -288,4 +336,4 @@ def status(history: dict | None = None, outcomes: dict | None = None) -> dict:
                          'window': [_clock(w[0]), _clock(w[1])] if w else None}
     return {'items': items, 'counts': counts, 'rounds': rounds(by_thread, outcomes), 'running': counts.get('queued', 0) > 0,
             'gap_seconds': gap_seconds(), 'daily_cap': daily_cap(), 'free_slots': plans.free_slots(),
-            'profiles': profiles, 'default_profile': DEFAULT_PROFILE, 'reserve': reply_reserve(), 'timezone': timezone_name()}
+            'profiles': profiles, 'best_hours': best_hours(by_thread), 'default_profile': DEFAULT_PROFILE, 'window_locked': bool(os.getenv('CAMPAIGN_WINDOW', '').strip()), 'reserve': reply_reserve(), 'timezone': timezone_name()}

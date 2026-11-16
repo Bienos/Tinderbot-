@@ -51,3 +51,23 @@ def test_scenario_suite_has_300_synthetic_cases():
         assert case['incoming_message']
         ids.add(case['id'])
     assert len(ids)==300
+
+
+def hist(*pairs):
+    return [{'id': str(i), 'sender': s_, 'body': b, 'created_at': '2026-11-01T10:00:00+00:00'} for i, (s_, b) in enumerate(pairs)]
+
+
+def test_conversation_language_defaults_to_english_and_she_can_switch_it():
+    from agent.engine import conversation_language as lang, asked_for_english
+    assert lang([], 'Kocham góry i kawę, szukam kogoś na wypady', 'auto') == 'pl'            # Polish bio
+    assert lang([], 'I love hiking and coffee', 'auto') == 'en' and lang([], 'Me gusta viajar y bailar', 'auto') == 'en'
+    assert lang([], '', 'auto') == 'pl'                                                      # nothing to go on: the owner's language
+    assert lang(hist(('you', 'hej'), ('them', 'hola, qué tal?')), '', 'auto') == 'en'      # she writes something else: English
+    assert lang(hist(('them', 'cześć, co tam?')), 'I love hiking', 'auto') == 'pl'           # what she writes beats the bio
+    assert lang([], 'I love hiking', 'pl') == 'pl'                                           # the owner's explicit choice holds
+    asked = hist(('you', 'hej, co u ciebie?'), ('them', 'sorry I dont understand, can we speak English please'))
+    assert asked_for_english(asked) and lang(asked, 'Kocham góry', 'pl') == 'en'             # ...unless she asks for English
+    for text in ('nie rozumiem po polsku', "I don't speak Polish", 'what language is this?', 'no entiendo'):
+        assert asked_for_english(hist(('them', text))), text
+    assert not asked_for_english(hist(('you', 'nie rozumiem'), ('them', 'cześć')))           # only HER words count
+    assert not asked_for_english(hist(('them', 'I understand everything, thanks')))

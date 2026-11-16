@@ -341,7 +341,7 @@ def test_sending_window_follows_the_profile_in_local_time(monkeypatch):
 
 def test_nothing_is_sent_outside_the_window_but_drafts_are_written(store, monkeypatch):
     monkeypatch.delenv('CAMPAIGN_WINDOW')
-    monkeypatch.setattr(campaigns, 'in_window', lambda profile=None, now=None: False)
+    monkeypatch.setattr(campaigns, 'in_window', lambda profile=None, now=None, own=None: False)
     assert not campaigns.send_room('balanced')
     campaigns.launch(['t4'], 'auto')
     assert campaigns.claim_next() is None                                         # an automatic opener waits for the window
@@ -445,3 +445,70 @@ def test_state_api_exposes_rounds(store, monkeypatch):
         c.post('/api/campaigns', json={'thread_ids': ['t4'], 'mode': 'draft', 'only_with_bio': False})
         r = c.get('/api/state').json()['campaign']['rounds']
         assert r[0]['name'] == 'Runda #1' and r[0]['people'][0]['name'] == 'Maja' and r[0]['status'] == 'active'
+
+
+# ---- the owner's own hours, and the best-hours suggestion --------------------------------------------------------
+
+def test_clock_parsing():
+    assert campaigns.parse_clock('17:30') == 17.5 and campaigns.parse_clock('00:00') == 0
+    assert campaigns.parse_clock('24:00') is None and campaigns.parse_clock('7') is None and campaigns.parse_clock(None) is None
+
+
+def test_own_hours_win_over_the_profile_but_not_over_the_operator(monkeypatch):
+    monkeypatch.delenv('CAMPAIGN_WINDOW')
+    assert not campaigns.in_window('balanced', warsaw(12))                         # profile: 17:00-22:30
+    assert campaigns.in_window('balanced', warsaw(12), (11.0, 13.0))              # the owner's hours
+    assert campaigns.in_window('balanced', warsaw(23), (22.0, 2.0)) and not campaigns.in_window('balanced', warsaw(12), (22.0, 2.0))
+    monkeypatch.setenv('CAMPAIGN_WINDOW', '01:00-02:00')                            # operator override beats both
+    assert not campaigns.in_window('balanced', warsaw(12), (11.0, 13.0))
+
+
+def test_a_run_remembers_its_own_hours(store):
+    r = campaigns.launch(['t4'], 'auto', 'balanced', window=(11.0, 13.5))
+    assert r['window'] == [11.0, 13.5]
+    row = s.rows('SELECT window_start,window_end FROM campaigns')[0]
+    assert (row['window_start'], row['window_end']) == (11.0, 13.5)
+    assert campaigns.rounds({})[0]['window'] == ['11:00', '13:30']
+
+
+def test_automatic_item_waits_for_its_own_window(store, monkeypatch):
+    monkeypatch.delenv('CAMPAIGN_WINDOW')
+    monkeypatch.setattr(campaigns.time, 'time', lambda: warsaw(12))
+    campaigns.launch(['t4'], 'auto', 'balanced', window=(18.0, 20.0))
+    assert campaigns.claim_next() is None                                           # 12:00 is outside 18:00-20:00
+    campaigns.stop()
+    campaigns.launch(['t4'], 'auto', 'balanced', window=(11.0, 13.0))
+    assert campaigns.claim_next()['thread_id'] == 't4'                              # inside the owner's hours
+
+
+def test_best_hours_come_from_the_owners_own_conversations():
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+    def conv(hour_of_reply, n):
+        msgs = []
+        for i in range(n):
+            base = datetime(2026, 11, 1 + i, hour_of_reply, 0, tzinfo=ZoneInfo('Europe/Warsaw'))
+            msgs += [{'sender': 'you', 'created_at': (base - timedelta(minutes=20)).isoformat()}, {'sender': 'them', 'created_at': base.isoformat()}]
+        return msgs
+    few = campaigns.best_hours({'a': conv(21, 4)})
+    assert few['n'] == 4 and few['window'] is None                                  # too little data to suggest anything
+    bh = campaigns.best_hours({'a': conv(21, 12), 'b': conv(9, 3)})
+    assert bh['n'] == 15 and bh['window'] == ['20:00', '23:00'] and bh['by_hour'][21] == 12 and bh['share'] == 0.8
+    # a reply after more than a day, or one without a preceding message of yours, is not counted
+    late = [{'sender': 'you', 'created_at': '2026-11-01T10:00:00+00:00'}, {'sender': 'them', 'created_at': '2026-11-03T10:00:00+00:00'},
+            {'sender': 'them', 'created_at': '2026-11-03T11:00:00+00:00'}]
+    assert campaigns.best_hours({'x': late})['n'] == 0
+
+
+def test_api_accepts_own_hours_and_rejects_nonsense(store, monkeypatch):
+    import app as application
+    monkeypatch.setattr(application, 'model_configured', lambda: True)
+    with client() as c:
+        bad = c.post('/api/campaigns', json={'thread_ids': ['t4'], 'mode': 'draft', 'only_with_bio': False, 'window_start': '25:00', 'window_end': '20:00'})
+        assert bad.status_code == 422
+        same = c.post('/api/campaigns', json={'thread_ids': ['t4'], 'mode': 'draft', 'only_with_bio': False, 'window_start': '18:00', 'window_end': '18:00'})
+        assert same.status_code == 422
+        ok = c.post('/api/campaigns', json={'thread_ids': ['t4'], 'mode': 'auto', 'only_with_bio': False, 'window_start': '19:00', 'window_end': '22:00'})
+        assert ok.status_code == 200 and ok.json()['window'] == [19.0, 22.0]
+        st = c.get('/api/state').json()['campaign']
+        assert st['rounds'][0]['window'] == ['19:00', '22:00'] and 'best_hours' in st
