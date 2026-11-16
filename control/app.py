@@ -56,7 +56,8 @@ MIGRATIONS = [('accounts', 'stripe_customer', 'TEXT'), ('accounts', 'plan_status
               ('accounts', 'provision_state', 'TEXT'), ('accounts', 'provision_error', 'TEXT'),
               ('accounts', 'start_consent_at', 'DOUBLE PRECISION'), ('accounts', 'paid_at', 'DOUBLE PRECISION'),
               ('accounts', 'withdrawn_at', 'DOUBLE PRECISION'), ('accounts', 'provision_started', 'DOUBLE PRECISION'),
-              ('accounts', 'source', 'TEXT'), ('accounts', 'plan', 'TEXT'), ('accounts', 'plan_choice', 'TEXT')]
+              ('accounts', 'source', 'TEXT'), ('accounts', 'plan', 'TEXT'), ('accounts', 'plan_choice', 'TEXT'),
+              ('accounts', 'plan_period', 'TEXT'), ('accounts', 'period_choice', 'TEXT')]
 WITHDRAWAL_DAYS = 14
 # Optional "Skąd o nas wiesz?" answer on sign-up.
 SIGNUP_SOURCES = ('tiktok', 'instagram', 'friend', 'google', 'other')
@@ -283,22 +284,62 @@ def _days(n: int) -> str:
     return f'{n} dzień' if n == 1 else f'{n} dni'
 
 
+def _zl(x: float) -> str:
+    return (f'{x:.2f}'.replace('.', ',') if x != int(x) else str(int(x))) + ' zł'
+
+
+def _free_label(n: int) -> str:
+    return f'{n} miesiąc gratis' if n == 1 else f'{n} miesiące gratis'
+
+
+def _strip(months: int, free: int) -> str:
+    """One small block per month, the free ones in the brand gradient: the saving is visible without reading."""
+    return '<span class="mo"></span>' * (months - free) + '<span class="mo free"></span>' * free
+
+
+def _period_facts(plan: dict, per: dict) -> dict:
+    total = catalog.total(plan, per)
+    regular = plan['price'] * per['months']
+    return {'per': _zl(total / per['months']), 'total': total, 'regular': regular, 'save': regular - total,
+            'months': per['months'], 'free': per['free'], 'strip': _strip(per['months'], per['free']),
+            'line': ('Płatność co miesiąc, anulujesz kiedy chcesz.' if per['months'] == 1 else
+                     f'Płacisz raz {_zl(total)} za {per["months"]} mies. (zamiast {_zl(regular)}). Oszczędzasz {_zl(regular - total)}.'),
+            'badge': '' if not per['free'] else f'{_free_label(per["free"])} · −{_zl(regular - total)}'}
+
+
 def tiers_html() -> str:
-    """The pricing cards on the landing page, generated from the catalog so prices and limits exist in one place."""
+    """The pricing cards on the landing page, generated from the catalog so prices and limits exist in one place.
+    With the 6- and 12-month payment links present there is a period switch (pricing.js) that opens on the year."""
     n = trial_days()
+    longer = catalog.periods_enabled()
+    default = catalog.period('12' if longer else '1')
     cards = []
     for p in catalog.PLANS:
         items = ''.join(f'<li>{html_lib.escape(f)}</li>' for f in p['features'])
         badge = '<span class="tier-badge">Najczęściej wybierany</span>' if p.get('popular') else ''
-        cards.append(f'<article class="tier{" popular" if p.get("popular") else ""}">{badge}<h3>{p["name"]}</h3>'
-                     f'<p class="tier-tag">{html_lib.escape(p["tagline"])}</p><p class="tier-price"><b>{p["price"]} zł</b><span> / mies.</span></p>'
-                     f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p><ul>{items}</ul>'
-                     f'<a class="btn{"" if p.get("popular") else " ghost"}" href="/rejestracja?plan={p["slug"]}">Wybieram {p["name"]}</a></article>')
+        facts = {q['key']: _period_facts(p, q) for q in catalog.PERIODS if longer or q['key'] == '1'}
+        cur = facts[default['key']]
+        data = html_lib.escape(json.dumps(facts, ensure_ascii=False), quote=True)
+        cards.append(
+            f'<article class="tier{" popular" if p.get("popular") else ""}" data-slug="{p["slug"]}" data-prices="{data}">{badge}<h3>{p["name"]}</h3>'
+            f'<p class="tier-tag">{html_lib.escape(p["tagline"])}</p>'
+            f'<p class="tier-price"><b class="js-per">{cur["per"]}</b><span> / mies.</span></p>'
+            f'<p class="tier-save js-save"{"" if cur["badge"] else " hidden"}>{cur["badge"]}</p>'
+            f'<div class="tier-strip js-strip" aria-hidden="true">{cur["strip"]}</div>'
+            f'<p class="tier-total js-line">{html_lib.escape(cur["line"])}</p>'
+            f'<p class="tier-pitch">{html_lib.escape(p["pitch"])}</p><ul>{items}</ul>'
+            f'<a class="btn{"" if p.get("popular") else " ghost"} js-cta" href="/rejestracja?plan={p["slug"]}&amp;period={default["key"]}">Wybieram {p["name"]}</a></article>')
+    switch = ''
+    if longer:
+        tabs = ''.join(f'<button type="button" data-period="{q["key"]}" class="{"on" if q["key"] == default["key"] else ""}" aria-pressed="{"true" if q["key"] == default["key"] else "false"}">'
+                       f'{q["label"]}{f"<i>{_free_label(q["free"])}</i>" if q["free"] else ""}</button>' for q in catalog.PERIODS)
+        switch = ('<p class="period-lead">Im dłużej, tym taniej. <b>Weź rok i trzy miesiące masz gratis.</b></p>'
+                  f'<div class="period" role="group" aria-label="Okres rozliczeniowy">{tabs}</div>')
     trial = f'Pierwsze {_days(n)} w każdym pakiecie za darmo. Kartę podajesz od razu, a jeśli anulujesz przed końcem okresu próbnego, nic nie zapłacisz. ' if n else ''
-    note = (f'<p class="tier-note">{trial}Anulujesz w każdej chwili.</p>'
+    note = (f'<p class="tier-note">{trial}Anulujesz w każdej chwili, a dostęp działa do końca opłaconego okresu.</p>'
             '<p class="tier-note">Aktywna rozmowa to taka, w której ktoś odpisał Ci w ciągu ostatnich 14 dni. Gdy rozmowa ucichnie, miejsce się zwalnia, '
             'a rozmowy, w których umawiasz spotkanie, nigdy się nie blokują.</p>')
-    return '<div class="tiers" role="group" aria-label="Pakiety">' + ''.join(cards) + '</div>' + note
+    return f'<div class="tiers-wrap" data-period="{default["key"]}">{switch}<div class="tiers" role="group" aria-label="Pakiety">' + ''.join(cards) + '</div></div>' + note
 
 
 def trial_texts() -> dict[str, str]:
@@ -332,11 +373,14 @@ def page(name: str) -> HTMLResponse:
     if catalog.enabled():
         html = re.sub(r'<!--TICKET-->.*?<!--/TICKET-->', '', html, flags=re.S).replace('{{TIERS}}', tiers_html())
         price = f'od {min(p["price"] for p in catalog.PLANS)} zł / mies.'
-        faq_price = f'Trzy pakiety: {prices} miesięcznie.'
+        faq_price = f'Trzy pakiety: {prices} miesięcznie.' + (' Przy płatności z góry za 6 miesięcy jeden miesiąc jest gratis, a za rok trzy miesiące gratis.' if catalog.periods_enabled() else '')
         terms_price = f'Cena Subskrypcji zależy od wybranego pakietu: {prices} miesięcznie (kwoty brutto)'
         plan_terms = ('<li>Pakiety różnią się liczbą aktywnych rozmów prowadzonych naraz i dostępnością funkcji Autopilot, zgodnie z opisem w cenniku. '
                       'Aktywna rozmowa to rozmowa, w której druga osoba odpisała w ciągu ostatnich 14 dni. Rozmowy, w których ustalany jest termin spotkania, '
-                      'nie są blokowane limitem.</li>')
+                      'nie są blokowane limitem.</li>'
+                      + ('<li>Subskrypcja może być opłacana miesięcznie, za 6 miesięcy z góry (płacisz za 5 miesięcy, jeden miesiąc jest bezpłatny) albo za 12 miesięcy z góry '
+                         '(płacisz za 9 miesięcy, trzy miesiące są bezpłatne). Odnawia się automatycznie na kolejny wybrany okres, dopóki jej nie anulujesz. Anulowanie zatrzymuje odnowienie, '
+                         'a dostęp działa do końca opłaconego okresu.</li>' if catalog.periods_enabled() else ''))
     else:
         html = html.replace('<!--TICKET-->', '').replace('<!--/TICKET-->', '').replace('{{TIERS}}', '')
         faq_price, terms_price, plan_terms = f'Jeden plan w subskrypcji, {price}.', f'Cena Subskrypcji wynosi {price} (kwota brutto)', ''
@@ -370,7 +414,7 @@ def terms():
 @app.get('/assets/{name}')
 def asset(name: str):
     types = {'landing.js': 'text/javascript', 'account.js': 'text/javascript', 'landing.css': 'text/css',
-             'og.png': 'image/png', 'email-logo.png': 'image/png', 'icon.svg': 'image/svg+xml'}
+             'og.png': 'image/png', 'email-logo.png': 'image/png', 'pricing.js': 'text/javascript', 'icon.svg': 'image/svg+xml'}
     if name not in types:
         raise HTTPException(404)
     return FileResponse(STATIC / name, media_type=types[name], headers={'Cache-Control': 'public, max-age=86400'})
@@ -613,7 +657,7 @@ def me(request: Request):
             'can_manage_billing': billing_enabled() and bool(acc.get('stripe_customer')),
             'provision_state': acc.get('provision_state') or '', 'can_withdraw': can_withdraw(acc),
             'withdrawn': bool(acc.get('withdrawn_at')),
-            'trial_days': trial_days(), 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '',
+            'trial_days': trial_days(), 'plans': catalog.public() if catalog.enabled() else [], 'plan': acc.get('plan') or '', 'plan_period': acc.get('plan_period') or '1',
             'panel_ready': acc['status'] == 'active' and bool(acc.get('instance_url')) and bool(acc.get('sso_secret')) and has_access(acc),
             'setup': setup_progress(acc)}
 
@@ -721,10 +765,13 @@ async def billing_checkout(request: Request):
         chosen = catalog.get(body.get('plan'))
         if not chosen:
             raise HTTPException(422, 'Wybierz pakiet.')
-        q('UPDATE accounts SET plan_choice=? WHERE id=?', (chosen['slug'], acc['id']))
+        per = catalog.period(body.get('period'))
+        if not per or (per['key'] != '1' and not catalog.periods_enabled()):
+            raise HTTPException(422, 'Wybierz okres.')
+        q('UPDATE accounts SET plan_choice=?, period_choice=? WHERE id=?', (chosen['slug'], per['key'], acc['id']))
     if link_mode():
         from urllib.parse import urlencode
-        return {'url': (catalog.link_for(chosen['slug']) if chosen else os.environ['STRIPE_PAYMENT_LINK']) + '?' + urlencode({'client_reference_id': str(acc['id']), 'prefilled_email': acc['email'], 'locale': 'pl'})}
+        return {'url': (catalog.link_for(chosen['slug'], per['key']) if chosen else os.environ['STRIPE_PAYMENT_LINK']) + '?' + urlencode({'client_reference_id': str(acc['id']), 'prefilled_email': acc['email'], 'locale': 'pl'})}
     import stripe
     params = dict(mode='subscription', line_items=[{'price': os.environ['STRIPE_PRICE_ID'], 'quantity': 1}],
                   client_reference_id=str(acc['id']), success_url=_origin(request) + '/konto?platnosc=ok',
@@ -808,7 +855,7 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
     if event['type'] == 'checkout.session.completed' and obj.get('mode') == 'subscription':
         ref = str(obj.get('client_reference_id') or '')
         if ref.isdigit():
-            q("UPDATE accounts SET stripe_customer=?, plan_status='active', withdrawn_at=NULL, paid_at=COALESCE(paid_at, ?), plan=COALESCE(plan_choice, plan) WHERE id=?",
+            q("UPDATE accounts SET stripe_customer=?, plan_status='active', withdrawn_at=NULL, paid_at=COALESCE(paid_at, ?), plan=COALESCE(plan_choice, plan), plan_period=COALESCE(period_choice, plan_period) WHERE id=?",
               (obj.get('customer'), time.time(), int(ref)))
             rows = q('SELECT email, plan, render_service_id FROM accounts WHERE id=?', (int(ref),), fetch=True)
             if rows:
@@ -821,13 +868,14 @@ async def stripe_webhook(request: Request, tasks: BackgroundTasks):
         # A withdrawn contract stays withdrawn until the owner cancels it in Stripe; only a fresh checkout reopens it.
         # The customer switched plan in the Stripe portal (or someone changed it in Stripe): the plan follows the price.
         items = ((obj.get('items') or {}).get('data') or [{}])
-        new_plan = None if event['type'] == 'customer.subscription.deleted' else catalog.plan_for_price(((items[0] or {}).get('price') or {}).get('id'))
-        if new_plan:
-            for acc_ in q('SELECT id, plan, render_service_id FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True):
-                if acc_.get('plan') != new_plan:
-                    q('UPDATE accounts SET plan=?, plan_choice=? WHERE id=?', (new_plan, new_plan, acc_['id']))
-                    if acc_.get('render_service_id'):
-                        tasks.add_task(_apply_plan, acc_['render_service_id'], new_plan)
+        found = None if event['type'] == 'customer.subscription.deleted' else catalog.plan_for_price(((items[0] or {}).get('price') or {}).get('id'))
+        if found:
+            new_plan, new_period = found
+            for acc_ in q('SELECT id, plan, plan_period, render_service_id FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True):
+                if acc_.get('plan') != new_plan or (acc_.get('plan_period') or '1') != new_period:
+                    q('UPDATE accounts SET plan=?, plan_choice=?, plan_period=?, period_choice=? WHERE id=?', (new_plan, new_plan, new_period, new_period, acc_['id']))
+                if acc_.get('plan') != new_plan and acc_.get('render_service_id'):
+                    tasks.add_task(_apply_plan, acc_['render_service_id'], new_plan)
         before = q('SELECT email, plan_status FROM accounts WHERE stripe_customer=? AND withdrawn_at IS NULL', (obj.get('customer'),), fetch=True)
         q('UPDATE accounts SET plan_status=? WHERE stripe_customer=? AND withdrawn_at IS NULL', (status[:30], obj.get('customer')))
         for row in before:  # one mail per change of state: Stripe repeats these events
@@ -998,6 +1046,28 @@ async def admin_status(request: Request):
     if status == 'disabled':
         q('DELETE FROM account_sessions WHERE account_id IN (SELECT id FROM accounts WHERE email=?)', (str(body.get('email', '')).strip().lower(),))
     return {'ok': True}
+
+
+@app.post('/admin/mail/test')
+async def admin_mail_test(request: Request, tasks: BackgroundTasks):
+    """Send one sample of every customer mail to the given address, through the real sender (Resend), to check the look."""
+    _admin(request)
+    body = await _json(request)
+    to = str(body.get('to', '')).strip()
+    if '@' not in to or len(to) > 200:
+        raise HTTPException(422, 'Podaj adres e-mail w polu "to".')
+    o = _origin(request)
+    sample = [lambda: mailer.welcome(to, o), lambda: mailer.payment_ok(to, o), lambda: mailer.panel_ready(to, o),
+              lambda: mailer.password_reset(to, o + '/nowe-haslo?t=PRZYKLAD'), lambda: mailer.password_changed(to, o),
+              lambda: mailer.payment_failed(to, o), lambda: mailer.subscription_canceled(to, o),
+              lambda: mailer.withdrawal_confirmed(to, o), lambda: mailer.account_deleted(to)]
+
+    def send_all():
+        for send in sample:
+            send()
+            time.sleep(1.2)  # stay under the provider's rate limit
+    tasks.add_task(send_all)
+    return {'sending': len(sample), 'to': to, 'sender_problem': mailer.sender_problem()}
 
 
 @app.post('/admin/fly/update-image')
