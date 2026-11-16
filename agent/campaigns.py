@@ -228,7 +228,50 @@ def stop() -> int:
     return len(ids)
 
 
-def status(history: dict | None = None) -> dict:
+DATE_KINDS = {'date_confirmed', 'date_tentative'}
+
+
+def _person(item: dict, msgs: list, kinds: set) -> str:
+    """Where one person is in a round, from what actually happened in the conversation (not from our own bookkeeping)."""
+    if kinds & DATE_KINDS:
+        return 'date'
+    hers = any(m['sender'] == 'them' for m in msgs)
+    if hers and len(msgs) >= 5:
+        return 'talking'
+    if hers:
+        return 'replied'
+    if any(m['sender'] == 'you' for m in msgs):
+        return 'sent'
+    return {'working': 'queued'}.get(item['status'], item['status'])
+
+
+def rounds(by_thread: dict, outcomes: dict | None = None) -> list[dict]:
+    """Every run ("runda") with its results, newest first. Results come from the conversations themselves, so a first
+    message the owner sent from a draft counts too. (A person re-queued in a later run belongs to that later run.)"""
+    outcomes = outcomes or {}
+    campaigns_ = s.rows('SELECT * FROM campaigns ORDER BY created, rowid')
+    threads = {t['id']: t for t in s.threads()}
+    items: dict = {}
+    for r in s.rows('SELECT * FROM campaign_items ORDER BY position'):
+        items.setdefault(r['campaign_id'], []).append(r)
+    out = []
+    for n, c in enumerate(campaigns_, 1):
+        people = []
+        for it in items.get(c['id'], []):
+            msgs = by_thread.get(it['thread_id'], [])
+            people.append({'thread_id': it['thread_id'], 'name': (threads.get(it['thread_id']) or {}).get('display_name', '?'),
+                           'status': _person(it, msgs, set(outcomes.get(it['thread_id'], []))), 'note': it['note'], 'messages': len(msgs)})
+        count = lambda *k: sum(1 for x in people if x['status'] in k)
+        queued = count('queued')
+        out.append({'id': c['id'], 'number': n, 'name': f'Runda #{n}', 'created': c['created'], 'mode': c['mode'], 'profile': c['profile'],
+                    'status': 'stopped' if c['stopped'] else 'active' if queued else 'done',
+                    'total': len(people), 'queued': queued, 'sent': count('sent', 'replied', 'talking', 'date'),
+                    'replied': count('replied', 'talking', 'date'), 'talking': count('talking', 'date'), 'dates': count('date'),
+                    'people': people})
+    return [r for r in reversed(out) if r['total']]
+
+
+def status(history: dict | None = None, outcomes: dict | None = None) -> dict:
     """What the panel shows: capacity, pacing and per-conversation progress."""
     by_thread = history if history is not None else s.messages_by_thread()
     items, counts = {}, {}
@@ -243,6 +286,6 @@ def status(history: dict | None = None) -> dict:
         w = window_hours(key)
         profiles[key] = {'label': v['label'], 'hint': v['hint'], 'gap_seconds': gap_seconds(key), 'per_day': daily_cap(key),
                          'window': [_clock(w[0]), _clock(w[1])] if w else None}
-    return {'items': items, 'counts': counts, 'running': counts.get('queued', 0) > 0,
+    return {'items': items, 'counts': counts, 'rounds': rounds(by_thread, outcomes), 'running': counts.get('queued', 0) > 0,
             'gap_seconds': gap_seconds(), 'daily_cap': daily_cap(), 'free_slots': plans.free_slots(),
             'profiles': profiles, 'default_profile': DEFAULT_PROFILE, 'reserve': reply_reserve(), 'timezone': timezone_name()}

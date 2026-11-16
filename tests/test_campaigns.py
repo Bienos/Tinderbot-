@@ -399,3 +399,49 @@ def test_status_describes_the_profiles_for_the_panel(store):
     assert st['default_profile'] == 'balanced' and set(st['profiles']) == {'careful', 'balanced', 'fast'}
     assert st['profiles']['balanced'] == {**st['profiles']['balanced'], 'gap_seconds': 300, 'per_day': 15, 'label': 'Zrównoważony'}
     assert st['reserve'] == 5 and st['timezone'] == 'Europe/Warsaw'
+
+
+# ---- rounds: results of each run, taken from the conversations themselves -----------------------------------------
+
+def msg(tid, mid, sender, body='x'):
+    s.sync_message({'id': mid, 'thread_id': tid, 'sender': sender, 'body': body, 'created_at': s.utcnow()})
+
+
+def test_a_round_reports_where_everyone_is(store):
+    with s.connect() as db:
+        for tid in ('r1', 'r2', 'r3', 'r4', 'r5'):
+            db.execute("INSERT INTO threads(id,display_name,source_seen) VALUES(?,?,1)", (tid, tid.upper()))
+    campaigns.launch(['r1', 'r2', 'r3', 'r4', 'r5'], 'draft')
+    msg('r2', 'a', 'you')                                                      # sent, no answer
+    msg('r3', 'b', 'you'); msg('r3', 'c', 'them')                              # she answered
+    for i, who in enumerate(['you', 'them', 'you', 'them', 'you']):            # a real conversation, 5+ messages
+        msg('r4', f'd{i}', who)
+    campaigns.finish('r5', 'skipped', 'Brak opisu')
+    st = campaigns.status(s.messages_by_thread(), {'r4': ['date_tentative']})
+    (rnd,) = st['rounds']
+    assert rnd['name'] == 'Runda #1' and rnd['status'] == 'active' and rnd['total'] == 5 and rnd['queued'] == 1
+    assert {p['name']: p['status'] for p in rnd['people']} == {'R1': 'queued', 'R2': 'sent', 'R3': 'replied', 'R4': 'date', 'R5': 'skipped'}
+    assert (rnd['sent'], rnd['replied'], rnd['talking'], rnd['dates']) == (3, 2, 1, 1)
+    assert next(p for p in rnd['people'] if p['name'] == 'R5')['note'] == 'Brak opisu'
+
+
+def test_round_status_and_numbering(store):
+    with s.connect() as db:
+        db.execute("INSERT INTO threads(id,display_name,source_seen) VALUES('n1','N1',1),('n2','N2',1)")
+    campaigns.launch(['n1'], 'draft')
+    campaigns.finish('n1', 'review')
+    campaigns.launch(['n2'], 'draft')
+    first, second = campaigns.rounds({})[1], campaigns.rounds({})[0]              # newest first
+    assert (first['number'], second['number']) == (1, 2) and first['status'] == 'done' and second['status'] == 'active'
+    campaigns.stop()
+    assert campaigns.rounds({})[0]['status'] == 'stopped'
+
+
+def test_state_api_exposes_rounds(store, monkeypatch):
+    import app as application
+    stub(monkeypatch)
+    monkeypatch.setattr(application, 'model_configured', lambda: True)
+    with client() as c:
+        c.post('/api/campaigns', json={'thread_ids': ['t4'], 'mode': 'draft', 'only_with_bio': False})
+        r = c.get('/api/state').json()['campaign']['rounds']
+        assert r[0]['name'] == 'Runda #1' and r[0]['people'][0]['name'] == 'Maja' and r[0]['status'] == 'active'

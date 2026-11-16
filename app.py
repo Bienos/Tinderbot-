@@ -287,7 +287,7 @@ def state():
         waiting=set(plan['queued'])
         for p_ in threads:p_['queued']=p_['id'] in waiting
         plan['queued']=len(waiting)
-    return {'plan':plan,'campaign':campaigns.status(hist),'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
+    return {'plan':plan,'campaign':campaigns.status(hist,{k:[o['kind'] for o in v] for k,v in outcomes.items()}),'threads':threads,'messages':hist,'drafts':drafts,'notifications':notes,'llm_enabled':model_configured(),
             'worker':service.WORKER,'settings':rt.settings(),'grants':s.rows('SELECT * FROM grants'),
             'memory':{t['id']:mem.get(t['id'],[]) for t in rows},'outcome_details':outcomes,
             'activity':s.rows('SELECT * FROM activity ORDER BY id DESC LIMIT 100'),

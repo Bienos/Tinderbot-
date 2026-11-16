@@ -71,7 +71,7 @@ function choose(id){selected=id;render()}
 function threadById(){return data?.threads.find(t=>t.id===selected)}
 function isConv(t){return (t.message_count||0)>0}
 function filtered(t){if(!isConv(t))return false;if(filter==='all')return t.state!=='archived';if(filter==='needs')return t.state==='needs_reply';if(filter==='waiting')return t.state==='waiting';if(filter==='other')return ['archived','paused','unavailable_unknown','needs_review'].includes(t.state);return true}
-function render(){if(!data)return;if(DEEP){DEEP=false;setView('stats')}renderPlanBar();renderOnboarding();renderRoster();if(view==='stats')renderStats();
+function render(){if(!data)return;if(DEEP){DEEP=false;setView('stats')}renderPlanBar();renderOnboarding();renderRoster();if(view==='stats')renderStats();if(view==='auto')renderAuto();
 let acct=document.getElementById('account-link'),au=/^https?:\/\//.test(data.account_url||'')?data.account_url:'';acct.hidden=!au;if(au)acct.href=au+'/konto';
 
 const filters=[['all','Wszystkie'],['needs','Do odpowiedzi'],['waiting','Czekają'],['other','Pozostałe']];let fs=document.getElementById('filters');fs.replaceChildren();for(let [value,label] of filters){let b=el('button',value===filter?'active':'',label);b.onclick=()=>{filter=value;render()};fs.append(b)}
@@ -337,7 +337,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document
 document.getElementById('tab-settings').addEventListener('click',()=>showSettings());document.getElementById('queue-btn')?.addEventListener('click',()=>showQueue());document.getElementById('logout').addEventListener('click',logoutNow);document.getElementById('autopilot-btn').addEventListener('click',showAutopilot);document.getElementById('pause-all').addEventListener('click',pauseAll);document.getElementById('close-panel').addEventListener('click',()=>document.getElementById('panel').close());
 
 let view='chats';
-function setView(v){view=v;for(let [id,name] of [['tab-chats','chats'],['tab-stats','stats'],['tab-settings','settings']])document.getElementById(id).classList.toggle('active',v===name);document.querySelector('main').hidden=v!=='chats';document.getElementById('roster-wrap').hidden=v!=='chats';renderOnboarding();document.getElementById('stats-view').hidden=v!=='stats';document.getElementById('settings-view').hidden=v!=='settings';if(v==='stats'){S.anim=true;renderStats()}}
+function setView(v){view=v;for(let [id,name] of [['tab-chats','chats'],['tab-auto','auto'],['tab-stats','stats'],['tab-settings','settings']])document.getElementById(id).classList.toggle('active',v===name);document.querySelector('main').hidden=v!=='chats';document.getElementById('roster-wrap').hidden=v!=='chats';renderOnboarding();document.getElementById('auto-view').hidden=v!=='auto';if(v==='auto')renderAuto();document.getElementById('stats-view').hidden=v!=='stats';document.getElementById('settings-view').hidden=v!=='settings';if(v==='stats'){S.anim=true;renderStats()}}
 async function logoutNow(){try{await api('/auth/logout','POST')}catch(e){}location.href=data&&data.account_url?data.account_url+'/zaloguj':'/'}
 function renderRoster(){let box=document.getElementById('roster');box.replaceChildren();if(!data)return;
 let todo=data.threads.filter(t=>t.state==='new_match').sort((a,b)=>matchedOf(b)-matchedOf(a)),reply=data.threads.filter(t=>t.state==='needs_reply').sort((a,b)=>tsOf(b)-tsOf(a));
@@ -561,7 +561,7 @@ function renderStats(){let root=document.getElementById('stats-view');root.repla
  deep.push(resultsBlock(st));
  if(statsAdv())root.append(...deep);else root.append(lockedPreview(deep));
  S.anim=false}
-document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
+document.getElementById('tab-chats').addEventListener('click',()=>setView('chats'));document.getElementById('tab-auto').addEventListener('click',()=>setView('auto'));document.getElementById('tab-stats').addEventListener('click',()=>setView('stats'));
 
 function renderOnboarding(){const box=document.getElementById('onboard');if(!box||!data)return;updateAutopilotButton();
  let hidden=false;try{hidden=localStorage.getItem('winq-start-hidden')==='1'}catch(e){}
@@ -663,3 +663,33 @@ function fillCampaign(p){p.replaceChildren();
    CAMPAIGN.msg='Ruszyło: '+r.accepted.length+(rej.length?'. Pominięto '+rej.length+': '+rej[0]:'.');await refresh();redraw()}
   catch(e){note.className='mresult err';note.textContent=ERR_PL[e.message]||e.message;go.disabled=false}};
  let foot=el('div','mfoot');foot.append(go);p.append(foot)}
+
+/* ---------- Automatyzacje: lista rund z wynikami (wzór: lista subskrypcji w Stripe) ---------- */
+const AUTO={tab:'active'};
+const ROUND_STATUS={active:'Aktywna',done:'Zakończona',stopped:'Zatrzymana'};
+const PERSON_STATUS={queued:'W kolejce',review:'Szkic czeka na Ciebie',sent:'Wysłano, czeka na odpowiedź',replied:'Odpisała',talking:'Rozmawiacie',date:'Spotkanie',skipped:'Pominięto',failed:'Nie udało się'};
+const pct=(a,b)=>b?Math.round(100*a/b)+'%':'–';
+function roundWhen(c){let d=new Date(c);return isNaN(d)?'':d.toLocaleDateString('pl-PL',{day:'numeric',month:'numeric'})+' '+d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})}
+function renderAuto(){const box=document.getElementById('auto-view');if(!box||!data)return;box.replaceChildren();
+ const rounds=(data.campaign&&data.campaign.rounds)||[];const wrap=el('div','autolist');
+ const head=el('div','autohead');head.append(el('h2','','Automatyzacje'));const nb=el('button','primary','Nowa automatyzacja');nb.onclick=showCampaign;head.append(nb);wrap.append(head);
+ const tabs=[['active','Aktywne',rounds.filter(r=>r.status==='active').length],['done','Zakończone',rounds.filter(r=>r.status!=='active').length],['all','Wszystkie',rounds.length]];
+ const st=el('div','autostat');for(let [k,l,n] of tabs){let b=el('button',AUTO.tab===k?'on':'',l);b.append(el('span','',n));b.onclick=()=>{AUTO.tab=k;renderAuto()};st.append(b)}wrap.append(st);
+ const shown=rounds.filter(r=>AUTO.tab==='all'||(AUTO.tab==='active'?r.status==='active':r.status!=='active'));
+ if(!shown.length){let e=el('div','roster-empty',rounds.length?'Nie ma tu nic w tej zakładce.':'Jeszcze nie uruchomiono żadnej automatyzacji. Kliknij „Nowa automatyzacja”, żeby agent zagadał do nowych dopasowań.');wrap.append(e)}
+ else{const tb=el('table','autotable');const th=el('tr');for(let [l,c] of [['Nazwa',''],['Status',''],['Osoby',''],['Wysłano',''],['Odpisały',''],['Rozmowy 5+','hide-sm'],['Umówieni','hide-sm'],['Start','hide-sm']]){let x=el('th',c,l);th.append(x)}tb.append(th);
+  for(let r of shown){let tr=el('tr','arow');tr.tabIndex=0;const go=()=>showRound(r.id);tr.onclick=go;tr.onkeydown=e=>{if(e.key==='Enter')go()};
+   let nm=el('td','');nm.append(el('b','',r.name));let st=el('td','');st.append(el('span','sbadge '+r.status,ROUND_STATUS[r.status]||r.status));
+   tr.append(nm,st,el('td','',r.total),el('td','',r.sent+' / '+r.total),el('td','',r.replied+' ('+pct(r.replied,r.sent)+')'),el('td','hide-sm',r.talking),el('td','hide-sm',r.dates),el('td','hide-sm',roundWhen(r.created)));tb.append(tr)}wrap.append(tb)}
+ const waiting=data.threads.filter(t=>t.state==='new_match').length;
+ if(waiting){const hints=el('div','autohints');const a=el('div','hint');a.append(el('b','','Zagadaj nowe dopasowania'),document.createTextNode(waiting+' '+pl(waiting,'osoba czeka','osoby czekają','osób czeka')+' na pierwszą wiadomość.'));const bt=el('button','linkish','Nowa automatyzacja →');bt.onclick=showCampaign;a.append(el('div','',''),bt);hints.append(a);wrap.append(hints)}
+ box.append(wrap)}
+function showRound(id){const r=((data.campaign&&data.campaign.rounds)||[]).find(x=>x.id===id);if(!r)return;const p=panel(r.name+' · '+(ROUND_STATUS[r.status]||r.status));
+ const prof=(data.campaign.profiles||{})[r.profile];
+ p.append(el('p','gdesc',(r.mode==='auto'?'Agent wysyłał sam':'Szkice dla Ciebie')+(r.mode==='auto'&&prof?' · tempo '+prof.label:'')+' · start '+roundWhen(r.created)));
+ const tiles=el('div','scard');tiles.append(el('div','gdesc','Wysłano: '+r.sent+' / '+r.total+' · Odpisały: '+r.replied+' ('+pct(r.replied,r.sent)+') · Rozmowy 5+: '+r.talking+' · Spotkania: '+r.dates));p.append(tiles);
+ if(r.status==='active'){let stop=el('button','secondary danger','Zatrzymaj automatyzację');stop.onclick=async()=>{if(!confirm('Zatrzymać automatyzację? To, co już wysłano, zostaje. Reszta kolejki zostanie odwołana.'))return;stop.disabled=true;try{await api('/api/campaigns/stop','POST');await refresh();showRound(id)}catch(e){stop.disabled=false}};p.append(stop)}
+ const list=el('div','cmplist');for(let x of r.people){let row=el('div','cmprow');let th=data.threads.find(t=>t.id===x.thread_id);
+  let who=el('div','cmpwho');who.append(el('b','',x.name),el('span','muted',x.note||(x.messages?x.messages+' '+pl(x.messages,'wiadomość','wiadomości','wiadomości'):'')));
+  if(th)row.append(avatarFor(th,'queue'));row.append(who,el('span','pstat '+x.status,PERSON_STATUS[x.status]||x.status));
+  if(th){row.style.cursor='pointer';row.onclick=()=>{closePanel();setView('chats');choose(th.id)}}list.append(row)}p.append(list)}
